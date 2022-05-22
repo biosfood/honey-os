@@ -1,0 +1,4 @@
+build
+rootfs/boot/kernel
+.vscode
+*.log
