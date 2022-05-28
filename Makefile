@@ -6,8 +6,6 @@ LD = i686-elf-ld
 LD_FLAGS = -z max-page-size=0x1000 -T link.ld
 AS = nasm
 ASFlAGS = -felf32
-GENISO = genisoimage
-GENISOFLAGS = -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -input-charset utf8 -quiet -boot-info-table -A tree-os
 EMU = qemu-system-x86_64
 EMUFLAGS = -m 1G -drive format=raw,file=$(IMAGE_FILE) -no-reboot -no-shutdown -monitor stdio
 
@@ -16,13 +14,13 @@ BUILD_FOLDER = build
 SOURCE_FILES := $(shell find src/kernel -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 USER_PROGRAMS := $(shell ls src/userland)
-USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=rootfs/%)
+USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=initrd/%)
 
 run: $(IMAGE_FILE)
 	@echo "starting qemu"
 	@$(EMU) $(EMUFLAGS)
 
-$(IMAGE_FILE): rootfs/boot/kernel $(USER_PROGRAM_NAMES)
+$(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	echo "creating the iso image"
 	dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
 	printf "n\np\n1\n\n\na\nw\n" | fdisk $(IMAGE_FILE) &&\
@@ -34,13 +32,15 @@ $(IMAGE_FILE): rootfs/boot/kernel $(USER_PROGRAM_NAMES)
 	sudo mount $$loop1 /mnt &&\
 	sudo grub-install --root-directory=/mnt --no-floppy --modules="normal part_msdos multiboot" $$loop0 &&\
 	sudo cp -RT rootfs/ /mnt &&\
-	sudo rm -r /mnt/boot/grub/fonts &&\
 	sync &&\
 	sudo umount /mnt &&\
 	sudo losetup -d $$loop0 &&\
 	sudo losetup -d $$loop1
 
-rootfs/boot/kernel: $(OBJS)
+rootfs/initrd.tar: $(USER_PROGRAM_NAMES)
+	tar cvf rootfs/initrd.tar initrd/
+
+rootfs/boot/kernel: $(OBJS) link.ld
 	@echo "linking"
 	@$(LD) $(LD_FLAGS) -o $@ $(OBJS)
 
@@ -59,14 +59,10 @@ $(BUILD_FOLDER)/%.s.o: %.s
 	@mkdir -p $(dir $@)
 	@$(CC) $(CCFLAGS) -r $< -o $@
 
-rootfs/%: src/userland/% iso/modules
+initrd/%: src/userland/%
 	@echo "compiling userspace program $<"
 	@make -C $<
 
 clean:
 	@echo "clearing build folder"
-	@rm -r $(BUILD_FOLDER) tree-os.iso
-
-cleanELF:
-	@echo "clearing the elf file"
-	@rm iso/boot/tree-os.elf
+	@rm -r $(BUILD_FOLDER)

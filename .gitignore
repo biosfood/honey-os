@@ -1,4 +1,7 @@
 build
 rootfs/boot/kernel
+rootfs/bin
+rootfs/initrd.tar
 .vscode
 *.log
+initrd

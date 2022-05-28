@@ -4,7 +4,8 @@
 #include <stdint.h>
 
 extern void setupMemory();
-extern void reservePagesUntil(uint32_t endPageId);
-extern void memset(uint8_t *target, uint8_t byte, uint32_t size);
+extern void reservePagesUntilPhysical(uint32_t endPageId);
+extern void memset(void *target, uint8_t byte, uint32_t size);
+extern void *kernelMapPhysical(void *address);
 
 #endif

@@ -7,7 +7,6 @@ SECTIONS {
     .boot : {
         *(.boot)
     }
-    bootEnd = .;
 
     . +=                         0xFFB00000;
     .text : AT(ADDR(.text) -     0xFFB00000) {
@@ -24,5 +23,11 @@ SECTIONS {
 
     .bss :AT(ADDR(.bss) -        0xFFB00000) {
         *(.bss)
+        . = ALIGN(4M);
+    }
+
+    . = 0x500000;
+    .kernelReserve :AT(0x500000) {
+        . += 0x400000;
     }
 }
