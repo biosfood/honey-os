@@ -14,7 +14,6 @@ multibootHeader:
 .end:
 
 extern kernelMain
-extern multibootInfo
 
 %define pageDirectory       0x500000
 %define kernelPageTable     0x501000
@@ -24,8 +23,11 @@ extern multibootInfo
 %define mappedStackEnd      0xFFBFFFFF
 %define originalPageTable   0x503000
 
+ebxStart: db 0x00000000
+
 global _start
 _start:
+    mov [ebxStart], ebx
     mov esp, stackEnd
     lgdt [gdt32.end]
     mov ax, 16
@@ -35,7 +37,7 @@ _start:
     mov fs, ax
     mov gs, ax
     jmp 0x08:.setupPaging
-.setupPaging
+.setupPaging:
     mov eax, pageDirectory
     mov ebx, originalPageTable
     mov ecx, 0
@@ -114,7 +116,9 @@ gdt32:
 
 section .text
 higherKernelEntry:
-.cleanOriginalEntryCode
+    mov ebx, [ebxStart]
+    push ebx
+.cleanOriginalEntryCode:
     mov eax, 0xFF800000
     mov dword [eax], 0
     call kernelMain
