@@ -51,6 +51,6 @@ typedef struct {
     char commandLineParameters[0];
 } MultibootModuleTag;
 
-extern void *findInitrd(MultibootInformation *information);
+extern void *findInitrd(MultibootInformation *information, uint32_t *fileSize);
 
 #endif

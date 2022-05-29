@@ -5,8 +5,10 @@
 void kernelMain(void *multibootInfo) {
     setupMemory();
     void *address = kernelMapPhysical(multibootInfo);
-    void *initrd = findInitrd(address);
-    asm("mov %%eax, %0" ::"r"(initrd));
+    uint32_t tarSize = 0;
+    void *initrd = findInitrd(address, &tarSize);
+    void *loaderProgram = findTarFile(initrd, tarSize, "initrd/loader");
+    asm("mov %%eax, %0" ::"r"(loaderProgram));
     while (1)
         ;
 }
