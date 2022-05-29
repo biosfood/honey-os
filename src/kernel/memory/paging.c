@@ -80,7 +80,7 @@ void reservePage(PagingInfo *info, uint32_t pageId) {
     }
 }
 
-uint32_t findPage(PagingInfo *info) {
+uint32_t findMultiplePages(PagingInfo *info, uint32_t size) {
     for (uint32_t veryCoarse = info->pageSearchStart / 1024;; veryCoarse++) {
         if (info->isPageAllocatedCoarse[veryCoarse] == ~0) {
             continue;
@@ -89,9 +89,18 @@ uint32_t findPage(PagingInfo *info) {
             if (info->isPageAllocatedCoarse[veryCoarse] & (1 << coarse)) {
                 continue;
             }
-            uint32_t coarsePageId = (veryCoarse * 32 + coarse);
+            uint32_t coarsePageId = veryCoarse * 32 + coarse;
             for (uint8_t fine = 0; fine < 32; fine++) {
-                if (info->isPageAllocated[coarsePageId] & (1 << fine)) {
+                bool fail = false;
+                for (uint32_t check = 0; check < size; check++) {
+                    uint32_t currentFine = fine + check;
+                    if (info->isPageAllocated[coarsePageId + currentFine / 32] &
+                        (1 << (currentFine % 32))) {
+                        fail = true;
+                        break;
+                    }
+                }
+                if (fail) {
                     continue;
                 }
                 return coarsePageId * 32 + fine;
@@ -100,13 +109,22 @@ uint32_t findPage(PagingInfo *info) {
     }
 }
 
+uint32_t findPage(PagingInfo *info) { return findMultiplePages(info, 1); }
+
+void *kernelMapMultiplePhysicalPages(void *address, uint32_t size) {
+    uint32_t physicalPageStart = U32(address) >> 12;
+    uint32_t virtualPageStart = findMultiplePages(kernelVirtualPages, size);
+    for (uint32_t i = 0; i < size; i++) {
+        reservePage(physicalPages, physicalPageStart + i);
+        reservePage(kernelVirtualPages, virtualPageStart + i);
+        kernelUtilityPages[virtualPageStart + i].targetAddress =
+            physicalPageStart + i;
+        kernelUtilityPages[virtualPageStart + i].writable = 1;
+        kernelUtilityPages[virtualPageStart + i].present = 1;
+    }
+    return PTR((virtualPageStart << 12) + (U32(address) & 0xFFF));
+}
+
 void *kernelMapPhysical(void *address) {
-    uint32_t physicalPage = U32(address) >> 12;
-    reservePage(physicalPages, physicalPage);
-    uint32_t virtualPage = findPage(kernelVirtualPages);
-    reservePage(kernelVirtualPages, virtualPage);
-    kernelUtilityPages[virtualPage].targetAddress = physicalPage;
-    kernelUtilityPages[virtualPage].writable = 1;
-    kernelUtilityPages[virtualPage].present = 1;
-    return PTR((virtualPage << 12) + (U32(address) & 0xFFF));
+    return kernelMapMultiplePhysicalPages(address, 1);
 }

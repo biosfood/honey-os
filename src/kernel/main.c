@@ -5,7 +5,8 @@
 void kernelMain(void *multibootInfo) {
     setupMemory();
     void *address = kernelMapPhysical(multibootInfo);
-    asm("mov %%eax, %0" ::"r"(address));
+    void *initrd = findInitrd(address);
+    asm("mov %%eax, %0" ::"r"(initrd));
     while (1)
         ;
 }
