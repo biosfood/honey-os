@@ -7,5 +7,6 @@ extern void setupMemory();
 extern void reservePagesUntilPhysical(uint32_t endPageId);
 extern void memset(void *target, uint8_t byte, uint32_t size);
 extern void *kernelMapPhysical(void *address);
+extern void *kernelMapMultiplePhysicalPages(void *address, uint32_t size);
 
 #endif
