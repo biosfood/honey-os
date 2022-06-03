@@ -2,12 +2,17 @@
 #include <memory.h>
 #include <util.h>
 
-PageDirectoryEntry *kernelDirectory;
-PageTableEntry *kernelCodePageTable, *kernelDataPageTable, *kernelUtilityPages;
+PageTableEntry *kernelCodePageTable, *kernelDataPageTable;
 
-PagingInfo *physicalPages, *kernelVirtualPages;
+PagingInfo *kernelPhysicalPages, *kernelVirtualPages;
+
+void *temporaryPage;
 
 void reservePage(PagingInfo *info, uint32_t pageId);
+
+void invalidatePage(uint32_t pageId) {
+    asm("invlpg (%0)" ::"r"(pageId << 12) : "memory");
+}
 
 void *kernelGetVirtualAddress(void *_address) {
     uint32_t address = (uint32_t)(uintptr_t)_address;
@@ -23,52 +28,56 @@ void *kernelGetVirtualAddress(void *_address) {
     return 0;
 }
 
+void *mapTemporary(void *physical) {
+    kernelDataPageTable[3].targetAddress = U32(physical) >> 12;
+    kernelDataPageTable[3].writable = 1;
+    kernelDataPageTable[3].present = 1;
+    invalidatePage(0xFF803);
+    return temporaryPage;
+}
+
 void *getPhysicalAddress(void *address, PageDirectoryEntry *pageDirectory) {
     VirtualAddress *virtual = (void *)&address;
     uint32_t pageTableLocation =
         pageDirectory[virtual->pageDirectoryIndex].pageTableID;
     PageTableEntry *pageTable = PTR(pageTableLocation << 12);
-    pageTable = kernelGetVirtualAddress(pageTable);
+    pageTable = mapTemporary(pageTable);
     uint32_t pageBase = pageTable[virtual->pageTableIndex].targetAddress;
     return PTR(pageBase << 12 | virtual->pageOffset);
 }
 
-void mapDirectoryEntry(PageDirectoryEntry *directory, uint32_t pageTableIndex,
-                       PageTableEntry *pageTable, PagingInfo *pagingInfo) {
-    directory[pageTableIndex].pageTableID =
-        U32(getPhysicalAddress(pageTable, directory)) >> 12;
-    directory[pageTableIndex].writable = 1;
-    directory[pageTableIndex].present = 1;
-    pagingInfo->isPageTableInUse[pageTableIndex / 32] |=
-        1 << (pageTableIndex % 32);
+void *getPhysicalAddressKernel(void *address) {
+    return getPhysicalAddress(address, kernelVirtualPages->pageDirectory);
 }
+
+uint32_t findPage(PagingInfo *info);
+void mapPage(PagingInfo *info, void *physical, void *virtual);
 
 void reservePagesUntilPhysical(uint32_t endPageId) {
     void *buffer = (void *)0xFF800000;
-    kernelDirectory = buffer;
-    memset(kernelDirectory, 0, 0xFF8);
-    buffer += 0x1000;
-    kernelCodePageTable = buffer;
+    void *pageDirectory = buffer;
+    memset(pageDirectory, 0, 0xFF8);
     buffer += 0x1000;
     kernelDataPageTable = buffer;
     buffer += 0x1000;
-    kernelUtilityPages = buffer;
+    kernelCodePageTable = buffer;
     buffer += 0x1000;
-    physicalPages = buffer;
+    temporaryPage = buffer;
+    buffer += 0x1000;
+    kernelPhysicalPages = buffer;
     buffer += sizeof(PagingInfo);
     kernelVirtualPages = buffer;
     buffer += sizeof(PagingInfo);
-    memset(physicalPages, 0, 2 * sizeof(PagingInfo));
+    memset(kernelPhysicalPages, 0, 2 * sizeof(PagingInfo));
     for (uint32_t i = 0; i < endPageId; i++) {
-        reservePage(physicalPages, i);
+        reservePage(kernelPhysicalPages, i);
     }
     for (uint32_t i = 0; i < 0x800; i++) {
         reservePage(kernelVirtualPages, i + 0xFF800);
     }
-    memset(kernelUtilityPages, 0, 0x1000);
-    mapDirectoryEntry(kernelDirectory, 0, kernelUtilityPages,
-                      kernelVirtualPages);
-    physicalPages->pageSearchStart = endPageId;
+    kernelPhysicalPages->pageSearchStart = endPageId;
+    kernelVirtualPages->pageSearchStart = 0;
+    kernelVirtualPages->pageDirectory = pageDirectory;
 }
 
 void reservePage(PagingInfo *info, uint32_t pageId) {
@@ -115,16 +124,55 @@ void *kernelMapMultiplePhysicalPages(void *address, uint32_t size) {
     uint32_t physicalPageStart = U32(address) >> 12;
     uint32_t virtualPageStart = findMultiplePages(kernelVirtualPages, size);
     for (uint32_t i = 0; i < size; i++) {
-        reservePage(physicalPages, physicalPageStart + i);
+        reservePage(kernelPhysicalPages, physicalPageStart + i);
         reservePage(kernelVirtualPages, virtualPageStart + i);
-        kernelUtilityPages[virtualPageStart + i].targetAddress =
-            physicalPageStart + i;
-        kernelUtilityPages[virtualPageStart + i].writable = 1;
-        kernelUtilityPages[virtualPageStart + i].present = 1;
+    }
+    for (uint32_t i = 0; i < size; i++) {
+        mapPage(kernelVirtualPages, PTR((physicalPageStart + i) << 12),
+                PTR((virtualPageStart + i) << 12));
     }
     return PTR((virtualPageStart << 12) + (U32(address) & 0xFFF));
 }
 
 void *kernelMapPhysical(void *address) {
     return kernelMapMultiplePhysicalPages(address, 1);
+}
+
+void mapPage(PagingInfo *info, void *physical, void *virtual) {
+    VirtualAddress *address = (void *)&virtual;
+    PageDirectoryEntry *directory = info->pageDirectory;
+    if (!directory[address->pageDirectoryIndex].present) {
+        uint32_t newPageTable = findPage(kernelPhysicalPages);
+        reservePage(kernelPhysicalPages, newPageTable);
+        void *temporary = mapTemporary(PTR(newPageTable << 12));
+        memset(temporary, 0, 0x1000);
+        directory[address->pageDirectoryIndex].pageTableID = newPageTable;
+        directory[address->pageDirectoryIndex].present = 1;
+        directory[address->pageDirectoryIndex].writable = 1;
+    }
+    void *pageTablePhysical =
+        PTR(directory[address->pageDirectoryIndex].pageTableID << 12);
+    void *temporary = mapTemporary(pageTablePhysical);
+    PageTableEntry *pageTable = temporary;
+    pageTable[address->pageTableIndex].targetAddress = U32(physical) >> 12;
+    pageTable[address->pageTableIndex].present = 1;
+    pageTable[address->pageTableIndex].writable = 1;
+    invalidatePage(U32(virtual) >> 12);
+}
+
+void *getPage() {
+    uint32_t physical = findPage(kernelPhysicalPages);
+    reservePage(kernelPhysicalPages, physical);
+    uint32_t virtual = findPage(kernelVirtualPages);
+    reservePage(kernelVirtualPages, virtual);
+    mapPage(kernelVirtualPages, PTR(physical << 12), PTR(virtual << 12));
+    return PTR(virtual << 12);
+}
+
+void sharePage(PagingInfo *destination, void *sourceAddress,
+               void *destinationAddress) {
+    PagingInfo *source = kernelVirtualPages;
+    void *physicalSource =
+        getPhysicalAddress(sourceAddress, source->pageDirectory);
+    mapPage(destination, physicalSource, destinationAddress);
 }
