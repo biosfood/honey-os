@@ -7,21 +7,22 @@ LD_FLAGS = -z max-page-size=0x1000 -T link.ld
 AS = nasm
 ASFlAGS = -felf32
 EMU = qemu-system-x86_64
-EMUFLAGS = -m 1G -drive format=raw,file=$(IMAGE_FILE) -no-reboot -no-shutdown -monitor stdio
+EMUFLAGS = -m 1G -drive format=raw,file=$(IMAGE_FILE) -no-reboot -no-shutdown -monitor stdio -d int -D crashlog.log -s
 
 BUILD_FOLDER = build
 
 SOURCE_FILES := $(shell find src/kernel -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 USER_PROGRAMS := $(shell ls src/userland)
-USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=initrd/%)
+USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=user/%)
+USER_PROGRAM_FILES := $(USER_PROGRAMS:%=initrd/%)
 
-run: $(IMAGE_FILE)
+run: $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
 	@echo "starting qemu"
 	@$(EMU) $(EMUFLAGS)
 
 $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
-	echo "creating the iso image"
+	@echo "creating the iso image"
 	dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
 	printf "n\np\n1\n\n\na\nw\n" | fdisk $(IMAGE_FILE) &&\
 	loop0=$$(sudo losetup -f) &&\
@@ -37,7 +38,7 @@ $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	sudo losetup -d $$loop0 &&\
 	sudo losetup -d $$loop1
 
-rootfs/initrd.tar: $(USER_PROGRAM_NAMES)
+rootfs/initrd.tar: $(USER_PROGRAM_FILES)
 	tar cvf rootfs/initrd.tar initrd/
 
 rootfs/boot/kernel: $(OBJS) link.ld
@@ -59,7 +60,7 @@ $(BUILD_FOLDER)/%.s.o: %.s
 	@mkdir -p $(dir $@)
 	@$(CC) $(CCFLAGS) -r $< -o $@
 
-initrd/%: src/userland/%
+user/%: src/userland/%
 	@echo "compiling userspace program $<"
 	@make -C $<
 
