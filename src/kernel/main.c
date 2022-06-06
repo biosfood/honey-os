@@ -10,7 +10,7 @@ void kernelMain(void *multibootInfo) {
     void *initrd = findInitrd(address, &tarSize);
     void *loaderProgram = findTarFile(initrd, tarSize, "initrd/loader");
     loadElf(loaderProgram);
-    asm("mov %%eax, %0" ::"r"(loaderProgram));
+    asm("mov %%eax, %0" ::"r"(0xB105F00D));
     while (1)
         ;
 }

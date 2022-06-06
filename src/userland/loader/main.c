@@ -26,6 +26,8 @@ void Parallel_SendByte(unsigned char pData) {
 
 int32_t main() {
     // send a x to the parralel port to test stuff out
-    Parallel_SendByte('x');
+    Parallel_SendByte('h');
+    Parallel_SendByte('i');
+    Parallel_SendByte('!');
     return 0;
 }
