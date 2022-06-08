@@ -110,6 +110,21 @@ gdt32:
 	db 10010010b
 	db 11001111b
 	db 0
+
+.userCode:
+	dw 0xffff
+	dw 0
+	db 0
+	db 10011010b
+	db 11001111b
+	db 0
+.userData:
+	dw 0xffff
+	dw 0
+	db 0
+	db 10010010b
+	db 11001111b
+	db 0
 .end:
     dw .end - gdt32 - 1
     dd gdt32
