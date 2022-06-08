@@ -37,5 +37,9 @@ extern void sharePage(PagingInfo *destination, void *sourceAddress,
                       void *destinationAddress);
 
 extern void *getPhysicalAddressKernel(void *address);
+extern void *getPhysicalAddress(PageDirectoryEntry *pageDirectory,
+                                void *address);
+extern uint32_t findPage(PagingInfo *info);
+extern void *mapTemporary(void *address);
 
 #endif

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <syscalls.h>
 
 uint8_t inb(uint16_t port) {
     uint8_t result;
@@ -10,7 +11,7 @@ void outb(uint16_t port, uint8_t val) {
     asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
-void Parallel_SendByte(unsigned char pData) {
+void writeParallel(unsigned char pData) {
     unsigned char lControl;
 
     while (!(inb(0x379) & 0x80)) {
@@ -24,10 +25,49 @@ void Parallel_SendByte(unsigned char pData) {
     }
 }
 
+void testProvider(void *requestData) {
+    writeParallel('t');
+    writeParallel('e');
+    writeParallel('s');
+    writeParallel('t');
+}
+
+void syscall(void *callData) {
+    Syscall *call = callData;
+    asm("mov %%esp, %%eax" : "=a"(call->returnEsp));
+    call->returnAddress = &&returnAddress;
+    asm(".intel_syntax noprefix\n"
+        "sysenter\n"
+        ".att_syntax" ::"a"(callData));
+returnAddress:
+    call->id = 0;
+    return;
+}
+
+void makeRequest(char *moduleName, char *functionName) {
+    RequestSyscall call = {.id = SYS_REQUEST,
+                           .service = moduleName,
+                           .request = functionName,
+                           .data = 0};
+    syscall(&call);
+}
+
+void installServiceProvider(char *name, void(provider)(void *)) {
+    RegisterServiceProviderSyscall call = {
+        .id = SYS_REQUEST,
+        .name = name,
+        .handler = provider,
+    };
+    syscall(&call);
+}
+
+void test() { makeRequest("loader", "test"); }
+
 int32_t main() {
-    // send a x to the parralel port to test stuff out
-    Parallel_SendByte('h');
-    Parallel_SendByte('i');
-    Parallel_SendByte('!');
+    // writeParallel('I'); // install
+    installServiceProvider("test", testProvider);
+    // writeParallel('C'); // call
+    // test();
+    // writeParallel('E'); // end
     return 0;
 }
