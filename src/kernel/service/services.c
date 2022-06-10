@@ -2,46 +2,50 @@
 #include "service.h"
 #include <memory.h>
 #include <service.h>
+#include <syscalls.h>
 #include <util.h>
-
-Service loaderService;
-Service kernelService;
-Context kernelContext;
 
 extern void *kernelCodePageTable;
 
-// these are temporary variables but I need the pointers in the asm parts
-void *currentCr3 = 0;
-void *currentEsp = 0;
+void *serviceCR3 = 0;
+void *serviceESP = 0;
 void *mainFunction = NULL;
-void *returnStack = 0;
 
 extern void *functionsStart;
 extern void(runFunction)();
 extern void(runEnd)();
 
 void run(Service *service, void *main) {
-    currentEsp = malloc(0x1000);
-    memset(currentEsp, 0, 0x1000);
-    ((void **)currentEsp)[0x3FF] = runEnd;
-    sharePage(&service->pagingInfo, currentEsp, currentEsp);
-    currentCr3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
+    serviceESP = malloc(0x1000);
+    memset(serviceESP, 0, 0x1000);
+    serviceESP += 0xFFC;
+    *(void **)serviceESP = runEnd;
+    sharePage(&service->pagingInfo, serviceESP, serviceESP);
+    serviceCR3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
     mainFunction = main;
-    asm("jmp runFunction");
+    runFunction();
 }
 
-void loadElf(void *elfStart) {
+void resume(Syscall *syscall) {
+    mainFunction = syscall->returnAddress;
+    serviceESP = syscall->returnEsp;
+    serviceCR3 = PTR(syscall->cr3);
+    runFunction();
+}
+
+void loadElf(void *elfStart, char *serviceName, ListElement **services) {
     // use this function ONLY to load the initrd/loader program(maybe also the
     // ELF loader service)!
     ElfHeader *header = elfStart;
     ProgramHeader *programHeader =
         elfStart + header->programHeaderTablePosition;
-    PagingInfo *paging = &loaderService.pagingInfo;
-    memset(paging, 0, sizeof(PagingInfo));
-    paging->pageDirectory = malloc(0x1000);
+    Service *service = malloc(sizeof(Service));
+    memset(service, 0, sizeof(Service));
+    service->pagingInfo.pageDirectory = malloc(0x1000);
+    service->name = serviceName;
     // todo: make this unwritable!
     // todo: use functionsStart as the reference
-    sharePage(paging, PTR(0xFFC02000),
+    sharePage(&(service->pagingInfo), PTR(0xFFC02000),
               PTR(0xFFC02000)); // functionsStart, functionsStart);
     for (uint32_t i = 0; i < header->programHeaderEntryCount; i++) {
         for (uint32_t page = 0; page < programHeader->segmentMemorySize;
@@ -50,9 +54,15 @@ void loadElf(void *elfStart) {
             memset(data, 0, 0x1000);
             memcpy(elfStart + programHeader->dataOffset, data,
                    MIN(0x1000, programHeader->segmentFileSize - page));
-            sharePage(paging, data, PTR(programHeader->virtualAddress + page));
+            sharePage(&service->pagingInfo, data,
+                      PTR(programHeader->virtualAddress + page));
         }
         programHeader = (void *)programHeader + header->programHeaderEntrySize;
     }
-    run(&loaderService, PTR(header->entryPosition));
+    Provider *main = malloc(sizeof(Provider));
+    main->name = "main";
+    main->service = service;
+    main->address = PTR(header->entryPosition);
+    listAdd(services, service);
+    listAdd(&service->providers, main);
 }
