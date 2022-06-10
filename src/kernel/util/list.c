@@ -2,19 +2,10 @@
 #include <util.h>
 
 void listAdd(ListElement **list, void *data) {
-    ListElement *element = *list;
-    if (!element) {
-        *list = malloc(sizeof(ListElement));
-        element = *list;
-    } else {
-        while (element->next) {
-            element = element->next;
-        }
-        element->next = malloc(sizeof(ListElement));
-        element = element->next;
-    }
-    element->next = NULL;
+    ListElement *element = malloc(sizeof(ListElement));
+    element->next = *list;
     element->data = data;
+    *list = element;
 }
 
 void *listPopFirst(ListElement **list) {

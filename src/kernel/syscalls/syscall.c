@@ -20,8 +20,8 @@ void handleSyscall(void *cr3, Syscall *callData) {
     if (!callData) {
         asm("jmp runEndSyscall");
     }
-    void *pageDirectory = mapTemporary(cr3);
-    void *dataPhysical = getPhysicalAddress(pageDirectory, callData);
+    callData->pageDirectory = kernelMapPhysical(cr3);
+    void *dataPhysical = getPhysicalAddress(callData->pageDirectory, callData);
     Syscall *data = kernelMapPhysical(dataPhysical);
     data->cr3 = U32(cr3);
     listAdd(&callsToProcess, data);
