@@ -169,6 +169,18 @@ void *getPage() {
     return PTR(virtual << 12);
 }
 
+void *getMultiplePages(uint32_t count) {
+    uint32_t virtual = findMultiplePages(kernelVirtualPages, count);
+    for (uint32_t i = 0; i < count; i++) {
+        reservePage(kernelVirtualPages, virtual + i);
+        uint32_t physical = findPage(kernelPhysicalPages);
+        reservePage(kernelPhysicalPages, physical);
+        mapPage(kernelVirtualPages, PTR(physical << 12),
+                PTR((virtual + i) << 12), false);
+    }
+    return PTR(virtual << 12);
+}
+
 void sharePage(PagingInfo *destination, void *sourceAddress,
                void *destinationAddress) {
     PagingInfo *sourcePagingInfo = kernelVirtualPages;

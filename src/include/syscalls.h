@@ -1,9 +1,10 @@
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
-enum {
+typedef enum {
     SYS_REGISTER_FUNCTION,
     SYS_REQUEST,
 } SyscallIds;
@@ -12,6 +13,8 @@ typedef struct {
     uint32_t id;
     void *returnAddress;
     void *returnEsp;
+    uint32_t cr3;
+    bool resume;
 } Syscall;
 
 typedef struct {
