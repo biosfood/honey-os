@@ -26,10 +26,13 @@ void writeParallel(unsigned char pData) {
 }
 
 void testProvider(void *requestData) {
-    writeParallel('t');
-    writeParallel('e');
-    writeParallel('s');
-    writeParallel('t');
+    // writeParallel('t');
+    // writeParallel('e');
+    // writeParallel('s');
+    // writeParallel('t');
+    asm("mov %%eax, %0" ::"r"(0xB105F00D));
+    while (1)
+        ;
 }
 
 void bufferFunction() {}
@@ -58,7 +61,7 @@ void makeRequest(char *moduleName, char *functionName) {
 
 void installServiceProvider(char *name, void(provider)(void *)) {
     RegisterServiceProviderSyscall call = {
-        .id = SYS_REQUEST,
+        .id = SYS_REGISTER_FUNCTION,
         .name = name,
         .handler = provider,
     };
@@ -71,7 +74,7 @@ int32_t main() {
     // writeParallel('I'); // install
     installServiceProvider("test", testProvider);
     // writeParallel('C'); // call
-    // test();
+    test();
     // writeParallel('E'); // end
     return 0;
 }

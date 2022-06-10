@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 typedef enum {
-    SYS_REGISTER_FUNCTION,
-    SYS_REQUEST,
+    SYS_REGISTER_FUNCTION = 1,
+    SYS_REQUEST = 2,
 } SyscallIds;
 
 typedef struct {
@@ -14,6 +14,8 @@ typedef struct {
     void *returnAddress;
     void *returnEsp;
     uint32_t cr3;
+    void *respondingTo;
+    void *pageDirectory;
     bool resume;
 } Syscall;
 
