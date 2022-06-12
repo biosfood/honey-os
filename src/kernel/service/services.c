@@ -13,27 +13,26 @@ void *mainFunction = NULL;
 
 extern void *functionsStart;
 extern void(runFunction)();
-extern void(runEnd)();
+Service *currentService;
+
+ListElement *services, *callsToProcess;
 
 void run(Service *service, void *main) {
-    serviceESP = malloc(0x1000);
-    memset(serviceESP, 0, 0x1000);
-    serviceESP += 0xFFC;
-    *(void **)serviceESP = runEnd;
-    sharePage(&service->pagingInfo, serviceESP, serviceESP);
     serviceCR3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
     mainFunction = main;
+    currentService = service;
     runFunction();
 }
 
 void resume(Syscall *syscall) {
-    mainFunction = syscall->returnAddress;
-    serviceESP = syscall->returnEsp;
-    serviceCR3 = PTR(syscall->cr3);
+    mainFunction = syscall->address;
+    serviceESP = syscall->esp;
+    currentService = syscall->service;
+    serviceCR3 = syscall->cr3;
     runFunction();
 }
 
-void loadElf(void *elfStart, char *serviceName, ListElement **services) {
+void loadElf(void *elfStart, char *serviceName) {
     // use this function ONLY to load the initrd/loader program(maybe also the
     // ELF loader service)!
     ElfHeader *header = elfStart;
@@ -63,6 +62,26 @@ void loadElf(void *elfStart, char *serviceName, ListElement **services) {
     main->name = "main";
     main->service = service;
     main->address = PTR(header->entryPosition);
-    listAdd(services, service);
+    listAdd(&services, service);
     listAdd(&service->providers, main);
+}
+
+Service *findService(char *name) {
+    foreach (services, Service *, service, {
+        if (stringEquals(service->name, name)) {
+            return service;
+        }
+    })
+        ;
+    return NULL;
+}
+
+Provider *findProvider(Service *service, char *name) {
+    foreach (service->providers, Provider *, provider, {
+        if (stringEquals(provider->name, name)) {
+            return provider;
+        }
+    })
+        ;
+    return NULL;
 }

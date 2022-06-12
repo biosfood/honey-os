@@ -5,17 +5,18 @@
 #include <stdint.h>
 
 typedef enum {
-    SYS_REGISTER_FUNCTION = 1,
-    SYS_REQUEST = 2,
+    SYS_RUN,
+    SYS_REGISTER_FUNCTION,
+    SYS_REQUEST,
 } SyscallIds;
 
-typedef struct {
-    uint32_t id;
-    void *returnAddress;
-    void *returnEsp;
-    uint32_t cr3;
-    void *respondingTo;
-    void *pageDirectory;
+typedef struct Syscall {
+    uint32_t function;
+    void *address;
+    void *esp;
+    void *cr3;
+    struct Syscall *respondingTo;
+    void *service;
     bool resume;
 } Syscall;
 
@@ -27,8 +28,8 @@ typedef struct {
 
 typedef struct {
     Syscall;
-    char *service;
-    char *request;
+    char *serviceName;
+    char *providerName;
     void *data;
 } RequestSyscall;
 

@@ -18,8 +18,14 @@ typedef struct {
     Service *service;
 } Provider;
 
-extern void loadElf(void *fileData, char *serviceName, ListElement **services);
+extern void loadElf(void *fileData, char *serviceName);
 extern void run(Service *service, void *address);
 extern void resume(Syscall *syscall);
+
+extern void *runEnd;
+
+extern Service *findService(char *);
+extern Provider *findProvider(Service *, char *);
+extern Service *currentService;
 
 #endif

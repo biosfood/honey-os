@@ -35,25 +35,21 @@ void testProvider(void *requestData) {
         ;
 }
 
-void bufferFunction() {}
-
 void syscall(void *callData) {
     Syscall *call = callData;
-    asm("mov %%ebp, %%eax" : "=a"(call->returnEsp));
-    call->returnAddress = &&returnAddress;
-    asm(".intel_syntax noprefix\n"
-        "sysenter\n"
-        ".att_syntax" ::"a"(callData));
+    asm("mov %%ebp, %%eax" : "=a"(call->esp));
+    call->address = &&returnAddress;
+    asm("sysenter\n" ::"a"(callData));
 returnAddress:
-    bufferFunction();
+    asm("nop");
     return;
 }
 
 void makeRequest(char *moduleName, char *functionName) {
     RequestSyscall call = {
-        .id = SYS_REQUEST,
-        .service = moduleName,
-        .request = functionName,
+        .function = SYS_REQUEST,
+        .serviceName = moduleName,
+        .providerName = functionName,
         .data = 0,
     };
     syscall(&call);
@@ -61,7 +57,7 @@ void makeRequest(char *moduleName, char *functionName) {
 
 void installServiceProvider(char *name, void(provider)(void *)) {
     RegisterServiceProviderSyscall call = {
-        .id = SYS_REGISTER_FUNCTION,
+        .function = SYS_REGISTER_FUNCTION,
         .name = name,
         .handler = provider,
     };
@@ -71,10 +67,7 @@ void installServiceProvider(char *name, void(provider)(void *)) {
 void test() { makeRequest("loader", "test"); }
 
 int32_t main() {
-    // writeParallel('I'); // install
     installServiceProvider("test", testProvider);
-    // writeParallel('C'); // call
     test();
-    // writeParallel('E'); // end
     return 0;
 }
