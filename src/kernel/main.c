@@ -28,9 +28,8 @@ void loadAndScheduleLoader(void *multibootInfo) {
     runLoader->service = loader;
     memset(runLoader->esp, 0, 0x1000);
     runLoader->esp += 0xFFC;
-    *(void **)runLoader->esp = runEnd;
+    *(void **)runLoader->esp = &runEnd;
     sharePage(&loader->pagingInfo, runLoader->esp, runLoader->esp);
-
     listAdd(&callsToProcess, runLoader);
 }
 
