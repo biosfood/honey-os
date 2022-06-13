@@ -8,6 +8,8 @@ typedef enum {
     SYS_RUN,
     SYS_REGISTER_FUNCTION,
     SYS_REQUEST,
+    SYS_IO_IN,
+    SYS_IO_OUT,
 } SyscallIds;
 
 typedef struct Syscall {
@@ -32,5 +34,21 @@ typedef struct {
     char *providerName;
     void *data;
 } RequestSyscall;
+
+typedef struct {
+    Syscall;
+    uint16_t port;
+    uint8_t size;
+} IOPortSyscall;
+
+typedef struct {
+    IOPortSyscall;
+    uint32_t result;
+} IOPortInSyscall;
+
+typedef struct {
+    IOPortSyscall;
+    uint32_t value;
+} IOPortOutSyscall;
 
 #endif

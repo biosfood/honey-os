@@ -1,40 +1,6 @@
 #include <stdint.h>
 #include <syscalls.h>
 
-uint8_t inb(uint16_t port) {
-    uint8_t result;
-    __asm__("in %%dx, %%al" : "=a"(result) : "d"(port));
-    return result;
-}
-
-void outb(uint16_t port, uint8_t val) {
-    asm volatile("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
-void writeParallel(unsigned char pData) {
-    unsigned char lControl;
-
-    while (!(inb(0x379) & 0x80)) {
-    }
-    outb(0x378, pData);
-
-    lControl = inb(0x37A);
-    outb(0x37A, lControl | 1);
-    outb(0x37A, lControl);
-    while (!(inb(0x379) & 0x80)) {
-    }
-}
-
-void testProvider(void *requestData) {
-    // writeParallel('t');
-    // writeParallel('e');
-    // writeParallel('s');
-    // writeParallel('t');
-    asm("mov %%eax, %0" ::"r"(0xB105F00D));
-    while (1)
-        ;
-}
-
 void syscall(void *callData) {
     Syscall *call = callData;
     asm("mov %%ebp, %%eax" : "=a"(call->esp));
@@ -43,6 +9,47 @@ void syscall(void *callData) {
 returnAddress:
     asm("nop");
     return;
+}
+
+uint32_t ioIn(uint16_t port, uint8_t size) {
+    IOPortInSyscall call = {
+        .function = SYS_IO_IN,
+        .port = port,
+        .size = size,
+    };
+    syscall(&call);
+    return call.result;
+}
+
+void ioOut(uint16_t port, uint32_t value, uint8_t size) {
+    IOPortOutSyscall call = {
+        .function = SYS_IO_OUT,
+        .port = port,
+        .value = value,
+        .size = size,
+    };
+    syscall(&call);
+}
+
+void writeParallel(uint8_t data) {
+    uint8_t control;
+
+    while (!(ioIn(0x379, sizeof(uint8_t)) & 0x80)) {
+    }
+    ioOut(0x378, data, sizeof(uint8_t));
+
+    control = ioIn(0x37A, sizeof(uint8_t));
+    ioOut(0x37A, control | 1, sizeof(uint8_t));
+    ioOut(0x37A, control, sizeof(uint8_t));
+    while (!(ioIn(0x379, sizeof(uint8_t)) & 0x80)) {
+    }
+}
+
+void testProvider(void *requestData) {
+    writeParallel('t');
+    writeParallel('e');
+    writeParallel('s');
+    writeParallel('t');
 }
 
 void makeRequest(char *moduleName, char *functionName) {

@@ -23,7 +23,7 @@ run: $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
 
 $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	@echo "creating the iso image"
-	dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
+	@dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
 	printf "n\np\n1\n\n\na\nw\n" | fdisk $(IMAGE_FILE) &&\
 	loop0=$$(sudo losetup -f) &&\
 	sudo losetup $$loop0 $(IMAGE_FILE) &&\

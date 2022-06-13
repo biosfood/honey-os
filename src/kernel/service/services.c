@@ -13,18 +13,13 @@ void *mainFunction = NULL;
 
 extern void *functionsStart;
 extern void(runFunction)();
+
 Service *currentService;
-
 ListElement *services, *callsToProcess;
-
-void run(Service *service, void *main) {
-    serviceCR3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
-    mainFunction = main;
-    currentService = service;
-    runFunction();
-}
+Syscall *currentSyscall;
 
 void resume(Syscall *syscall) {
+    currentSyscall = syscall;
     mainFunction = syscall->address;
     serviceESP = syscall->esp;
     currentService = syscall->service;

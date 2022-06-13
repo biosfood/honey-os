@@ -19,7 +19,6 @@ typedef struct {
 } Provider;
 
 extern void loadElf(void *fileData, char *serviceName);
-extern void run(Service *service, void *address);
 extern void resume(Syscall *syscall);
 
 extern void *runEnd;
