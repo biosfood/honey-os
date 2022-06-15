@@ -14,16 +14,19 @@ uint32_t readOctal(char *string) {
     return result;
 }
 
-void *findTarFile(void *fileData, uint32_t fileSize, char *fileName) {
+uint32_t i = 0;
+
+void *findTarFile(void *fileData, uint32_t tarFileSize, char *fileName) {
     void *currentPosition = fileData;
-    while (currentPosition <= fileData + fileSize) {
+    i++;
+    while (currentPosition <= fileData + tarFileSize) {
         TarFileHeader *header = currentPosition;
         uint32_t fileSize = readOctal(header->fileSize);
-        if (!stringEquals(header->fileName, fileName)) {
-            currentPosition += 512 * (SECTOR_COUNT(fileSize) + 1);
-            continue;
+        if (stringEquals(header->fileName, fileName)) {
+            return currentPosition + 512;
         }
-        return currentPosition + 512;
+        // fixme!
+        currentPosition += 512;
     }
     return NULL;
 }

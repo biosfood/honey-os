@@ -33,7 +33,7 @@ void *mapTemporary(void *physical) {
     kernelDataPageTable[3].writable = 1;
     kernelDataPageTable[3].present = 1;
     invalidatePage(0xFF803);
-    return temporaryPage;
+    return temporaryPage + (U32(physical) & 0xFFF);
 }
 
 void *getPhysicalAddress(PageDirectoryEntry *pageDirectory, void *address) {
@@ -133,7 +133,13 @@ void *kernelMapMultiplePhysicalPages(void *address, uint32_t size) {
 }
 
 void *kernelMapPhysical(void *address) {
-    return kernelMapMultiplePhysicalPages(address, 1);
+    uint32_t physicalPageId = U32(address) >> 12;
+    reservePage(kernelPhysicalPages, physicalPageId);
+    uint32_t virtualPageId = findPage(kernelVirtualPages);
+    reservePage(kernelVirtualPages, virtualPageId);
+    mapPage(kernelVirtualPages, PTR(physicalPageId << 12),
+            PTR(virtualPageId << 12), false);
+    return PTR((virtualPageId << 12) + (U32(address) & 0xFFF));
 }
 
 void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage) {

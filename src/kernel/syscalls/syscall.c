@@ -26,23 +26,31 @@ void handleSyscall(void *cr3, Syscall *callData) {
         }
         asm("jmp runEndSyscall");
     }
+    Service *service = currentSyscall->service;
     void *dataPhysical =
-        getPhysicalAddress(currentService->pagingInfo.pageDirectory, callData);
-    Syscall *data = kernelMapPhysical(dataPhysical);
-    data->cr3 = cr3;
-    data->service = currentService;
-    listAdd(&callsToProcess, data);
+        getPhysicalAddress(service->pagingInfo.pageDirectory, callData);
+    Syscall *call = malloc(sizeof(RequestSyscall));
+    void *data = mapTemporary(dataPhysical);
+    memcpy(data, call, sizeof(RequestSyscall));
+    call->cr3 = cr3;
+    call->service = currentSyscall->service;
+    call->writeBack = dataPhysical;
+    if (!call->respondingTo) {
+        call->respondingTo = currentSyscall->respondingTo;
+    }
+    if (!call->address) {
+        asm("hlt" ::"a"(call), "b"(dataPhysical));
+    }
+    listAdd(&callsToProcess, call);
     asm("jmp runEndSyscall");
 }
 
 void *syscallStubPtr = syscallStub;
-void *syscallStubPointer = &syscallStubPtr;
 
 void setupSyscalls() {
     writeMsrRegister(0x174, PTR(0x08));               // code segment register
-    writeMsrRegister(0x175, malloc(0x1000) + 0x1000); // hadler stack
+    writeMsrRegister(0x175, malloc(0x1000) + 0x1000); // handler stack
     writeMsrRegister(0x176, syscallStubPtr);          // the handler
-    return;
 }
 
 void handleInstallSyscall(RegisterServiceProviderSyscall *call) {
@@ -54,12 +62,9 @@ void handleInstallSyscall(RegisterServiceProviderSyscall *call) {
     provider->address = call->handler;
     provider->service = call->service;
     listAdd(&service->providers, provider);
-    call->resume = true;
-    listAdd(&callsToProcess, call);
 }
 
 void handleRequestSyscall(RequestSyscall *call) {
-    call->resume = true;
     Service *service = call->service;
     char *serviceName = kernelMapPhysical(getPhysicalAddress(
         service->pagingInfo.pageDirectory, call->serviceName));
@@ -80,6 +85,7 @@ void handleRequestSyscall(RequestSyscall *call) {
     runCall->esp += 0xFFC;
     *(void **)runCall->esp = &runEnd;
     listAdd(&callsToProcess, runCall);
+    call->avoidReschedule = true;
 }
 
 void handleIOInSyscall(IOPortInSyscall *call) {
@@ -94,8 +100,6 @@ void handleIOInSyscall(IOPortInSyscall *call) {
         asm("in %%dx, %%eax" : "=a"(call->result) : "d"(call->port));
         break;
     }
-    call->resume = true;
-    listAdd(&callsToProcess, call);
 }
 
 void handleIOOutSyscall(IOPortOutSyscall *call) {
@@ -110,8 +114,16 @@ void handleIOOutSyscall(IOPortOutSyscall *call) {
         asm("out %0, %1" : : "a"((uint32_t)call->value), "Nd"(call->port));
         break;
     }
-    call->resume = true;
-    listAdd(&callsToProcess, call);
+}
+
+extern Syscall *loadInitrdProgram(char *name, Syscall *respondingTo);
+
+void handleLoadFromInitrdSyscall(LoadFromInitrdSyscall *call) {
+    Service *service = call->service;
+    char *programName = kernelMapPhysical(getPhysicalAddress(
+        service->pagingInfo.pageDirectory, call->programName));
+    loadInitrdProgram(programName, (void *)call);
+    call->avoidReschedule = true;
 }
 
 void (*syscallHandlers[])(Syscall *) = {
@@ -120,4 +132,5 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)handleRequestSyscall,
     (void *)handleIOInSyscall,
     (void *)handleIOOutSyscall,
+    (void *)handleLoadFromInitrdSyscall,
 };
