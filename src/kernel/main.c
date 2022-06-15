@@ -9,28 +9,40 @@
 extern ListElement *callsToProcess;
 extern void (*syscallHandlers[])(Syscall *);
 
+void *initrd;
+uint32_t initrdSize;
+
+Syscall *loadInitrdProgram(char *name, Syscall *respondingTo) {
+    char *fileName = combineStrings("initrd/", name);
+    void *elfData = findTarFile(initrd, initrdSize, fileName);
+    free(fileName);
+    loadElf(elfData, name);
+
+    Service *service = findService(name);
+    Provider *provider = findProvider(service, "main");
+    Syscall *runTask = malloc(sizeof(Syscall));
+    runTask->function = SYS_RUN;
+    runTask->address = provider->address;
+    runTask->resume = true;
+    runTask->cr3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
+    runTask->esp = malloc(0x1000);
+    runTask->respondingTo = respondingTo;
+    runTask->service = service;
+    memset(runTask->esp, 0, 0x1000);
+    runTask->esp += 0xFFC;
+    *(void **)runTask->esp = &runEnd;
+    sharePage(&service->pagingInfo, runTask->esp, runTask->esp);
+    listAdd(&callsToProcess, runTask);
+    if (!runTask->address) {
+        asm("hlt" ::"a"(runTask), "b"(provider), "c"(service), "d"(elfData));
+    }
+    return runTask;
+}
+
 void loadAndScheduleLoader(void *multibootInfo) {
     void *address = kernelMapMultiplePhysicalPages(multibootInfo, 4);
-    uint32_t tarSize = 0;
-    void *initrd = findInitrd(address, &tarSize);
-    void *loaderProgram = findTarFile(initrd, tarSize, "initrd/loader");
-    loadElf(loaderProgram, "loader");
-
-    Service *loader = findService("loader");
-    Provider *provider = findProvider(loader, "main");
-    Syscall *runLoader = malloc(sizeof(Syscall));
-    runLoader->function = SYS_RUN;
-    runLoader->address = provider->address;
-    runLoader->resume = true;
-    runLoader->cr3 = getPhysicalAddressKernel(loader->pagingInfo.pageDirectory);
-    runLoader->esp = malloc(0x1000);
-    runLoader->respondingTo = NULL;
-    runLoader->service = loader;
-    memset(runLoader->esp, 0, 0x1000);
-    runLoader->esp += 0xFFC;
-    *(void **)runLoader->esp = &runEnd;
-    sharePage(&loader->pagingInfo, runLoader->esp, runLoader->esp);
-    listAdd(&callsToProcess, runLoader);
+    initrd = findInitrd(address, &initrdSize);
+    loadInitrdProgram("loader", NULL);
 }
 
 void kernelMain(void *multibootInfo) {
@@ -52,6 +64,12 @@ void kernelMain(void *multibootInfo) {
         void (*handler)(Syscall *) = syscallHandlers[call->function];
         if (handler) {
             handler(call);
+        }
+        call->resume = true;
+        if (!call->avoidReschedule) {
+            listAdd(&callsToProcess, call);
+            void *temporary = mapTemporary(call->writeBack);
+            memcpy(call, temporary, sizeof(IOPortInSyscall));
         }
     }
 }

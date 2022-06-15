@@ -5,25 +5,17 @@
 #include <syscalls.h>
 #include <util.h>
 
-extern void *kernelCodePageTable;
-
-void *serviceCR3 = 0;
-void *serviceESP = 0;
-void *mainFunction = NULL;
-
 extern void *functionsStart;
 extern void(runFunction)();
 
-Service *currentService;
 ListElement *services, *callsToProcess;
 Syscall *currentSyscall;
 
 void resume(Syscall *syscall) {
     currentSyscall = syscall;
-    mainFunction = syscall->address;
-    serviceESP = syscall->esp;
-    currentService = syscall->service;
-    serviceCR3 = syscall->cr3;
+    if (!syscall->address) {
+        asm("hlt" ::"a"(syscall));
+    }
     runFunction();
 }
 

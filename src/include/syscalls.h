@@ -5,11 +5,12 @@
 #include <stdint.h>
 
 typedef enum {
-    SYS_RUN,
-    SYS_REGISTER_FUNCTION,
-    SYS_REQUEST,
-    SYS_IO_IN,
-    SYS_IO_OUT,
+    SYS_RUN = 0,
+    SYS_REGISTER_FUNCTION = 1,
+    SYS_REQUEST = 2,
+    SYS_IO_IN = 3,
+    SYS_IO_OUT = 4,
+    SYS_LOAD_INITRD = 5,
 } SyscallIds;
 
 typedef struct Syscall {
@@ -20,6 +21,8 @@ typedef struct Syscall {
     struct Syscall *respondingTo;
     void *service;
     bool resume;
+    bool avoidReschedule;
+    struct Syscall *writeBack;
 } Syscall;
 
 typedef struct {
@@ -32,6 +35,7 @@ typedef struct {
     Syscall;
     char *serviceName;
     char *providerName;
+    uint32_t dataSize;
     void *data;
 } RequestSyscall;
 
@@ -50,5 +54,10 @@ typedef struct {
     IOPortSyscall;
     uint32_t value;
 } IOPortOutSyscall;
+
+typedef struct {
+    Syscall;
+    char *programName;
+} LoadFromInitrdSyscall;
 
 #endif

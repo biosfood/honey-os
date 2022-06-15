@@ -14,6 +14,9 @@
 #define PAGE_COUNT(x) (((x - 1) / 4096) + 1)
 
 extern bool stringEquals(char *string1, char *string2);
+extern char *combineStrings(char *string1, char *string2);
+extern uint32_t strlen(char *string);
+
 extern void memcpy(void *source, void *destination, uint32_t size);
 
 typedef struct ListElement {

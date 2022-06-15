@@ -4,9 +4,7 @@ global runFunction
 global runEnd
 global runEndSyscall
 
-extern serviceCR3
-extern serviceESP
-extern mainFunction
+extern currentSyscall
 
 temporaryESP: resb 4
 
@@ -14,10 +12,11 @@ runFunction:
   push ebp
   mov eax, esp
   mov [temporaryESP], eax
-  mov ecx, [serviceESP]
+  mov ebx, [currentSyscall]
+  mov ecx, [ebx + 8]
   mov ebp, ecx
-  mov edx, [mainFunction]
-  mov eax, [serviceCR3]
+  mov edx, [ebx + 4]
+  mov eax, [ebx + 12]
   mov cr3, eax
   sysexit
 runEnd:
