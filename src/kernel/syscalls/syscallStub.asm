@@ -3,16 +3,23 @@ bits 32
 
 global syscallStub
 extern handleSyscall
+extern temporaryESP
+
+temporaryEAX: resb 4
 
 syscallStub:
-  mov ebx, cr3
-  mov ecx, 0x500000
-  mov cr3, ecx
-  push eax
+  mov [temporaryEAX], eax
+  mov eax, 0x500000
+  mov cr3, eax
+  mov eax, [temporaryEAX]
+  push esi
+  push edx
+  push ecx
   push ebx
+  push eax
+  push edi
   call handleSyscall
-  pop ebx
-  mov edx, [eax+4]
-  mov ecx, [eax+8]
-  mov cr3, ebx
-  sysexit
+  mov eax, [temporaryESP]
+  mov esp, eax
+  pop ebp
+  ret
