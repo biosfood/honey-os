@@ -5,7 +5,6 @@
 #include <syscalls.h>
 #include <util.h>
 
-extern void *runEndSyscall;
 extern ListElement *callsToProcess;
 extern void(syscallStub)();
 extern Syscall *currentSyscall;
@@ -19,30 +18,30 @@ void writeMsrRegister(uint32_t reg, void *value) {
           0); // when transitioning to 64 bit: U32(value) >> 32);
 }
 
-void handleSyscall(void *cr3, Syscall *callData) {
-    if (!callData) {
+void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
+                   uint32_t parameter1, uint32_t parameter2,
+                   uint32_t parameter3) {
+    if (!function) {
         if (currentSyscall->respondingTo) {
             listAdd(&callsToProcess, currentSyscall->respondingTo);
         }
-        asm("jmp runEndSyscall");
+        return;
     }
-    Service *service = currentSyscall->service;
-    void *dataPhysical =
-        getPhysicalAddress(service->pagingInfo.pageDirectory, callData);
-    Syscall *call = malloc(sizeof(RequestSyscall));
-    void *data = mapTemporary(dataPhysical);
-    memcpy(data, call, sizeof(RequestSyscall));
-    call->cr3 = cr3;
+    Syscall *call = malloc(sizeof(Syscall));
+    call->function = function;
+    call->parameters[0] = parameter0;
+    call->parameters[1] = parameter1;
+    call->parameters[2] = parameter2;
+    call->parameters[3] = parameter3;
     call->service = currentSyscall->service;
-    call->writeBack = dataPhysical;
+    call->esp = esp;
     if (!call->respondingTo) {
         call->respondingTo = currentSyscall->respondingTo;
     }
-    if (!call->address) {
-        asm("hlt" ::"a"(call), "b"(dataPhysical));
-    }
+    Service *currentService = currentSyscall->service;
+    call->cr3 =
+        getPhysicalAddressKernel(currentService->pagingInfo.pageDirectory);
     listAdd(&callsToProcess, call);
-    asm("jmp runEndSyscall");
 }
 
 void *syscallStubPtr = syscallStub;
@@ -53,28 +52,33 @@ void setupSyscalls() {
     writeMsrRegister(0x176, syscallStubPtr);          // the handler
 }
 
-void handleInstallSyscall(RegisterServiceProviderSyscall *call) {
+void handleInstallSyscall(Syscall *call) {
     Provider *provider = malloc(sizeof(Provider));
     Service *service = call->service;
-    char *providerName = kernelMapPhysical(
-        getPhysicalAddress(service->pagingInfo.pageDirectory, call->name));
+    char *providerName = kernelMapPhysical(getPhysicalAddress(
+        service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
     provider->name = providerName;
-    provider->address = call->handler;
+    provider->address = PTR(call->parameters[1]);
     provider->service = call->service;
     listAdd(&service->providers, provider);
 }
 
-void handleRequestSyscall(RequestSyscall *call) {
+void *listGet(ListElement *list, uint32_t position) {
+    for (uint32_t i = 0; i < position; i++) {
+        list = list->next;
+    }
+    return list->data;
+}
+
+extern ListElement *services;
+
+void handleRequestSyscall(Syscall *call) {
     Service *service = call->service;
-    char *serviceName = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, call->serviceName));
-    Service *providerService = findService(serviceName);
-    char *providerName = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, call->providerName));
-    Provider *callProvider = findProvider(providerService, providerName);
+    Service *providerService = listGet(services, call->parameters[0]);
+    Provider *provider =
+        listGet(providerService->providers, call->parameters[1]);
     Syscall *runCall = malloc(sizeof(Syscall));
     runCall->function = SYS_RUN;
-    runCall->address = callProvider->address;
     runCall->esp = malloc(0x1000);
     runCall->respondingTo = (void *)call;
     runCall->cr3 =
@@ -82,48 +86,92 @@ void handleRequestSyscall(RequestSyscall *call) {
     runCall->service = providerService;
     runCall->resume = true;
     sharePage(&providerService->pagingInfo, runCall->esp, runCall->esp);
-    runCall->esp += 0xFFC;
-    *(void **)runCall->esp = &runEnd;
+    runCall->esp += 0xFF8;
+    *(void **)runCall->esp = provider->address;
+    *(void **)(runCall->esp + 4) = &runEnd;
     listAdd(&callsToProcess, runCall);
     call->avoidReschedule = true;
 }
 
-void handleIOInSyscall(IOPortInSyscall *call) {
-    switch (call->size) {
+void handleIOInSyscall(Syscall *call) {
+    switch (call->parameters[0]) {
     case 1:
-        asm("in %%dx, %%al" : "=a"(call->result) : "d"(call->port));
+        asm("in %%dx, %%al"
+            : "=a"(call->returnValue)
+            : "d"(call->parameters[1]));
         break;
     case 2:
-        asm("in %%dx, %%ax" : "=a"(call->result) : "d"(call->port));
+        asm("in %%dx, %%ax"
+            : "=a"(call->returnValue)
+            : "d"(call->parameters[1]));
         break;
     case 4:
-        asm("in %%dx, %%eax" : "=a"(call->result) : "d"(call->port));
+        asm("in %%dx, %%eax"
+            : "=a"(call->returnValue)
+            : "d"(call->parameters[1]));
         break;
     }
 }
 
-void handleIOOutSyscall(IOPortOutSyscall *call) {
-    switch (call->size) {
+void handleIOOutSyscall(Syscall *call) {
+    switch (call->parameters[0]) {
     case 1:
-        asm("out %0, %1" : : "a"((uint8_t)call->value), "Nd"(call->port));
+        asm("out %0, %1"
+            :
+            : "a"((uint8_t)call->parameters[2]), "Nd"(call->parameters[1]));
         break;
     case 2:
-        asm("out %0, %1" : : "a"((uint16_t)call->value), "Nd"(call->port));
+        asm("out %0, %1"
+            :
+            : "a"((uint16_t)call->parameters[2]), "Nd"(call->parameters[1]));
         break;
     case 4:
-        asm("out %0, %1" : : "a"((uint32_t)call->value), "Nd"(call->port));
+        asm("out %0, %1"
+            :
+            : "a"((uint32_t)call->parameters[2]), "Nd"(call->parameters[1]));
         break;
     }
 }
 
 extern Syscall *loadInitrdProgram(char *name, Syscall *respondingTo);
 
-void handleLoadFromInitrdSyscall(LoadFromInitrdSyscall *call) {
+void handleLoadFromInitrdSyscall(Syscall *call) {
     Service *service = call->service;
     char *programName = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, call->programName));
+        service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
     loadInitrdProgram(programName, (void *)call);
     call->avoidReschedule = true;
+}
+
+void handleGetServiceSyscall(Syscall *call) {
+    uint32_t i = 0;
+    Service *callService = call->service;
+    char *name = kernelMapPhysical(getPhysicalAddress(
+        callService->pagingInfo.pageDirectory, PTR(call->parameters[0])));
+    foreach (services, Service *, service, {
+        if (stringEquals(service->name, name)) {
+            call->returnValue = i;
+            return;
+        }
+        i++;
+    })
+        ;
+}
+
+void handleGetProviderSyscall(Syscall *call) {
+    uint32_t i = 0;
+    Service *callService = call->service;
+    char *name = kernelMapPhysical(getPhysicalAddress(
+        callService->pagingInfo.pageDirectory, PTR(call->parameters[1])));
+    Service *providerService = listGet(services, call->parameters[0]);
+    foreach (providerService->providers, Provider *, provider, {
+        if (stringEquals(provider->name, name)) {
+            call->returnValue = i;
+            return;
+        }
+        i++;
+    })
+        ;
 }
 
 void (*syscallHandlers[])(Syscall *) = {
@@ -133,4 +181,6 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)handleIOInSyscall,
     (void *)handleIOOutSyscall,
     (void *)handleLoadFromInitrdSyscall,
+    (void *)handleGetServiceSyscall,
+    (void *)handleGetProviderSyscall,
 };

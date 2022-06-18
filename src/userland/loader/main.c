@@ -1,45 +1,30 @@
 #include <stdint.h>
 #include <syscalls.h>
 
-void syscall(void *callData) {
-    Syscall *call = callData;
-    call->respondingTo = 0;
-    call->resume = false;
-    asm("mov %%ebp, %%eax" : "=a"(call->esp));
-    call->address = &&returnAddress;
-    asm("sysenter\n" ::"a"(callData));
-returnAddress:
-    asm("nop");
-    return;
+#define PTR(x) ((void *)(uintptr_t)x)
+#define U32(x) ((uint32_t)(uintptr_t)x)
+
+uint32_t syscall(uint32_t function, uint32_t parameter0, uint32_t parameter1,
+                 uint32_t parameter2, uint32_t parameter3) {
+    uint32_t esp, result;
+    asm("push %%eax" ::"a"(&&end));
+    asm("mov %%esp, %%eax" : "=a"(esp));
+    asm("sysenter\n"
+        :
+        : "a"(function), "b"(parameter0), "c"(parameter1), "d"(parameter2),
+          "S"(parameter3), "D"(esp));
+end:
+    // eax is set by the kernel as the return value
+    asm("nop" : "=a"(result));
+    return result;
 }
 
-void makeRequest(char *moduleName, char *functionName, void *data,
-                 uint32_t size) {
-    RequestSyscall call = {
-        .function = SYS_REQUEST,
-        .serviceName = moduleName,
-        .providerName = functionName,
-        .data = data,
-        .dataSize = size,
-    };
-    syscall(&call);
+void request(uint32_t module, uint32_t function, void *data, uint32_t size) {
+    syscall(SYS_REQUEST, module, function, U32(data), size);
 }
 
 void installServiceProvider(char *name, void(provider)(void *)) {
-    RegisterServiceProviderSyscall call = {
-        .function = SYS_REGISTER_FUNCTION,
-        .name = name,
-        .handler = provider,
-    };
-    syscall(&call);
-}
-
-void loadFromInitrd(char *name) {
-    LoadFromInitrdSyscall call = {
-        .function = SYS_LOAD_INITRD,
-        .programName = name,
-    };
-    syscall(&call);
+    syscall(SYS_REGISTER_FUNCTION, U32(name), U32(provider), 0, 0);
 }
 
 uint32_t strlen(char *string) {
@@ -51,7 +36,23 @@ uint32_t strlen(char *string) {
     return size;
 }
 
-void log(char *message) { makeRequest("log", "log", message, strlen(message)); }
+uint32_t getModule(char *name) {
+    return syscall(SYS_GET_SERVICE, U32(name), strlen(name), 0, 0);
+}
+
+uint32_t getProvider(uint32_t module, char *name) {
+    return syscall(SYS_GET_PROVIDER, module, U32(name), strlen(name), 0);
+}
+
+void loadFromInitrd(char *name) {
+    syscall(SYS_LOAD_INITRD, U32(name), strlen(name), 0, 0);
+}
+
+void log(char *message) {
+    uint32_t module = getModule("log");
+    uint32_t provider = getProvider(module, "log");
+    request(module, provider, message, strlen(message));
+}
 
 int32_t main() {
     loadFromInitrd("log");

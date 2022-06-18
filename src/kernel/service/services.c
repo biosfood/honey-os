@@ -13,9 +13,6 @@ Syscall *currentSyscall;
 
 void resume(Syscall *syscall) {
     currentSyscall = syscall;
-    if (!syscall->address) {
-        asm("hlt" ::"a"(syscall));
-    }
     runFunction();
 }
 

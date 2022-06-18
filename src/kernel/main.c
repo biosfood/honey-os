@@ -22,20 +22,17 @@ Syscall *loadInitrdProgram(char *name, Syscall *respondingTo) {
     Provider *provider = findProvider(service, "main");
     Syscall *runTask = malloc(sizeof(Syscall));
     runTask->function = SYS_RUN;
-    runTask->address = provider->address;
     runTask->resume = true;
     runTask->cr3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
     runTask->esp = malloc(0x1000);
     runTask->respondingTo = respondingTo;
     runTask->service = service;
     memset(runTask->esp, 0, 0x1000);
-    runTask->esp += 0xFFC;
-    *(void **)runTask->esp = &runEnd;
+    runTask->esp += 0xFF8;
+    *(void **)runTask->esp = provider->address;
+    *(void **)(runTask->esp + 4) = &runEnd;
     sharePage(&service->pagingInfo, runTask->esp, runTask->esp);
     listAdd(&callsToProcess, runTask);
-    if (!runTask->address) {
-        asm("hlt" ::"a"(runTask), "b"(provider), "c"(service), "d"(elfData));
-    }
     return runTask;
 }
 
@@ -68,8 +65,6 @@ void kernelMain(void *multibootInfo) {
         call->resume = true;
         if (!call->avoidReschedule) {
             listAdd(&callsToProcess, call);
-            void *temporary = mapTemporary(call->writeBack);
-            memcpy(call, temporary, sizeof(IOPortInSyscall));
         }
     }
 }

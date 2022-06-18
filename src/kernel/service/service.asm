@@ -2,7 +2,7 @@ section .sharedFunctions
 
 global runFunction
 global runEnd
-global runEndSyscall
+global temporaryESP
 
 extern currentSyscall
 
@@ -13,17 +13,17 @@ runFunction:
   mov eax, esp
   mov [temporaryESP], eax
   mov ebx, [currentSyscall]
-  mov ecx, [ebx + 8]
+  mov ecx, [ebx + 24]
   mov ebp, ecx
-  mov edx, [ebx + 4]
-  mov eax, [ebx + 12]
+  mov edx, returnPoint
+  mov eax, [ebx + 28]
+  mov ebx, [ebx + 20]
   mov cr3, eax
+  mov eax, ebx
   sysexit
 runEnd:
   mov eax, 0
   sysenter
-runEndSyscall:
-  mov eax, [temporaryESP]
-  mov esp, eax
-  pop ebp
+
+returnPoint:
   ret

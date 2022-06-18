@@ -15,7 +15,9 @@ void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
         block->allocatedCoarse &= ~(1 << coarse);
         break;
     }
-    return ((uint8_t *)block) + block->blockSize * (32 * coarse + fine);
+    void *result = ((uint8_t *)block) + block->blockSize * (32 * coarse + fine);
+    memset(result, 0, block->blockSize);
+    return result;
 }
 
 void *malloc(uint32_t size) {
