@@ -2,7 +2,7 @@
 #define SERVICE_H
 
 #include <memory.h>
-#include <syscalls.h>
+#include <syscall.h>
 #include <util.h>
 
 typedef struct {

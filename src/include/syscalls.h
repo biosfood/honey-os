@@ -15,16 +15,4 @@ typedef enum {
     SYS_GET_PROVIDER = 7,
 } SyscallIds;
 
-typedef struct Syscall {
-    uint32_t function;
-    uint32_t parameters[4];
-    uint32_t returnValue;
-    void *esp;
-    void *cr3;
-    struct Syscall *respondingTo;
-    void *service;
-    bool resume;
-    bool avoidReschedule;
-} Syscall;
-
 #endif

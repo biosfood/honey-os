@@ -14,7 +14,6 @@ runFunction:
   mov [temporaryESP], eax
   mov ebx, [currentSyscall]
   mov ecx, [ebx + 24]
-  mov ebp, ecx
   mov edx, returnPoint
   mov eax, [ebx + 28]
   mov ebx, [ebx + 20]

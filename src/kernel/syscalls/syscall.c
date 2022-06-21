@@ -18,10 +18,18 @@ void writeMsrRegister(uint32_t reg, void *value) {
           0); // when transitioning to 64 bit: U32(value) >> 32);
 }
 
+uint32_t n = 0;
+
 void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
                    uint32_t parameter1, uint32_t parameter2,
                    uint32_t parameter3) {
     if (!function) {
+        if (n++ == 5) {
+            asm("nop" ::"a"(function), "b"(currentSyscall),
+                "c"(currentSyscall->respondingTo));
+            while (1)
+                ;
+        }
         if (currentSyscall->respondingTo) {
             listAdd(&callsToProcess, currentSyscall->respondingTo);
         }
@@ -35,8 +43,12 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
     call->parameters[3] = parameter3;
     call->service = currentSyscall->service;
     call->esp = esp;
-    if (!call->respondingTo) {
-        call->respondingTo = currentSyscall->respondingTo;
+    call->respondingTo = currentSyscall->respondingTo;
+    if (call->respondingTo->service == currentSyscall->service) {
+        asm("nop" ::"a"(currentSyscall), "b"(call),
+            "c"(currentSyscall->respondingTo), "d"(0xB105F00D));
+        while (1)
+            ;
     }
     Service *currentService = currentSyscall->service;
     call->cr3 =
@@ -77,18 +89,23 @@ void handleRequestSyscall(Syscall *call) {
     Service *providerService = listGet(services, call->parameters[0]);
     Provider *provider =
         listGet(providerService->providers, call->parameters[1]);
+    void *data = kernelMapPhysical(getPhysicalAddress(
+        service->pagingInfo.pageDirectory, PTR(call->parameters[2])));
+    sharePage(&providerService->pagingInfo, data, data);
     Syscall *runCall = malloc(sizeof(Syscall));
     runCall->function = SYS_RUN;
     runCall->esp = malloc(0x1000);
-    runCall->respondingTo = (void *)call;
+    runCall->respondingTo = call;
     runCall->cr3 =
         getPhysicalAddressKernel(providerService->pagingInfo.pageDirectory);
     runCall->service = providerService;
     runCall->resume = true;
     sharePage(&providerService->pagingInfo, runCall->esp, runCall->esp);
-    runCall->esp += 0xFF8;
+    runCall->esp += 0xFF0;
     *(void **)runCall->esp = provider->address;
-    *(void **)(runCall->esp + 4) = &runEnd;
+    *(void **)(runCall->esp + 0x4) = &runEnd;
+    *(void **)(runCall->esp + 0x8) = data;
+    *(uint32_t *)(runCall->esp + 0xC) = call->parameters[3];
     listAdd(&callsToProcess, runCall);
     call->avoidReschedule = true;
 }

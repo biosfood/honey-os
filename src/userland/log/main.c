@@ -6,7 +6,7 @@
 
 uint32_t syscall(uint32_t function, uint32_t parameter0, uint32_t parameter1,
                  uint32_t parameter2, uint32_t parameter3) {
-    uint32_t esp, result;
+    uint32_t esp;
     asm("push %%eax" ::"a"(&&end));
     asm("mov %%esp, %%eax" : "=a"(esp));
     asm("sysenter\n"
@@ -15,11 +15,16 @@ uint32_t syscall(uint32_t function, uint32_t parameter0, uint32_t parameter1,
           "S"(parameter3), "D"(esp));
 // eax is set by the kernel as the return value
 end:
-    asm("nop" : "=a"(result));
-    return result;
+    // the 0x1C comes from the number of parameters / local variables do handle
+    // this function with care or it will break everything
+    asm("add $0x1C, %%esp\n"
+        "pop %%ebp\n"
+        "ret" ::);
+    // don't go here! ret returns with the correct value
+    return 0;
 }
 
-void installServiceProvider(char *name, void(provider)(void *)) {
+void installServiceProvider(char *name, void(provider)(void *, uint32_t)) {
     syscall(SYS_REGISTER_FUNCTION, U32(name), U32(provider), 0, 0);
 }
 
@@ -53,10 +58,13 @@ void writeParallel(uint8_t data) {
     }
 }
 
-void log(void *requestData) {
-    writeParallel('l');
-    writeParallel('o');
-    writeParallel('g');
+void log(void *data, uint32_t dataLength) {
+    char *string = data, dump;
+    for (uint32_t i = 0; i < dataLength; i++) {
+        writeParallel(string[i]);
+    }
+    writeParallel('\r');
+    writeParallel('\n');
 }
 
 int32_t main() {
