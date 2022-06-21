@@ -56,6 +56,7 @@ void kernelMain(void *multibootInfo) {
         }
         if (call->resume) {
             resume(call);
+            free(call);
             continue;
         }
         void (*handler)(Syscall *) = syscallHandlers[call->function];

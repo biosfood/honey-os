@@ -20,7 +20,9 @@ void *listPopFirst(ListElement **list) {
     if (!*list) {
         return NULL;
     }
-    void *result = (*list)->data;
+    ListElement *resultElement = *list;
+    void *result = resultElement->data;
     *list = (*list)->next;
+    free(resultElement);
     return result;
 }
