@@ -12,6 +12,9 @@ ListElement *services, *callsToProcess;
 Syscall *currentSyscall;
 
 void resume(Syscall *syscall) {
+    if (U32(syscall) < 0x1000) {
+        asm("hlt" ::"a"(syscall));
+    }
     currentSyscall = syscall;
     runFunction();
 }
@@ -27,9 +30,7 @@ void loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     // todo: make this unwritable!
-    // todo: use functionsStart as the reference
-    sharePage(&(service->pagingInfo), PTR(0xFFC02000),
-              PTR(0xFFC02000)); // functionsStart, functionsStart);
+    sharePage(&(service->pagingInfo), &functionsStart, &functionsStart);
     for (uint32_t i = 0; i < header->programHeaderEntryCount; i++) {
         for (uint32_t page = 0; page < programHeader->segmentMemorySize;
              page += 0x1000) {
