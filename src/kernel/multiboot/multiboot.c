@@ -10,7 +10,7 @@ void *findInitrd(MultibootInformation *information, uint32_t *fileSize) {
                          "initrd")) {
             MultibootModuleTag *module = (void *)tag;
             uint32_t moduleSize = module->moduleEnd - module->moduleStart;
-            void *moduleLocation = kernelMapMultiplePhysicalPages(
+            void *moduleLocation = kernelMapPhysicalCount(
                 PTR(module->moduleStart), PAGE_COUNT(moduleSize));
             *fileSize = moduleSize;
             return moduleLocation;

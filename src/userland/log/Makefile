@@ -10,7 +10,7 @@ BUILD_FOLDER = build
 SOURCE_FILES := $(shell find . -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 
-../../../initrd/loader: $(OBJS)
+../../../initrd/log: $(OBJS)
 	@echo "linking user program log"
 	@$(LD) $(LD_FLAGS) -o ../../../initrd/log $(OBJS)
 

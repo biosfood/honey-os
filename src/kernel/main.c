@@ -37,7 +37,7 @@ Syscall *loadInitrdProgram(char *name, Syscall *respondingTo) {
 }
 
 void loadAndScheduleLoader(void *multibootInfo) {
-    void *address = kernelMapMultiplePhysicalPages(multibootInfo, 4);
+    void *address = kernelMapPhysicalCount(multibootInfo, 4);
     initrd = findInitrd(address, &initrdSize);
     loadInitrdProgram("loader", NULL);
 }

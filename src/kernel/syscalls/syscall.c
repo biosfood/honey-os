@@ -24,12 +24,6 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
                    uint32_t parameter1, uint32_t parameter2,
                    uint32_t parameter3) {
     if (!function) {
-        if (n++ == 5) {
-            asm("nop" ::"a"(function), "b"(currentSyscall),
-                "c"(currentSyscall->respondingTo));
-            while (1)
-                ;
-        }
         if (currentSyscall->respondingTo) {
             listAdd(&callsToProcess, currentSyscall->respondingTo);
         }
@@ -44,7 +38,8 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
     call->service = currentSyscall->service;
     call->esp = esp;
     call->respondingTo = currentSyscall->respondingTo;
-    if (call->respondingTo->service == currentSyscall->service) {
+    if (call->respondingTo &&
+        call->respondingTo->service == currentSyscall->service) {
         asm("nop" ::"a"(currentSyscall), "b"(call),
             "c"(currentSyscall->respondingTo), "d"(0xB105F00D));
         while (1)

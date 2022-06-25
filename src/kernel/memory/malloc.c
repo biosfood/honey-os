@@ -23,7 +23,7 @@ void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
 void *malloc(uint32_t size) {
     uint32_t sizeBit = LOG2(size) + 1;
     if (sizeBit > 10) {
-        return getMultiplePages(((size - 1) >> 12) + 1);
+        return getPagesCount(((size - 1) >> 12) + 1);
     }
     AllocationBlock *block = allocationData[sizeBit], *last = 0;
     while (1) {
@@ -60,7 +60,7 @@ void *malloc(uint32_t size) {
 void free(void *location) {
     AllocationBlock *block = (void *)((uintptr_t)location & ~0xFFF);
     if (block->magic != ALLOCATION_MAGIC) {
-        // freePage(location);
+        freePage(location);
         return;
     }
     uint16_t index = (uint16_t)((uintptr_t)location & 0xFFF) / block->blockSize;
