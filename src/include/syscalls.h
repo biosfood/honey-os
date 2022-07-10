@@ -13,6 +13,7 @@ typedef enum {
     SYS_LOAD_INITRD = 5,
     SYS_GET_SERVICE = 6,
     SYS_GET_PROVIDER = 7,
+    SYS_INTERRUPT = 8,
 } SyscallIds;
 
 #endif

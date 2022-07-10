@@ -6,6 +6,7 @@
 #include <util.h>
 
 extern void *functionsStart;
+extern void *functionsEnd;
 extern void(runFunction)();
 
 ListElement *services, *callsToProcess;
@@ -29,8 +30,12 @@ void loadElf(void *elfStart, char *serviceName) {
     memset(service, 0, sizeof(Service));
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
-    // todo: make this unwritable!
-    sharePage(&(service->pagingInfo), &functionsStart, &functionsStart);
+    void *current = &functionsStart;
+    while (current <= (void *)&functionsEnd) {
+        // todo: make this unwritable!
+        sharePage(&(service->pagingInfo), current, current);
+        current += 0x1000;
+    }
     for (uint32_t i = 0; i < header->programHeaderEntryCount; i++) {
         for (uint32_t page = 0; page < programHeader->segmentMemorySize;
              page += 0x1000) {
