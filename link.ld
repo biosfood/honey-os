@@ -18,7 +18,7 @@ SECTIONS {
     .sharedFunctions : AT(ADDR(.sharedFunctions) - 0xFFB00000) {
         *(.sharedFunctions)
     }
-    . = ALIGN(4k);
+    functionsEnd = .;
 
     . = ALIGN(4k);
     .rodata :AT (ADDR(.rodata) - 0xFFB00000) {

@@ -5,3 +5,4 @@ rootfs/initrd.tar
 .vscode
 *.log
 initrd
+bochsrc

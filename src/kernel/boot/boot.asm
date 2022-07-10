@@ -130,7 +130,11 @@ gdt32:
     dd gdt32
 
 section .text
+newGDT:
+    dw gdt32.end - gdt32 - 1
+    dd gdt32 + 0xFFB00000
 higherKernelEntry:
+    lgdt [newGDT]
     mov ebx, [ebxStart]
     push ebx
 .cleanOriginalEntryCode:

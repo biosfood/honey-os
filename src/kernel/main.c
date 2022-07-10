@@ -1,3 +1,4 @@
+#include <interrupts.h>
 #include <memory.h>
 #include <multiboot.h>
 #include <service.h>
@@ -48,9 +49,11 @@ void kernelMain(void *multibootInfo) {
     // multiboot-loaded stuff
     loadAndScheduleLoader(multibootInfo);
     setupSyscalls();
+    registerInterrupts();
     while (1) {
         Syscall *call = listPopFirst(&callsToProcess);
         if (!call) {
+            int x = 1 / 0;
             asm("hlt");
             continue;
         }
