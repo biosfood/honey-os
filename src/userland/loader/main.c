@@ -63,5 +63,8 @@ int32_t main() {
     loadFromInitrd("log");
     log("hello world");
     log("honey os is alive :)");
+    log("doing wrong code...");
+    uint32_t x = 1 / 0;
+    log("something went wrong?");
     return 0;
 }

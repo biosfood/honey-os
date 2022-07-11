@@ -31,7 +31,7 @@ void loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     void *current = &functionsStart;
-    while (current <= (void *)&functionsEnd) {
+    for (uint32_t i = 0; i < 3; i++) {
         // todo: make this unwritable!
         sharePage(&(service->pagingInfo), current, current);
         current += 0x1000;

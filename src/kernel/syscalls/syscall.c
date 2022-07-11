@@ -38,13 +38,6 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
     call->service = currentSyscall->service;
     call->esp = esp;
     call->respondingTo = currentSyscall->respondingTo;
-    if (call->respondingTo &&
-        call->respondingTo->service == currentSyscall->service) {
-        asm("nop" ::"a"(currentSyscall), "b"(call),
-            "c"(currentSyscall->respondingTo), "d"(0xB105F00D));
-        while (1)
-            ;
-    }
     Service *currentService = currentSyscall->service;
     call->cr3 =
         getPhysicalAddressKernel(currentService->pagingInfo.pageDirectory);
