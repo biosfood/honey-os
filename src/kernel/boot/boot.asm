@@ -29,7 +29,7 @@ global _start
 _start:
     mov [ebxStart], ebx
     mov esp, stackEnd
-    lgdt [gdt32.end]
+    lgdt [earlyGDT.end]
     mov ax, 16
     mov ds, ax
     mov ss, ax
@@ -91,10 +91,9 @@ setupFullPageTable:
     pop eax
     ret
 
-ALIGN 4
-gdt32:
+earlyGDT:
+.start:
 	dq 0
-
 .code:
 	dw 0xffff
 	dw 0
@@ -102,7 +101,6 @@ gdt32:
 	db 10011010b
 	db 11001111b
 	db 0
-
 .data:
 	dw 0xffff
 	dw 0
@@ -110,7 +108,31 @@ gdt32:
 	db 10010010b
 	db 11001111b
 	db 0
+.end:
+    dw .end - .start - 1
+    dd .start
 
+section .sharedFunctions
+tss:
+  resb 0x68
+ALIGN 4
+newGDT:
+.start:
+	dq 0
+.code:
+	dw 0xffff
+	dw 0
+	db 0
+	db 10011010b
+	db 11001111b
+	db 0
+.data:
+	dw 0xffff
+	dw 0
+	db 0
+	db 10010010b
+	db 11001111b
+	db 0
 .userCode:
 	dw 0xffff
 	dw 0
@@ -125,16 +147,18 @@ gdt32:
 	db 10010010b
 	db 11001111b
 	db 0
+.tss:
+  resb 0x8
 .end:
-    dw .end - gdt32 - 1
-    dd gdt32
+    dw .end - .start - 1
+    dd .start
+
+global newGDT
+global tss
 
 section .text
-newGDT:
-    dw gdt32.end - gdt32 - 1
-    dd gdt32 + 0xFFB00000
 higherKernelEntry:
-    lgdt [newGDT]
+    lgdt [newGDT.end]
     mov ebx, [ebxStart]
     push ebx
 .cleanOriginalEntryCode:

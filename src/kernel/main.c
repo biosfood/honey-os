@@ -53,7 +53,6 @@ void kernelMain(void *multibootInfo) {
     while (1) {
         Syscall *call = listPopFirst(&callsToProcess);
         if (!call) {
-            int x = 1 / 0;
             asm("hlt");
             continue;
         }
