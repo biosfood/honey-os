@@ -79,22 +79,7 @@ void handleRequestSyscall(Syscall *call) {
         listGet(providerService->providers, call->parameters[1]);
     void *data = kernelMapPhysical(getPhysicalAddress(
         service->pagingInfo.pageDirectory, PTR(call->parameters[2])));
-    sharePage(&providerService->pagingInfo, data, data);
-    Syscall *runCall = malloc(sizeof(Syscall));
-    runCall->function = SYS_RUN;
-    runCall->esp = malloc(0x1000);
-    runCall->respondingTo = call;
-    runCall->cr3 =
-        getPhysicalAddressKernel(providerService->pagingInfo.pageDirectory);
-    runCall->service = providerService;
-    runCall->resume = true;
-    sharePage(&providerService->pagingInfo, runCall->esp, runCall->esp);
-    runCall->esp += 0xFF0;
-    *(void **)runCall->esp = provider->address;
-    *(void **)(runCall->esp + 0x4) = &runEnd;
-    *(void **)(runCall->esp + 0x8) = data;
-    *(uint32_t *)(runCall->esp + 0xC) = call->parameters[3];
-    listAdd(&callsToProcess, runCall);
+    scheduleProvider(provider, data, call->parameters[3], call);
     call->avoidReschedule = true;
 }
 
@@ -179,6 +164,18 @@ void handleGetProviderSyscall(Syscall *call) {
         ;
 }
 
+extern ListElement *interruptSubscriptions[255];
+
+void handleSubscribeInterruptSyscall(Syscall *call) {
+    Provider *provider = malloc(sizeof(Provider));
+    Service *service = call->service;
+    char *providerName = "INTERRUPT";
+    provider->name = providerName;
+    provider->address = PTR(call->parameters[1]);
+    provider->service = call->service;
+    listAdd(&interruptSubscriptions[call->parameters[0]], provider);
+}
+
 void (*syscallHandlers[])(Syscall *) = {
     0,
     (void *)handleInstallSyscall,
@@ -188,4 +185,5 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)handleLoadFromInitrdSyscall,
     (void *)handleGetServiceSyscall,
     (void *)handleGetProviderSyscall,
+    (void *)handleSubscribeInterruptSyscall,
 };
