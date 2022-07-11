@@ -26,5 +26,6 @@ extern void *runEnd;
 extern Service *findService(char *);
 extern Provider *findProvider(Service *, char *);
 extern Service *currentService;
-
+extern void scheduleProvider(Provider *provider, void *data,
+                             uint32_t dataLength, Syscall *respondingTo);
 #endif

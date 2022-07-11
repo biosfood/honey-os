@@ -1,6 +1,7 @@
 #include "interrupts.h"
 #include <interrupts.h>
 #include <memory.h>
+#include <service.h>
 #include <util.h>
 
 #define IDT_ENTRY(i)                                                           \
@@ -12,17 +13,21 @@ extern void *idt;
 extern GDTEntry newGDT;
 extern TSS tss;
 
+ListElement *interruptSubscriptions[255];
+
 __attribute__((section(".sharedFunction"))) __attribute__((aligned(0x10)))
 IdtEntry idtEntries[256] = {};
 
 void onInterrupt(uint32_t cr3, uint32_t intNo, uint32_t errorCode) {
     if (intNo > 31) {
         // an external interrupt was triggered
-        while (1)
+        foreach (interruptSubscriptions[intNo], Provider *, provider,
+                 { scheduleProvider(provider, PTR(intNo), 0, NULL); })
             ;
-    }
-    if (intNo <= 31 && cr3 != 0x500000) {
-        // a task encountered an exception
+    } else if (intNo <= 31 && cr3 != 0x500000) {
+        // a task encountered an exception, end it
+        // todo: free syscall structure and handle the respondingTo one
+        // appropriately
         asm(".intel_syntax noprefix\n"
             "mov eax, [temporaryESP]\n"
             "mov esp, eax\n"
@@ -33,6 +38,8 @@ void onInterrupt(uint32_t cr3, uint32_t intNo, uint32_t errorCode) {
 }
 
 extern void *interruptStack;
+
+void setupPic();
 
 void registerInterrupts() {
     GDTEntry *currentGdt = &newGDT;
@@ -57,8 +64,24 @@ void registerInterrupts() {
         .limit = sizeof(idtEntries) - 1,
     };
     asm("lidt %0" ::"m"(pointer));
-    asm("mov $0xFF, %%al" ::);
-    asm("out %%al, $0xA1" ::);
-    asm("out %%al, $0x21" ::);
+    setupPic();
     asm("sti");
+}
+
+#define outb(port, value)                                                      \
+    asm("outb %0, %1" : : "a"((uint8_t)value), "Nd"(port));
+
+void setupPic() {
+    // sadly I have to do this here, because the PIC will trigger before the PIC
+    // driver has a chance to set it up
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+    outb(0xA1, 32);
+    outb(0x21, 40);
+    outb(0xA1, 0x04);
+    outb(0x21, 0x02);
+    outb(0x21, 0x1);
+    outb(0xA1, 0x1);
+    outb(0xA0, 0x20);
+    outb(0x20, 0x20);
 }

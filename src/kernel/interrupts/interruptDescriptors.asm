@@ -13,6 +13,8 @@ handleInterrupt:
   call onInterrupt
   pop eax
   mov cr3, eax
+  pop eax
+  pop eax
   iret
 
 %macro interruptHandler 1

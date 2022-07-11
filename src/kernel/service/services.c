@@ -75,3 +75,23 @@ Provider *findProvider(Service *service, char *name) {
         ;
     return NULL;
 }
+
+void scheduleProvider(Provider *provider, void *data, uint32_t dataLength,
+                      Syscall *respondingTo) {
+    sharePage(&provider->service->pagingInfo, data, data);
+    Syscall *runCall = malloc(sizeof(Syscall));
+    runCall->function = SYS_RUN;
+    runCall->esp = malloc(0x1000);
+    runCall->respondingTo = respondingTo;
+    runCall->cr3 =
+        getPhysicalAddressKernel(provider->service->pagingInfo.pageDirectory);
+    runCall->service = provider->service;
+    runCall->resume = true;
+    sharePage(&provider->service->pagingInfo, runCall->esp, runCall->esp);
+    runCall->esp += 0xFF0;
+    *(void **)runCall->esp = provider->address;
+    *(void **)(runCall->esp + 0x4) = &runEnd;
+    *(void **)(runCall->esp + 0x8) = data;
+    *(uint32_t *)(runCall->esp + 0xC) = dataLength;
+    listAdd(&callsToProcess, runCall);
+}
