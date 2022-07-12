@@ -78,10 +78,39 @@ void log(char *message) {
     command(1, __VA_ARGS__);                                                   \
     command(2, __VA_ARGS__);
 
+#define PIC_READ_IRR 0x0A
+uint16_t getIRR() {
+    ioOut(PIC1, PIC_READ_IRR, 1);
+    ioOut(PIC2, PIC_READ_IRR, 1);
+    return (ioIn(PIC2, 1) << 8) | ioIn(PIC1, 1);
+}
+
+#define PIC_READ_ISR 0x0B
+uint16_t getISR() {
+    ioOut(PIC1, PIC_READ_ISR, 1);
+    ioOut(PIC2, PIC_READ_ISR, 1);
+    return (ioIn(PIC2, 1) << 8) | ioIn(PIC1, 1);
+}
+
 void irqMaster(uint32_t intNo) {
-    ioOut(1, PIC1, 0x20);
-    ioIn(1, 0x60);
-    log("irq!");
+    uint16_t isr = getISR();
+    if (isr) {
+        ioOut(PIC1, 0x20, 1);
+    }
+    bool sentPic2EOI = false;
+    for (uint8_t i = 0; i < 16; i++) {
+        if (!(isr & (1 << i))) {
+            continue;
+        }
+        if (i >= 8 && !sentPic2EOI) {
+            sentPic2EOI = true;
+            ioOut(PIC2, 0x20, 1);
+        }
+        if (i == 1) {
+            ioIn(0x60, 1);
+            log("keyboard!");
+        }
+    }
 }
 
 void subscribeInterrupt(uint32_t intNo, void *handler) {
