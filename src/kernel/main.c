@@ -13,7 +13,7 @@ extern void (*syscallHandlers[])(Syscall *);
 void *initrd;
 uint32_t initrdSize;
 
-Syscall *loadInitrdProgram(char *name, Syscall *respondingTo) {
+void loadInitrdProgram(char *name, Syscall *respondingTo) {
     char *fileName = combineStrings("initrd/", name);
     void *elfData = findTarFile(initrd, initrdSize, fileName);
     free(fileName);
@@ -21,20 +21,7 @@ Syscall *loadInitrdProgram(char *name, Syscall *respondingTo) {
 
     Service *service = findService(name);
     Provider *provider = findProvider(service, "main");
-    Syscall *runTask = malloc(sizeof(Syscall));
-    runTask->function = SYS_RUN;
-    runTask->resume = true;
-    runTask->cr3 = getPhysicalAddressKernel(service->pagingInfo.pageDirectory);
-    runTask->esp = malloc(0x1000);
-    runTask->respondingTo = respondingTo;
-    runTask->service = service;
-    memset(runTask->esp, 0, 0x1000);
-    runTask->esp += 0xFF8;
-    *(void **)runTask->esp = provider->address;
-    *(void **)(runTask->esp + 4) = &runEnd;
-    sharePage(&service->pagingInfo, runTask->esp, runTask->esp);
-    listAdd(&callsToProcess, runTask);
-    return runTask;
+    scheduleProvider(provider, 0, 0, 0);
 }
 
 void loadAndScheduleLoader(void *multibootInfo) {
