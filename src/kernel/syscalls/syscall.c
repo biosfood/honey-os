@@ -123,7 +123,7 @@ void handleIOOutSyscall(Syscall *call) {
     }
 }
 
-extern Syscall *loadInitrdProgram(char *name, Syscall *respondingTo);
+extern void loadInitrdProgram(char *name, Syscall *respondingTo);
 
 void handleLoadFromInitrdSyscall(Syscall *call) {
     Service *service = call->service;
