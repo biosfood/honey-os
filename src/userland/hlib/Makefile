@@ -1,7 +1,7 @@
 CC = i686-elf-gcc
 CCFLAGS = -m32 -mtune=generic -ffreestanding -nostdlib -c -I ../../include -I include -Wno-discarded-qualifiers -fms-extensions -Wno-shift-count-overflow -O0
 LD = i686-elf-ld
-LD_FLAGS = -z max-page-size=0x1000 -T ../link.ld
+LD_FLAGS = -z max-page-size=0x1000 -e main
 AS = nasm
 ASFlAGS = -felf32
 
@@ -10,9 +10,10 @@ BUILD_FOLDER = build
 SOURCE_FILES := $(shell find . -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 
-../../../initrd/pic: $(OBJS)
-	@echo "linking user program 8259 PIC"
-	@$(LD) $(LD_FLAGS) -o ../../../initrd/pic $(OBJS)
+../../../initrd/hlib: $(OBJS)
+	@echo "linking the honey OS c libary"
+	@$(LD) $(LD_FLAGS) -o ../../../build/hlib.o $(OBJS) -T link.ld -r
+	@$(LD) $(LD_FLAGS) -o ../../../initrd/hlib $(OBJS) -T link.ld
 
 $(BUILD_FOLDER)/%.asm.o: %.asm
 	@echo "asembling $<"

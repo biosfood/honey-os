@@ -2,6 +2,7 @@ section .sharedFunctions
 bits 32
 
 global syscallStub
+global handleSyscallEnd
 extern handleSyscall
 extern temporaryESP
 
@@ -19,6 +20,7 @@ syscallStub:
   push eax
   push edi
   call handleSyscall
+handleSyscallEnd:
   mov eax, [temporaryESP]
   mov esp, eax
   pop ebp

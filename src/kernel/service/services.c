@@ -2,7 +2,6 @@
 #include "service.h"
 #include <memory.h>
 #include <service.h>
-#include <syscalls.h>
 #include <util.h>
 
 extern void *functionsStart;
@@ -11,6 +10,7 @@ extern void(runFunction)();
 
 ListElement *services, *callsToProcess;
 Syscall *currentSyscall;
+extern Service *hlib;
 
 void resume(Syscall *syscall) {
     if (U32(syscall) < 0x1000) {
@@ -20,7 +20,7 @@ void resume(Syscall *syscall) {
     runFunction();
 }
 
-void loadElf(void *elfStart, char *serviceName) {
+Service *loadElf(void *elfStart, char *serviceName) {
     // use this function ONLY to load the initrd/loader program(maybe also the
     // ELF loader service)!
     ElfHeader *header = elfStart;
@@ -31,12 +31,22 @@ void loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     void *current = &functionsStart;
+    if (hlib) {
+        service->pagingInfo.pageDirectory[0x3FC].pageTableID =
+            hlib->pagingInfo.pageDirectory[0x3FC].pageTableID;
+        service->pagingInfo.pageDirectory[0x3FC].belongsToUserProcess = 1;
+        service->pagingInfo.pageDirectory[0x3FC].present = 1;
+        service->pagingInfo.pageDirectory[0x3FC].writable = 1;
+    }
     for (uint32_t i = 0; i < 3; i++) {
         // todo: make this unwritable!
         sharePage(&(service->pagingInfo), current, current);
         current += 0x1000;
     }
     for (uint32_t i = 0; i < header->programHeaderEntryCount; i++) {
+        if (hlib && programHeader->virtualAddress >= 0xF0000000) {
+            goto end;
+        }
         for (uint32_t page = 0; page < programHeader->segmentMemorySize;
              page += 0x1000) {
             void *data = malloc(0x1000);
@@ -46,6 +56,7 @@ void loadElf(void *elfStart, char *serviceName) {
             sharePage(&service->pagingInfo, data,
                       PTR(programHeader->virtualAddress + page));
         }
+    end:
         programHeader = (void *)programHeader + header->programHeaderEntrySize;
     }
     Provider *main = malloc(sizeof(Provider));
@@ -54,6 +65,7 @@ void loadElf(void *elfStart, char *serviceName) {
     main->address = PTR(header->entryPosition);
     listAdd(&services, service);
     listAdd(&service->providers, main);
+    return service;
 }
 
 Service *findService(char *name) {
@@ -80,7 +92,7 @@ void scheduleProvider(Provider *provider, void *data, uint32_t dataLength,
                       Syscall *respondingTo) {
     sharePage(&provider->service->pagingInfo, data, data);
     Syscall *runCall = malloc(sizeof(Syscall));
-    runCall->function = SYS_RUN;
+    runCall->function = 0;
     runCall->esp = malloc(0x1000);
     runCall->respondingTo = respondingTo;
     runCall->cr3 =

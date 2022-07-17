@@ -2,7 +2,6 @@
 #include <service.h>
 #include <stdint.h>
 #include <syscall.h>
-#include <syscalls.h>
 #include <util.h>
 
 extern ListElement *callsToProcess;
@@ -123,13 +122,13 @@ void handleIOOutSyscall(Syscall *call) {
     }
 }
 
-extern void loadInitrdProgram(char *name, Syscall *respondingTo);
+extern void loadProgram(char *name, Syscall *respondingTo);
 
 void handleLoadFromInitrdSyscall(Syscall *call) {
     Service *service = call->service;
     char *programName = kernelMapPhysical(getPhysicalAddress(
         service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
-    loadInitrdProgram(programName, (void *)call);
+    loadProgram(programName, (void *)call);
     call->avoidReschedule = true;
 }
 

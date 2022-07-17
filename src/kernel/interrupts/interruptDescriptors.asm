@@ -1,20 +1,74 @@
 section .sharedFunctions
 
 extern onInterrupt
+extern temporaryESP
 
 global interruptStack
 interruptStack: resb 1024
 
-handleInterrupt:
+interruptReturn:
+  pop eax
+  pop ebx
+  pop ecx
+  pop edx
+  ret
+
+exceptionAbort:
   mov eax, cr3
+  cmp eax, 0x500000
+  je $
+  mov eax, 0x500000
+  mov cr3, eax
+  mov eax, [temporaryESP]
+  mov esp, eax
+  pop ebp
+  ret
+
+handleInterrupt:
+.saveRegisters:
+  push eax
+  push ebx
+  push ecx
+  push edx
+  mov eax, cr3
+  push eax
+.checkException:
+  mov eax, [esp+20]
+  cmp eax, 31
+  jng exceptionAbort
+.normalInterrupt:
+  push eax
+.checkUsermode:
+  mov eax, cr3
+  cmp eax, 0x500000
+  je .kernelPages
+.saveRegistersToOldStack:
+  mov eax, [esp+44] ; eax = old esp
+  mov ebx, [esp+32] ; ebx = old eip
+  mov [eax], ebx ; virtual push
+  add eax, 4
+.pushRegisters:
+  mov ebx, [esp+4] ; ebx = old edx
+  mov [eax], ebx ; virtual push ebx
+  add eax, 4
+  mov ebx, [esp+8] ; ebx = old ecx
+  mov [eax], ebx ; virtual push ebx
+  add eax, 4
+  mov ebx, [esp+12] ; ebx = old ebx
+  mov [eax], ebx ; virtual push ebx
+  add eax, 4
+  mov ebx, [esp+16] ; ebx = old edx
+  mov [eax], ebx ; virtual push ebx
+  add eax, 4
+.kernelPages:
   push eax
   mov eax, 0x500000
   mov cr3, eax
+.callHandler:
+  push interruptReturn
   call onInterrupt
-  pop eax
-  mov cr3, eax
-  pop eax
-  pop eax
+.iretNow:
+  add esp, 40
   iret
 
 %macro interruptHandler 1
