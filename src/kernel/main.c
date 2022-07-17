@@ -4,7 +4,6 @@
 #include <service.h>
 #include <stdint.h>
 #include <syscall.h>
-#include <syscalls.h>
 #include <util.h>
 
 extern ListElement *callsToProcess;
@@ -12,29 +11,32 @@ extern void (*syscallHandlers[])(Syscall *);
 
 void *initrd;
 uint32_t initrdSize;
+Service *hlib;
 
-void loadInitrdProgram(char *name, Syscall *respondingTo) {
+Service *readInitrdProgram(char *name) {
     char *fileName = combineStrings("initrd/", name);
     void *elfData = findTarFile(initrd, initrdSize, fileName);
     free(fileName);
-    loadElf(elfData, name);
-
-    Service *service = findService(name);
-    Provider *provider = findProvider(service, "main");
-    scheduleProvider(provider, 0, 0, 0);
+    return loadElf(elfData, name);
 }
 
-void loadAndScheduleLoader(void *multibootInfo) {
+Service *loadProgram(char *name, Syscall *respondingTo) {
+    Service *service = readInitrdProgram(name);
+    Provider *provider = findProvider(service, "main");
+    scheduleProvider(provider, 0, 0, respondingTo);
+    return service;
+}
+
+void loadAndScheduleSystemServices(void *multibootInfo) {
     void *address = kernelMapPhysicalCount(multibootInfo, 4);
     initrd = findInitrd(address, &initrdSize);
-    loadInitrdProgram("loader", NULL);
+    hlib = readInitrdProgram("hlib");
+    loadProgram("loader", NULL);
 }
 
 void kernelMain(void *multibootInfo) {
     setupMemory();
-    // loading the loader also reserves the needed space for the
-    // multiboot-loaded stuff
-    loadAndScheduleLoader(multibootInfo);
+    loadAndScheduleSystemServices(multibootInfo);
     setupSyscalls();
     registerInterrupts();
     while (1) {

@@ -12,29 +12,31 @@ extern void *idt;
 
 extern GDTEntry newGDT;
 extern TSS tss;
+extern Syscall *currentSyscall;
+extern ListElement *callsToProcess;
 
 ListElement *interruptSubscriptions[255];
 
-__attribute__((section(".sharedFunction"))) __attribute__((aligned(0x10)))
+__attribute__((section(".sharedFunctions"))) __attribute__((aligned(0x10)))
 IdtEntry idtEntries[256] = {};
 
-void onInterrupt(uint32_t cr3, uint32_t intNo, uint32_t errorCode) {
-    if (intNo > 31) {
-        // an external interrupt was triggered
-        foreach (interruptSubscriptions[intNo], Provider *, provider,
-                 { scheduleProvider(provider, PTR(intNo), 0, NULL); })
-            ;
-    } else if (intNo <= 31 && cr3 != 0x500000) {
-        // a task encountered an exception, end it
-        // todo: free syscall structure and handle the respondingTo one
-        // appropriately
-        asm(".intel_syntax noprefix\n"
-            "mov eax, [temporaryESP]\n"
-            "mov esp, eax\n"
-            "pop ebp\n"
-            "ret\n"
-            ".att_syntax");
+void onInterrupt(void *eip, void *esp, uint32_t intNo, void *cr3) {
+    // an external interrupt was triggered
+    foreach (interruptSubscriptions[intNo], Provider *, provider,
+             { scheduleProvider(provider, PTR(intNo), 0, NULL); })
+        ;
+    if (cr3 == PTR(0x500000)) {
+        return;
     }
+    Syscall *call = malloc(sizeof(Syscall));
+    call->function = 0;
+    call->service = currentSyscall->service;
+    call->esp = esp;
+    call->respondingTo = currentSyscall->respondingTo;
+    Service *currentService = currentSyscall->service;
+    call->cr3 = cr3;
+    listAdd(&callsToProcess, call);
+    asm("jmp handleSyscallEnd");
 }
 
 extern void *interruptStack;
@@ -42,6 +44,7 @@ extern void *interruptStack;
 void setupPic();
 
 void registerInterrupts() {
+    setupPic();
     GDTEntry *currentGdt = &newGDT;
     currentGdt[5].limit = sizeof(TSS);
     currentGdt[5].baseLow = U32(&tss);
@@ -64,7 +67,6 @@ void registerInterrupts() {
         .limit = sizeof(idtEntries) - 1,
     };
     asm("lidt %0" ::"m"(pointer));
-    setupPic();
     asm("sti");
 }
 
@@ -72,8 +74,8 @@ void registerInterrupts() {
     asm("outb %0, %1" : : "a"((uint8_t)value), "Nd"(port));
 
 void setupPic() {
-    // sadly I have to do this here, because the PIC will trigger before the PIC
-    // driver has a chance to set it up
+    // sadly I have to do this here, because the PIC will trigger before the
+    // PIC driver has a chance to set it up
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
     outb(0xA1, 32);
@@ -82,4 +84,6 @@ void setupPic() {
     outb(0x21, 0x02);
     outb(0x21, 0x1);
     outb(0xA1, 0x1);
+    outb(0x21, 0xFF);
+    outb(0xA1, 0xFF);
 }

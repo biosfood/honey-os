@@ -13,7 +13,7 @@ BUILD_FOLDER = build
 
 SOURCE_FILES := $(shell find src/kernel -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
-USER_PROGRAMS := $(shell ls src/userland)
+USER_PROGRAMS := $(shell tree -d -L 1 -i --noreport src/userland/ | tail -n+2)
 USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=user/%)
 USER_PROGRAM_FILES := $(USER_PROGRAMS:%=initrd/%)
 

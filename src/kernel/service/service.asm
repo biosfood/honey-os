@@ -19,6 +19,7 @@ runFunction:
   mov ebx, [ebx + 20]
   mov cr3, eax
   mov eax, ebx
+  sti
   sysexit
 runEnd:
   mov eax, 0

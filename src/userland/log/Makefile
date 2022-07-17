@@ -1,7 +1,7 @@
 CC = i686-elf-gcc
 CCFLAGS = -m32 -mtune=generic -ffreestanding -nostdlib -c -I ../../include -I include -Wno-discarded-qualifiers -fms-extensions -Wno-shift-count-overflow -O0
 LD = i686-elf-ld
-LD_FLAGS = -z max-page-size=0x1000 -e main
+LD_FLAGS = -z max-page-size=0x1000 -T ../link.ld
 AS = nasm
 ASFlAGS = -felf32
 
