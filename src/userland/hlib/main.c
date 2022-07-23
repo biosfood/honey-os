@@ -41,7 +41,7 @@ uint32_t strlen(char *string) {
     return size;
 }
 
-uint32_t getModule(char *name) {
+uint32_t getService(char *name) {
     return syscall(SYS_GET_SERVICE, U32(name), strlen(name), 0, 0);
 }
 
@@ -57,7 +57,7 @@ uint32_t logModule = 0, logProvider;
 
 void log(char *message) {
     if (logModule == 0) {
-        logModule = getModule("log");
+        logModule = getService("log");
         logProvider = getProvider(logModule, "log");
     }
     request(logModule, logProvider, message, strlen(message));

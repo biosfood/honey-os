@@ -10,9 +10,9 @@ BUILD_FOLDER = build
 SOURCE_FILES := $(shell find . -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 
-../../../initrd/loader: $(OBJS) ../../../build/hlib.o
-	@echo "linking user program loader"
-	@$(LD) $(LD_FLAGS) -o ../../../initrd/loader $(OBJS)
+../../../initrd/keyboard: $(OBJS) ../../../build/hlib.o
+	@echo "linking user program PS/2 keyboard"
+	@$(LD) $(LD_FLAGS) -o $@ $(OBJS)
 
 $(BUILD_FOLDER)/%.asm.o: %.asm
 	@echo "asembling $<"

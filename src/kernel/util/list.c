@@ -26,3 +26,10 @@ void *listPopFirst(ListElement **list) {
     free(resultElement);
     return result;
 }
+
+uint32_t listCount(ListElement *list) {
+    uint32_t i = 0;
+    foreach (list, void *, element, { i++; })
+        ;
+    return i;
+}

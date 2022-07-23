@@ -32,4 +32,6 @@ typedef struct ListElement {
 
 extern void listAdd(ListElement **list, void *data);
 extern void *listPopFirst(ListElement **list);
+extern uint32_t listCount(ListElement *list);
+
 #endif

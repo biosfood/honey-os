@@ -9,6 +9,7 @@ typedef struct {
     PagingInfo pagingInfo;
     char *name;
     ListElement *providers;
+    ListElement *events;
 } Service;
 
 // the name is subject to change
@@ -17,6 +18,11 @@ typedef struct {
     void *address;
     Service *service;
 } Provider;
+
+typedef struct {
+    char *name;
+    ListElement *subscriptions;
+} Event;
 
 extern Service *loadElf(void *fileData, char *serviceName);
 extern void resume(Syscall *syscall);

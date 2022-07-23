@@ -6,5 +6,6 @@ int32_t main() {
     log("hello world");
     log("honey os is alive :)");
     loadFromInitrd("pic");
+    loadFromInitrd("keyboard");
     return 0;
 }

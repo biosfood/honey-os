@@ -10,7 +10,7 @@ BUILD_FOLDER = build
 SOURCE_FILES := $(shell find . -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 
-../../../initrd/pic: $(OBJS)
+../../../initrd/pic: $(OBJS) ../../../build/hlib.o
 	@echo "linking user program 8259 PIC"
 	@$(LD) $(LD_FLAGS) -o ../../../initrd/pic $(OBJS)
 
