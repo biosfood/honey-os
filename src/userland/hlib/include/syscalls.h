@@ -14,6 +14,10 @@ typedef enum {
     SYS_GET_SERVICE = 6,
     SYS_GET_PROVIDER = 7,
     SYS_SUBSCRIBE_INTERRUPT = 8,
+    SYS_CREATE_EVENT = 9,
+    SYS_GET_EVENT = 10,
+    SYS_FIRE_EVENT = 11,
+    SYS_SUBSCRIBE_EVENT = 12,
 } SyscallIds;
 
 #endif

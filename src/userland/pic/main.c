@@ -5,18 +5,12 @@
 #define PIC1 0x20
 #define PIC2 0xA0
 
-#define COMMAND_ICW4 0x01
-#define COMMAND_SINGLE 0x02
-#define COMMAND_INTERVAL4 0x04
-#define COMMAND_LEVEL 0x08
-#define COMMAND_INIT 0x10
-#define DATA(x) PIC##x + 1
+char *eventNames[] = {
+    "irq0", "irq1", "irq2",  "irq3",  "irq4",  "irq5",  "irq6",  "irq7",
+    "irq8", "irq9", "irq10", "irq11", "irq12", "irq13", "irq14", "irq15",
+};
 
-#define COMMAND(x, command) ioOut(1, PIC##x, command);
-
-#define BOTH(command, ...)                                                     \
-    command(1, __VA_ARGS__);                                                   \
-    command(2, __VA_ARGS__);
+uint32_t eventIds[16];
 
 #define PIC_READ_IRR 0x0A
 uint16_t getIRR() {
@@ -46,18 +40,8 @@ void irqMaster(uint32_t intNo) {
             sentPic2EOI = true;
             ioOut(PIC2, 0x20, 1);
         }
-        if (i == 1) {
-            ioIn(0x60, 1);
-            log("keyboard!");
-        }
+        fireEvent(eventIds[i]);
     }
-}
-
-uint32_t x = 1;
-
-void loop() {
-    while (x > 0)
-        ;
 }
 
 int32_t main() {
@@ -66,7 +50,10 @@ int32_t main() {
         subscribeInterrupt(i, irqMaster);
     }
     ioOut(0x21, 0x1, 1);
-    ioOut(0xA1, 0x1, 1);
+    ioOut(0xA1, 0x0, 1);
     ioOut(0x70, ioIn(0x70, 1) | 0x80, 1);
     ioIn(0x71, 1);
+    for (uint8_t i = 0; i < sizeof(eventNames) / sizeof(void *); i++) {
+        eventIds[i] = createEvent(eventNames[i]);
+    }
 }
