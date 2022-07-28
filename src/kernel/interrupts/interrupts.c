@@ -9,7 +9,6 @@
     idtEntries[i].offsetHigh = U32(&idtHandler##i) >> 16;
 
 extern void *idt;
-
 extern GDTEntry newGDT;
 extern TSS tss;
 extern Syscall *currentSyscall;
@@ -86,4 +85,14 @@ void setupPic() {
     outb(0xA1, 0x1);
     outb(0x21, 0xFF);
     outb(0xA1, 0xFF);
+}
+
+void handleSubscribeInterruptSyscall(Syscall *call) {
+    Provider *provider = malloc(sizeof(Provider));
+    Service *service = call->service;
+    char *providerName = "INTERRUPT";
+    provider->name = providerName;
+    provider->address = PTR(call->parameters[1]);
+    provider->service = call->service;
+    listAdd(&interruptSubscriptions[call->parameters[0]], provider);
 }

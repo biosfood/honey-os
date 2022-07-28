@@ -17,6 +17,6 @@ typedef struct Syscall {
 } Syscall;
 
 extern void setupSyscalls();
-extern void (*syscallHandlers[])(Syscall *);
+extern void processSyscall(Syscall *call);
 
 #endif
