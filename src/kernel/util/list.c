@@ -33,3 +33,10 @@ uint32_t listCount(ListElement *list) {
         ;
     return i;
 }
+
+void *listGet(ListElement *list, uint32_t position) {
+    for (uint32_t i = 0; i < position; i++) {
+        list = list->next;
+    }
+    return list->data;
+}

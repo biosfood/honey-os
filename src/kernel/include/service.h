@@ -24,6 +24,8 @@ typedef struct {
     ListElement *subscriptions;
 } Event;
 
+extern ListElement *services;
+
 extern Service *loadElf(void *fileData, char *serviceName);
 extern void resume(Syscall *syscall);
 

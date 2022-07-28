@@ -7,7 +7,6 @@
 #include <util.h>
 
 extern ListElement *callsToProcess;
-extern void (*syscallHandlers[])(Syscall *);
 
 void *initrd;
 uint32_t initrdSize;
@@ -45,18 +44,6 @@ void kernelMain(void *multibootInfo) {
             asm("sti;hlt");
             continue;
         }
-        if (call->resume) {
-            resume(call);
-            free(call);
-            continue;
-        }
-        void (*handler)(Syscall *) = syscallHandlers[call->function];
-        if (handler) {
-            handler(call);
-        }
-        call->resume = true;
-        if (!call->avoidReschedule) {
-            listAdd(&callsToProcess, call);
-        }
+        processSyscall(call);
     }
 }
