@@ -59,6 +59,8 @@ void handleInstallSyscall(Syscall *call) {
     provider->name = providerName;
     provider->address = PTR(call->parameters[1]);
     provider->service = call->service;
+    call->returnValue = listCount(service->providers);
+    // todo make listAdd return the new index
     listAdd(&service->providers, provider);
 }
 
@@ -221,6 +223,17 @@ void handleSubscribeEventSyscall(Syscall *call) {
     listAdd(&event->subscriptions, provider);
 }
 
+void handleGetServiceIdSyscall(Syscall *call) {
+    uint32_t i = 0;
+    foreach (services, Service *, service, {
+        if (service == call->service) {
+            call->returnValue = i;
+        }
+        i++;
+    })
+        ;
+}
+
 void (*syscallHandlers[])(Syscall *) = {
     0,
     (void *)handleInstallSyscall,
@@ -235,4 +248,5 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)handleGetEventSyscall,
     (void *)handleFireEventSyscall,
     (void *)handleSubscribeEventSyscall,
+    (void *)handleGetServiceIdSyscall,
 };

@@ -1,17 +1,10 @@
 #include <hlib.h>
 #include <stdint.h>
 
-void writeParallel(uint8_t data) {
-    uint8_t control;
-    while (!(ioIn(0x379, sizeof(uint8_t)) & 0x80)) {
-    }
-    ioOut(0x378, data, sizeof(uint8_t));
+uint32_t outService, outProvider;
 
-    control = ioIn(0x37A, sizeof(uint8_t));
-    ioOut(0x37A, control | 1, sizeof(uint8_t));
-    ioOut(0x37A, control, sizeof(uint8_t));
-    while (!(ioIn(0x379, sizeof(uint8_t)) & 0x80)) {
-    }
+void writeParallel(uint8_t data) {
+    request(outService, outProvider, PTR(data), 0);
 }
 
 void handleLog(void *data, uint32_t dataLength) {
@@ -23,9 +16,13 @@ void handleLog(void *data, uint32_t dataLength) {
     writeParallel('\n');
 }
 
+void registerOut(uint32_t *service, uint32_t provider) {
+    outService = *service;
+    outProvider = provider;
+}
+
 int32_t main() {
-    installServiceProvider("log", handleLog);
-    char *message = "logger initialized";
-    handleLog(message, strlen(message));
+    installServiceProvider("log", (void *)handleLog);
+    installServiceProvider("registerOut", (void *)registerOut);
     return 0;
 }
