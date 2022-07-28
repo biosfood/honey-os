@@ -28,8 +28,8 @@ void request(uint32_t module, uint32_t function, void *data, uint32_t size) {
     syscall(SYS_REQUEST, module, function, U32(data), size);
 }
 
-void installServiceProvider(char *name, void(provider)(void *)) {
-    syscall(SYS_REGISTER_FUNCTION, U32(name), U32(provider), 0, 0);
+uint32_t installServiceProvider(char *name, void(provider)(void *)) {
+    return syscall(SYS_REGISTER_FUNCTION, U32(name), U32(provider), 0, 0);
 }
 
 uint32_t strlen(char *string) {
@@ -74,3 +74,11 @@ void ioOut(uint16_t port, uint32_t value, uint8_t size) {
 void subscribeInterrupt(uint32_t intNo, void *handler) {
     syscall(SYS_SUBSCRIBE_INTERRUPT, intNo, U32(handler), 0, 0);
 }
+
+void requestName(char *service, char *provider, void *data, uint32_t size) {
+    uint32_t serviceId = getService(service);
+    uint32_t providerId = getProvider(serviceId, provider);
+    request(serviceId, providerId, data, size);
+}
+
+uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }

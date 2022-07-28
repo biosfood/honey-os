@@ -3,6 +3,7 @@
 
 int32_t main() {
     loadFromInitrd("log");
+    loadFromInitrd("parallel");
     log("hello world");
     log("honey os is alive :)");
     loadFromInitrd("pic");
