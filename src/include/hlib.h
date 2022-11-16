@@ -29,5 +29,7 @@ extern void requestName(char *service, char *provider, void *data,
 extern void request(uint32_t service, uint32_t provider, void *data,
                     uint32_t size);
 extern uint32_t getServiceId();
+extern uintptr_t insertString(char *string, uintptr_t size);
+extern uintptr_t getStringLength(uintptr_t stringId);
 
 #endif

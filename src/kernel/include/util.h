@@ -12,6 +12,7 @@
 #define MIN(x, y) (x < y ? x : y)
 
 #define PAGE_COUNT(x) (((x - 1) / 4096) + 1)
+#define BITS(x) (sizeof(x) * 8)
 
 extern bool stringEquals(char *string1, char *string2);
 extern char *combineStrings(char *string1, char *string2);

@@ -82,3 +82,11 @@ void requestName(char *service, char *provider, void *data, uint32_t size) {
 }
 
 uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }
+
+uintptr_t insertString(char *string, uintptr_t size) {
+    return syscall(SYS_INSERT_STRING, U32(string), size, 0, 0);
+}
+
+uintptr_t getStringLength(uintptr_t stringId) {
+    return syscall(SYS_GET_STRING_LENGTH, stringId, 0, 0, 0);
+}

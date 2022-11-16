@@ -1,6 +1,9 @@
 #include <hlib.h>
 #include <stdint.h>
 
+char *testString = "hello world";
+char *lengthString = "0";
+
 int32_t main() {
     loadFromInitrd("log");
     loadFromInitrd("parallel");
@@ -8,5 +11,10 @@ int32_t main() {
     log("honey os is alive :)");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
+    log(testString);
+    uintptr_t id = insertString(testString, strlen(testString));
+    uintptr_t length = getStringLength(id);
+    lengthString[0] += length;
+    log(lengthString);
     return 0;
 }
