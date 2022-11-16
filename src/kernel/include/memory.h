@@ -3,6 +3,16 @@
 
 #include <stdint.h>
 
+typedef struct AllocationBlock {
+    uint8_t data[3948];
+    uint32_t allocatedFine[32];
+    uint32_t allocatedCoarse;
+    uint32_t blockSize;
+    struct AllocationBlock *next;
+    struct AllocationBlock *previous;
+    uint32_t magic;
+} AllocationBlock;
+
 typedef struct {
     uint32_t present : 1;
     uint32_t writable : 1;

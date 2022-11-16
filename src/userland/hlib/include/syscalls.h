@@ -19,6 +19,8 @@ typedef enum {
     SYS_FIRE_EVENT = 11,
     SYS_SUBSCRIBE_EVENT = 12,
     SYS_GET_SERVICE_ID = 13,
+    SYS_INSERT_STRING = 14,
+    SYS_GET_STRING_LENGTH = 15,
 } SyscallIds;
 
 #endif
