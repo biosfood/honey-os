@@ -22,6 +22,7 @@ typedef enum {
     SYS_INSERT_STRING = 14,
     SYS_GET_STRING_LENGTH = 15,
     SYS_READ_STRING = 16,
+    SYS_DISCARD_STRING = 17,
 } SyscallIds;
 
 #endif

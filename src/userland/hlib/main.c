@@ -94,3 +94,7 @@ uintptr_t getStringLength(uintptr_t stringId) {
 void readString(uintptr_t stringId, void *buffer) {
     syscall(SYS_READ_STRING, stringId, U32(buffer), 0, 0);
 }
+
+void discardString(uintptr_t stringId) {
+    syscall(SYS_DISCARD_STRING, stringId, 0, 0, 0);
+}

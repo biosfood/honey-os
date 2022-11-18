@@ -29,3 +29,8 @@ void handleReadStringSyscall(Syscall *call) {
     memcpy(string, buffer, size + 1);
     unmapPage(buffer);
 }
+
+void handleDiscardStringSyscall(Syscall *call) {
+    uintptr_t stringId = call->parameters[0];
+    discardString(stringId);
+}
