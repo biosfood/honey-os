@@ -13,6 +13,9 @@ bool stringEquals(char *string1, char *string2) {
 }
 
 uint32_t strlen(char *string) {
+    if (!string) {
+        return 0;
+    }
     uint32_t size = 0;
     while (*string) {
         string++;

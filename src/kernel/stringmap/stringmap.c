@@ -47,13 +47,13 @@ char *retrieveString(uintptr_t stringId, uintptr_t *size) {
 
 void discardString(uintptr_t stringId) {
     MapLayer currentLayer = rootLayer;
-    for (uint32_t startBit = 0; startBit < sizeof(uintptr_t) - 4;
-         startBit += 4) {
+    for (uint32_t startBit = 0; startBit < BITS(uintptr_t) - 4; startBit += 4) {
         void *nextLayer = currentLayer[(stringId >> startBit) & 0xF];
         if (!nextLayer) {
             return;
         }
         currentLayer = nextLayer;
     }
-    currentLayer[stringId >> (sizeof(uintptr_t) - 4)] = NULL;
+    free(currentLayer[stringId >> (BITS(uintptr_t) - 4)]);
+    currentLayer[stringId >> (BITS(uintptr_t) - 4)] = NULL;
 }

@@ -57,7 +57,7 @@ extern uintptr_t handleCreateEventSyscall, handleGetEventSyscall,
     handleFireEventSyscall, handleSubscribeEventSyscall;
 extern uintptr_t handleSubscribeInterruptSyscall;
 extern uintptr_t handleInsertStringSyscall, handleReadStringLengthSyscall,
-    handleReadStringSyscall;
+    handleReadStringSyscall, handleDiscardStringSyscall;
 
 void (*syscallHandlers[])(Syscall *) = {
     0,
@@ -77,6 +77,7 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)&handleInsertStringSyscall,
     (void *)&handleReadStringLengthSyscall,
     (void *)&handleReadStringSyscall,
+    (void *)&handleDiscardStringSyscall,
 };
 
 void processSyscall(Syscall *call) {

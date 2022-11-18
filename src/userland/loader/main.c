@@ -19,5 +19,9 @@ int32_t main() {
     log(lengthString);
     readString(id, readBuffer);
     log(readBuffer);
+    discardString(id);
+    length = getStringLength(id);
+    lengthString[0] = '0' + length;
+    log(lengthString);
     return 0;
 }
