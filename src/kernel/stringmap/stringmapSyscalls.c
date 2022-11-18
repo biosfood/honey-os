@@ -19,3 +19,13 @@ void handleReadStringLengthSyscall(Syscall *call) {
     char *string = retrieveString(stringId, &size);
     call->returnValue = size;
 }
+
+void handleReadStringSyscall(Syscall *call) {
+    uintptr_t size, stringId = call->parameters[0];
+    Service *callService = call->service;
+    void *buffer = kernelMapPhysical(getPhysicalAddress(
+        callService->pagingInfo.pageDirectory, PTR(call->parameters[1])));
+    char *string = retrieveString(stringId, &size);
+    memcpy(string, buffer, size + 1);
+    unmapPage(buffer);
+}
