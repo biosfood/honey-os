@@ -35,13 +35,17 @@ char *retrieveString(uintptr_t stringId, uintptr_t *size) {
     for (uint32_t startBit = 0; startBit < BITS(uintptr_t) - 4; startBit += 4) {
         void *nextLayer = currentLayer[(stringId >> startBit) & 0xF];
         if (!nextLayer) {
-            *size = 0;
+            if (size) {
+                *size = 0;
+            }
             return NULL;
         }
         currentLayer = nextLayer;
     }
     char *result = currentLayer[stringId >> (BITS(uintptr_t) - 4)];
-    *size = strlen(result);
+    if (size) {
+        *size = strlen(result);
+    }
     return result;
 }
 
