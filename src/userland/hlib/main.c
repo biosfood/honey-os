@@ -90,3 +90,7 @@ uintptr_t insertString(char *string, uintptr_t size) {
 uintptr_t getStringLength(uintptr_t stringId) {
     return syscall(SYS_GET_STRING_LENGTH, stringId, 0, 0, 0);
 }
+
+void readString(uintptr_t stringId, void *buffer) {
+    syscall(SYS_READ_STRING, stringId, U32(buffer), 0, 0);
+}

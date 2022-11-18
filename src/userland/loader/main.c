@@ -3,6 +3,7 @@
 
 char *testString = "hello world";
 char *lengthString = "0";
+char readBuffer[20];
 
 int32_t main() {
     loadFromInitrd("log");
@@ -16,5 +17,7 @@ int32_t main() {
     uintptr_t length = getStringLength(id);
     lengthString[0] += length;
     log(lengthString);
+    readString(id, readBuffer);
+    log(readBuffer);
     return 0;
 }
