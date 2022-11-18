@@ -13,7 +13,7 @@ int32_t main() {
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
     log(testString);
-    uintptr_t id = insertString(testString, strlen(testString));
+    uintptr_t id = insertString(testString);
     uintptr_t length = getStringLength(id);
     lengthString[0] += length;
     log(lengthString);

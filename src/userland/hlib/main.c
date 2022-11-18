@@ -1,4 +1,5 @@
 #include "include/syscalls.h"
+#include <hlib.h>
 #include <stdint.h>
 
 #define PTR(x) ((void *)(uintptr_t)x)
@@ -28,8 +29,10 @@ void request(uint32_t module, uint32_t function, void *data, uint32_t size) {
     syscall(SYS_REQUEST, module, function, U32(data), size);
 }
 
-uint32_t installServiceProvider(char *name, void(provider)(void *)) {
-    return syscall(SYS_REGISTER_FUNCTION, U32(name), U32(provider), 0, 0);
+uint32_t installServiceProvider(char *name,
+                                int32_t(provider)(void *, uint32_t)) {
+    uintptr_t id = insertString(name);
+    return syscall(SYS_REGISTER_FUNCTION, id, U32(provider), 0, 0);
 }
 
 uint32_t strlen(char *string) {
@@ -42,11 +45,13 @@ uint32_t strlen(char *string) {
 }
 
 uint32_t getService(char *name) {
-    return syscall(SYS_GET_SERVICE, U32(name), strlen(name), 0, 0);
+    uintptr_t id = insertString(name);
+    return syscall(SYS_GET_SERVICE, id, 0, 0, 0);
 }
 
 uint32_t getProvider(uint32_t module, char *name) {
-    return syscall(SYS_GET_PROVIDER, module, U32(name), strlen(name), 0);
+    uintptr_t id = insertString(name);
+    return syscall(SYS_GET_PROVIDER, module, id, 0, 0);
 }
 
 void loadFromInitrd(char *name) {
@@ -83,8 +88,8 @@ void requestName(char *service, char *provider, void *data, uint32_t size) {
 
 uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }
 
-uintptr_t insertString(char *string, uintptr_t size) {
-    return syscall(SYS_INSERT_STRING, U32(string), size, 0, 0);
+uintptr_t insertString(char *string) {
+    return syscall(SYS_INSERT_STRING, U32(string), strlen(string), 0, 0);
 }
 
 uintptr_t getStringLength(uintptr_t stringId) {
