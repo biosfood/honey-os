@@ -24,10 +24,10 @@ extern void subscribeEvent(uint32_t service, uint32_t event,
                            void(handler)(void *, uint32_t));
 extern uint32_t getEvent(uint32_t service, char *name);
 extern uint32_t getService(char *name);
-extern void requestName(char *service, char *provider, void *data,
-                        uint32_t size);
-extern void request(uint32_t service, uint32_t provider, void *data,
-                    uint32_t size);
+extern void requestName(char *service, char *provider, uintptr_t data1,
+                        uintptr_t data2);
+extern void request(uint32_t service, uint32_t provider, uintptr_t data1,
+                    uintptr_t data2);
 extern uint32_t getServiceId();
 extern uintptr_t insertString(char *string);
 extern uintptr_t getStringLength(uintptr_t stringId);

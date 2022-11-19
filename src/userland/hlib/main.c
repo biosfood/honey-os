@@ -8,7 +8,7 @@
 uint32_t syscall(uint32_t function, uint32_t parameter0, uint32_t parameter1,
                  uint32_t parameter2, uint32_t parameter3) {
     uint32_t esp;
-    asm("push %%eax" ::"a"(&&end));
+    asm("push %%eax" ::"a"(&&end)); // end: return address
     asm("mov %%esp, %%eax" : "=a"(esp));
     asm("sysenter\n"
         :
@@ -25,8 +25,9 @@ end:
     return 0;
 }
 
-void request(uint32_t module, uint32_t function, void *data, uint32_t size) {
-    syscall(SYS_REQUEST, module, function, U32(data), size);
+void request(uint32_t module, uint32_t function, uintptr_t data1,
+             uintptr_t data2) {
+    syscall(SYS_REQUEST, module, function, data1, data2);
 }
 
 uint32_t installServiceProvider(char *name,
@@ -55,7 +56,8 @@ uint32_t getProvider(uint32_t module, char *name) {
 }
 
 void loadFromInitrd(char *name) {
-    syscall(SYS_LOAD_INITRD, U32(name), strlen(name), 0, 0);
+    uintptr_t id = insertString(name);
+    syscall(SYS_LOAD_INITRD, id, 0, 0, 0);
 }
 
 uint32_t logModule = 0, logProvider;
@@ -65,7 +67,9 @@ void log(char *message) {
         logModule = getService("log");
         logProvider = getProvider(logModule, "log");
     }
-    request(logModule, logProvider, message, strlen(message));
+    uintptr_t id = insertString(message);
+    request(logModule, logProvider, id, 0);
+    discardString(id);
 }
 
 uint32_t ioIn(uint16_t port, uint8_t size) {
@@ -80,10 +84,11 @@ void subscribeInterrupt(uint32_t intNo, void *handler) {
     syscall(SYS_SUBSCRIBE_INTERRUPT, intNo, U32(handler), 0, 0);
 }
 
-void requestName(char *service, char *provider, void *data, uint32_t size) {
+void requestName(char *service, char *provider, uintptr_t data1,
+                 uintptr_t data2) {
     uint32_t serviceId = getService(service);
     uint32_t providerId = getProvider(serviceId, provider);
-    request(serviceId, providerId, data, size);
+    request(serviceId, providerId, data1, data2);
 }
 
 uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }

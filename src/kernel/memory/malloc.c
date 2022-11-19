@@ -58,6 +58,9 @@ void *malloc(uint32_t size) {
 }
 
 void free(void *location) {
+    if (!location) {
+        return;
+    }
     AllocationBlock *block = (void *)((uintptr_t)location & ~0xFFF);
     if (block->magic != ALLOCATION_MAGIC) {
         freePage(location);

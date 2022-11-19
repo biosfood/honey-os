@@ -68,8 +68,6 @@ void handleRequestSyscall(Syscall *call) {
     Service *providerService = listGet(services, call->parameters[0]);
     Provider *provider =
         listGet(providerService->providers, call->parameters[1]);
-    void *data = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, PTR(call->parameters[2])));
-    scheduleProvider(provider, data, call->parameters[3], call);
+    scheduleProvider(provider, call->parameters[2], call->parameters[3], call);
     call->avoidReschedule = true;
 }
