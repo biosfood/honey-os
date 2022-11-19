@@ -3,21 +3,22 @@
 
 uint32_t outService, outProvider;
 
-void writeParallel(uint8_t data) {
-    request(outService, outProvider, PTR(data), 0);
-}
+void writeParallel(uint8_t data) { request(outService, outProvider, data, 0); }
 
-void handleLog(void *data, uint32_t dataLength) {
-    char *string = data, dump;
-    for (uint32_t i = 0; i < dataLength; i++) {
-        writeParallel(string[i]);
+char buffer[100];
+
+void handleLog(uint32_t stringId, uint32_t unused) {
+    readString(stringId, buffer);
+    uint32_t length = strlen(buffer);
+    for (uint32_t i = 0; i < length; i++) {
+        writeParallel(buffer[i]);
     }
     writeParallel('\r');
     writeParallel('\n');
 }
 
-void registerOut(uint32_t *service, uint32_t provider) {
-    outService = *service;
+void registerOut(uintptr_t service, uintptr_t provider) {
+    outService = service;
     outProvider = provider;
 }
 

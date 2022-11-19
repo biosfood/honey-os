@@ -1,5 +1,5 @@
-#include "elf.h"
 #include "service.h"
+#include "elf.h"
 #include <memory.h>
 #include <service.h>
 #include <util.h>
@@ -88,12 +88,11 @@ Provider *findProvider(Service *service, char *name) {
     return NULL;
 }
 
-void scheduleProvider(Provider *provider, void *data, uint32_t dataLength,
+void scheduleProvider(Provider *provider, uintptr_t data1, uintptr_t data2,
                       Syscall *respondingTo) {
-    sharePage(&provider->service->pagingInfo, data, data);
     Syscall *runCall = malloc(sizeof(Syscall));
     runCall->function = 0;
-    runCall->esp = malloc(0x1000);
+    runCall->esp = malloc(0x1000); // todo: free this
     runCall->respondingTo = respondingTo;
     runCall->cr3 =
         getPhysicalAddressKernel(provider->service->pagingInfo.pageDirectory);
@@ -103,7 +102,7 @@ void scheduleProvider(Provider *provider, void *data, uint32_t dataLength,
     runCall->esp += 0xFF0;
     *(void **)runCall->esp = provider->address;
     *(void **)(runCall->esp + 0x4) = &runEnd;
-    *(void **)(runCall->esp + 0x8) = data;
-    *(uint32_t *)(runCall->esp + 0xC) = dataLength;
+    *(uint32_t *)(runCall->esp + 0x8) = data1;
+    *(uint32_t *)(runCall->esp + 0xC) = data2;
     listAdd(&callsToProcess, runCall);
 }

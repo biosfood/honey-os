@@ -26,6 +26,6 @@ int32_t main() {
     event0 = createEvent("in");
     event1 = createEvent("parallelIn");
     uint32_t thisService = getServiceId();
-    requestName("log", "registerOut", &thisService, provider);
+    requestName("log", "registerOut", thisService, provider);
     return 0;
 }

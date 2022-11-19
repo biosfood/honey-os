@@ -1,12 +1,12 @@
 #include <service.h>
+#include <stringmap.h>
 #include <util.h>
 
 extern void loadProgram(char *name, Syscall *respondingTo);
 
 void handleLoadFromInitrdSyscall(Syscall *call) {
+    char *name = retrieveString(call->parameters[0], NULL);
     Service *service = call->service;
-    char *programName = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
-    loadProgram(programName, (void *)call);
+    loadProgram(name, (void *)call);
     call->avoidReschedule = true;
 }

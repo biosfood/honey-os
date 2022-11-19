@@ -26,7 +26,9 @@ uintptr_t insertString(char *string, uintptr_t size) {
         }
         currentLayer = nextLayer;
     }
-    currentLayer[hash >> (BITS(uintptr_t) - 4)] = string;
+    if (!currentLayer[hash >> (BITS(uintptr_t) - 4)]) {
+        currentLayer[hash >> (BITS(uintptr_t) - 4)] = string;
+    }
     return hash;
 }
 

@@ -34,6 +34,6 @@ extern void *runEnd;
 extern Service *findService(char *);
 extern Provider *findProvider(Service *, char *);
 extern Service *currentService;
-extern void scheduleProvider(Provider *provider, void *data,
-                             uint32_t dataLength, Syscall *respondingTo);
+extern void scheduleProvider(Provider *provider, uintptr_t data1,
+                             uintptr_t data2, Syscall *respondingTo);
 #endif
