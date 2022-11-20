@@ -33,5 +33,6 @@ extern uintptr_t insertString(char *string);
 extern uintptr_t getStringLength(uintptr_t stringId);
 extern void readString(uintptr_t stringId, void *buffer);
 extern void discardString(uintptr_t stringId);
+extern uintptr_t hashString(char *string);
 
 #endif

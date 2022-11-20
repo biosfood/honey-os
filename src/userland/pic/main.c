@@ -53,7 +53,7 @@ int32_t main() {
     ioOut(0xA1, 0x0, 1);
     ioOut(0x70, ioIn(0x70, 1) | 0x80, 1);
     ioIn(0x71, 1);
-    for (uint8_t i = 0; i < sizeof(eventNames) / sizeof(void *); i++) {
+    for (uint8_t i = 0; i < sizeof(eventNames) / sizeof(uintptr_t); i++) {
         eventIds[i] = createEvent(eventNames[i]);
     }
 }

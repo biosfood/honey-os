@@ -1,11 +1,14 @@
 #include <service.h>
+#include <stringmap.h>
 #include <util.h>
 
 void handleCreateEventSyscall(Syscall *call) {
+    char *name = retrieveString(call->parameters[0]);
+    if (!name) {
+        return;
+    }
     Event *event = malloc(sizeof(Provider));
     Service *service = call->service;
-    char *name = kernelMapPhysical(getPhysicalAddress(
-        service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
     event->subscriptions = NULL;
     event->name = name;
     call->returnValue = listCount(service->events);
@@ -13,20 +16,21 @@ void handleCreateEventSyscall(Syscall *call) {
 }
 
 void handleGetEventSyscall(Syscall *call) {
+    char *name = retrieveString(call->parameters[1]);
+    if (!name) {
+        return;
+    }
     uint32_t i = 0;
     Service *callService = call->service;
-    char *name = kernelMapPhysical(getPhysicalAddress(
-        callService->pagingInfo.pageDirectory, PTR(call->parameters[1])));
     Service *service = listGet(services, call->parameters[0]);
     foreach (service->events, Event *, event, {
         if (stringEquals(event->name, name)) {
             call->returnValue = i;
-            break;
+            return;
         }
         i++;
     })
         ;
-    unmapPage(name);
 }
 
 void handleFireEventSyscall(Syscall *call) {

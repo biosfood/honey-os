@@ -1,5 +1,6 @@
 #include "malloc.h"
 #include <memory.h>
+#include <util.h>
 
 #define LOG2(X) ((unsigned)(64 - __builtin_clzll((X)) - 1))
 
@@ -15,7 +16,8 @@ void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
         block->allocatedCoarse &= ~(1 << coarse);
         break;
     }
-    void *result = ((uint8_t *)block) + block->blockSize * (32 * coarse + fine);
+    void *result =
+        ((uint8_t *)block) + block->blockSize * (32 * (uint32_t)coarse + fine);
     memset(result, 0, block->blockSize);
     return result;
 }
@@ -36,19 +38,27 @@ void *malloc(uint32_t size) {
                 last->next = block;
             } else {
                 allocationData[sizeBit] = block;
-                block->previous = (void *)(uintptr_t)sizeBit;
+                block->previous = NULL;
             }
             block->magic = ALLOCATION_MAGIC;
         }
         if (block->allocatedCoarse == ~0) {
             goto end;
         }
+        bool abort = false;
         for (uint8_t coarse = 0; coarse < 32; coarse++) {
             for (uint8_t fine = 0; fine < 32; fine++) {
+                if (block->blockSize * (32 * coarse + fine + 1) > 3948) {
+                    abort = true;
+                    break;
+                }
                 if (block->allocatedFine[coarse] & (1 << fine)) {
                     continue;
                 }
                 return reserveBlock(block, coarse, fine);
+            }
+            if (abort) {
+                break;
             }
         }
     end:
@@ -71,11 +81,4 @@ void free(void *location) {
     uint8_t fine = index % 32;
     block->allocatedFine[coarse] &= ~(1 << fine);
     block->allocatedCoarse &= ~(1 << coarse);
-    for (uint8_t i = 0; i < 32; i++) {
-        if (block->allocatedFine[coarse] & (1 << i)) {
-            continue;
-        }
-        block->allocatedCoarse |= 1 << coarse;
-        return;
-    }
 }

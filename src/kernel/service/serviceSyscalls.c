@@ -17,7 +17,7 @@ void handleGetServiceIdSyscall(Syscall *call) {
 void handleGetServiceSyscall(Syscall *call) {
     uint32_t i = 0;
     Service *callService = call->service;
-    char *name = retrieveString(call->parameters[0], NULL);
+    char *name = retrieveString(call->parameters[0]);
     if (!name) {
         return;
     }
@@ -34,7 +34,7 @@ void handleGetServiceSyscall(Syscall *call) {
 void handleGetProviderSyscall(Syscall *call) {
     uint32_t i = 0;
     Service *callService = call->service;
-    char *name = retrieveString(call->parameters[1], NULL);
+    char *name = retrieveString(call->parameters[1]);
     if (!name) {
         return;
     }
@@ -50,7 +50,7 @@ void handleGetProviderSyscall(Syscall *call) {
 }
 
 void handleInstallSyscall(Syscall *call) {
-    char *name = retrieveString(call->parameters[0], NULL);
+    char *name = retrieveString(call->parameters[0]);
     if (!name) {
         return;
     }

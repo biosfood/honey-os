@@ -7,8 +7,8 @@ void onKey(void *data, uint32_t dataSize) {
 }
 
 int32_t main() {
-    log("keyboard handler installed");
     uint32_t service = getService("pic");
     uint32_t event = getEvent(service, "irq1");
     subscribeEvent(service, event, onKey);
+    log("keyboard handler installed");
 }
