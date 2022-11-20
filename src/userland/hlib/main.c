@@ -37,6 +37,9 @@ uint32_t installServiceProvider(char *name,
 }
 
 uint32_t strlen(char *string) {
+    if (!string) {
+        return 0;
+    }
     uint32_t size = 0;
     while (*string) {
         string++;
@@ -94,7 +97,7 @@ void requestName(char *service, char *provider, uintptr_t data1,
 uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }
 
 uintptr_t insertString(char *string) {
-    return syscall(SYS_INSERT_STRING, U32(string), strlen(string), 0, 0);
+    return syscall(SYS_INSERT_STRING, U32(string), 0, 0, 0);
 }
 
 uintptr_t getStringLength(uintptr_t stringId) {

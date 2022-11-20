@@ -2,6 +2,9 @@
 #include <util.h>
 
 bool stringEquals(char *string1, char *string2) {
+    if (string1 == string2) {
+        return true;
+    }
     while (*string1) {
         if (*string1 != *string2) {
             return false;
@@ -9,7 +12,7 @@ bool stringEquals(char *string1, char *string2) {
         string1++;
         string2++;
     }
-    return *string1 == *string2;
+    return *string2 == 0;
 }
 
 uint32_t strlen(char *string) {

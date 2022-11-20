@@ -3,8 +3,8 @@
 
 #include "stdint.h"
 
-extern uintptr_t insertString(char *string, uintptr_t size);
-extern char *retrieveString(uintptr_t stringId, uintptr_t *size);
+extern uintptr_t insertString(char *string);
+extern char *retrieveString(uintptr_t stringId);
 extern void discardString(uintptr_t stringId);
 
 #endif
