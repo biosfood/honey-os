@@ -25,4 +25,6 @@ typedef enum {
     SYS_DISCARD_STRING = 17,
 } SyscallIds;
 
+extern uint32_t getProvider(uint32_t module, char *name);
+
 #endif
