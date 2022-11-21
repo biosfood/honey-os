@@ -19,6 +19,7 @@ extern char *combineStrings(char *string1, char *string2);
 extern uint32_t strlen(char *string);
 
 extern void memcpy(void *source, void *destination, uint32_t size);
+extern void memset(void *target, uint8_t byte, uint32_t size);
 
 typedef struct ListElement {
     struct ListElement *next;
