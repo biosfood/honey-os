@@ -1,7 +1,12 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#include <stdbool.h>
 #include <stdint.h>
+
+#define ADDRESS(pageId) PTR((pageId) << 12)
+#define PAGE_ID(address) (U32(address) >> 12)
+#define PAGE_OFFSET(address) (U32(address) & 0xFFF)
 
 typedef struct AllocationBlock {
     uint8_t data[3948];
@@ -34,6 +39,8 @@ typedef struct {
     uint32_t pageSearchStart;
 } PagingInfo;
 
+extern PagingInfo *kernelPhysicalPages;
+
 extern void setupMemory();
 extern void reservePagesUntilPhysical(uint32_t endPageId);
 
@@ -42,6 +49,7 @@ extern void *findTarFile(void *fileStart, uint32_t fileSize, char *filename);
 extern void *kernelMapPhysical(void *address);
 extern void *kernelMapPhysicalCount(void *address, uint32_t size);
 extern void *getPage();
+extern void *getPhysicalPage();
 extern void *sharePage(PagingInfo *destination, void *sourceAddress,
                        void *destinationAddress);
 extern void freePage(void *pageAddress);
@@ -56,5 +64,11 @@ extern void *getPhysicalAddress(PageDirectoryEntry *pageDirectory,
 extern uint32_t findPage(PagingInfo *info);
 extern void *mapTemporary(void *address);
 extern void *getPagesCount(uint32_t size);
+
+extern uint32_t findMultiplePages(PagingInfo *info, uint32_t size);
+extern void reservePagesCount(PagingInfo *info, uint32_t startPageId,
+                              uint32_t count);
+extern void mapPage(PagingInfo *info, void *physical, void *virtual,
+                    bool userPage);
 
 #endif
