@@ -37,8 +37,6 @@ typedef struct {
 extern void setupMemory();
 extern void reservePagesUntilPhysical(uint32_t endPageId);
 
-extern void memset(void *target, uint8_t byte, uint32_t size);
-
 extern void *findTarFile(void *fileStart, uint32_t fileSize, char *filename);
 
 extern void *kernelMapPhysical(void *address);
