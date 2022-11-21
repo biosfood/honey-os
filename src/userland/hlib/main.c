@@ -45,3 +45,9 @@ void requestName(char *service, char *provider, uintptr_t data1,
     uint32_t providerId = getProvider(serviceId, provider);
     request(serviceId, providerId, data1, data2);
 }
+
+void *requestMemory(uint32_t pageCount, void *targetAddress,
+                    void *physicalAddress) {
+    return PTR(syscall(SYS_REQUEST_MEMORY, pageCount, U32(targetAddress),
+                       U32(physicalAddress), 0));
+}

@@ -2,10 +2,6 @@
 #include <memory.h>
 #include <util.h>
 
-#define ADDRESS(pageId) PTR((pageId) << 12)
-#define PAGE_ID(address) (U32(address) >> 12)
-#define PAGE_OFFSET(address) (U32(address) & 0xFFF)
-
 PageTableEntry *kernelCodePageTable, *kernelDataPageTable;
 
 PagingInfo *kernelPhysicalPages, *kernelVirtualPages;
@@ -257,4 +253,4 @@ void freePageFrom(PagingInfo *info, void *address) {
     } while (info->isPageConnectedToNext[coarse] & fineBit);
 }
 
-void freePage(void *address) {}
+void freePage(void *address) { freePageFrom(kernelVirtualPages, address); }
