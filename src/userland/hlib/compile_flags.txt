@@ -1,6 +1,6 @@
+-I./include
+-I../../include
 clang
--I./src/include
 -fms-extensions
 -Wno-microsoft-anon-tag
 -Wno-incompatible-library-redeclaration
--I./src/kernel/include
