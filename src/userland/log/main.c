@@ -1,9 +1,13 @@
 #include <hlib.h>
 #include <stdint.h>
 
-uint32_t outService, outProvider;
+uint32_t services[10], functions[10], outputCount;
 
-void writeParallel(uint8_t data) { request(outService, outProvider, data, 0); }
+void writeChar(uint8_t data) {
+    for (uint8_t i = 0; i < outputCount; i++) {
+        request(services[i], functions[i], data, 0);
+    }
+}
 
 char buffer[100];
 
@@ -11,15 +15,16 @@ void handleLog(uint32_t stringId, uint32_t unused) {
     readString(stringId, buffer);
     uint32_t length = strlen(buffer);
     for (uint32_t i = 0; i < length; i++) {
-        writeParallel(buffer[i]);
+        writeChar(buffer[i]);
     }
-    writeParallel('\r');
-    writeParallel('\n');
+    writeChar('\r');
+    writeChar('\n');
 }
 
 void registerOut(uintptr_t service, uintptr_t provider) {
-    outService = service;
-    outProvider = provider;
+    services[outputCount] = service;
+    functions[outputCount] = provider;
+    outputCount++;
 }
 
 int32_t main() {
