@@ -1,3 +1,5 @@
+#define ALLOC_MAIN
+
 #include <hlib.h>
 #include <stdint.h>
 
@@ -9,6 +11,7 @@ int32_t main() {
     log("honey os is alive :)");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
+    malloc(10);
     log("finished loading essential modules");
     return 0;
 }

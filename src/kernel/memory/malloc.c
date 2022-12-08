@@ -1,10 +1,4 @@
 #include "malloc.h"
-#include <memory.h>
-#include <util.h>
-
-#define LOG2(X) ((unsigned)(64 - __builtin_clzll((X)) - 1))
-
-AllocationData allocationData;
 
 void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
     block->allocatedFine[coarse] |= 1 << fine;
@@ -22,12 +16,14 @@ void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
     return result;
 }
 
-void *malloc(uint32_t size) {
+#define NULL 0
+
+void *_malloc(AllocationData *allocationData, uint32_t size) {
     uint32_t sizeBit = LOG2(size) + 1;
     if (sizeBit > 10) {
         return getPagesCount(((size - 1) >> 12) + 1);
     }
-    AllocationBlock *block = allocationData[sizeBit], *last = 0;
+    AllocationBlock *block = (*allocationData)[sizeBit], *last = 0;
     while (1) {
         if (!block) {
             block = getPage();
@@ -37,7 +33,7 @@ void *malloc(uint32_t size) {
                 block->previous = last;
                 last->next = block;
             } else {
-                allocationData[sizeBit] = block;
+                (*allocationData)[sizeBit] = block;
                 block->previous = NULL;
             }
             block->magic = ALLOCATION_MAGIC;

@@ -1,3 +1,6 @@
+#define ALLOC_MAIN
+#include "memory/malloc.h"
+
 #include <interrupts.h>
 #include <memory.h>
 #include <multiboot.h>
