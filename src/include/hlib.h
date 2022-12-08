@@ -4,9 +4,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "../userland/hlib/malloc.h"
+
 #define PTR(x) ((void *)(uintptr_t)(x))
 #define U32(x) ((uint32_t)(uintptr_t)(x))
-#define NULL PTR(0)
 
 extern uint32_t installServiceProvider(char *name,
                                        int32_t(provider)(void *, uint32_t));
