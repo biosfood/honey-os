@@ -25,7 +25,7 @@ Service *readInitrdProgram(char *name) {
 Service *loadProgram(char *name, Syscall *respondingTo) {
     Service *service = readInitrdProgram(name);
     Provider *provider = findProvider(service, "main");
-    scheduleProvider(provider, 0, 0, respondingTo);
+    scheduleProvider(provider, 0, 0, 0, respondingTo);
     return service;
 }
 

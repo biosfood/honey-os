@@ -22,7 +22,7 @@ IdtEntry idtEntries[256] = {};
 void onInterrupt(void *eip, void *esp, uint32_t intNo, void *cr3) {
     // an external interrupt was triggered
     foreach (interruptSubscriptions[intNo], Provider *, provider,
-             { scheduleProvider(provider, intNo, 0, NULL); })
+             { scheduleProvider(provider, intNo, 0, 0, NULL); })
         ;
     if (cr3 == PTR(0x500000)) {
         return;
