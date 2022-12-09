@@ -33,8 +33,11 @@ extern void free(void *);
 AllocationData allocationData;
 
 extern void *_malloc(void *, uintptr_t);
-
 void *malloc(uint32_t size) { _malloc(&allocationData, size); }
+
+extern void _printf(void *(malloc)(uint32_t), const char *format, ...);
+
+#define printf(...) _printf(malloc, __VA_ARGS__)
 
 #endif
 

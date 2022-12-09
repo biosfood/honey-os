@@ -9,6 +9,8 @@
 #define PTR(x) ((void *)(uintptr_t)(x))
 #define U32(x) ((uint32_t)(uintptr_t)(x))
 
+#define NULL PTR(0)
+
 extern uint32_t installServiceProvider(char *name,
                                        int32_t(provider)(void *, uint32_t));
 extern uint32_t strlen(char *string);
@@ -38,5 +40,7 @@ extern void discardString(uintptr_t stringId);
 extern uintptr_t hashString(char *string);
 extern void *requestMemory(uint32_t pageCount, void *targetAddress,
                            void *physicalAddress);
+
+#define MAX(x, y) (x > y ? (x) : (y))
 
 #endif
