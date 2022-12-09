@@ -7,11 +7,11 @@ int32_t main() {
     loadFromInitrd("log");
     loadFromInitrd("vga");
     loadFromInitrd("parallel");
-    log("hello world");
     log("honey os is alive :)");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
-    malloc(10);
+    printf("test print string: '%s', number: %i, hex: 0x%x", "hello world",
+           1234, 0xB105F00D);
     log("finished loading essential modules");
     return 0;
 }
