@@ -2,6 +2,7 @@
 #include "elf.h"
 #include <memory.h>
 #include <service.h>
+#include <stringmap.h>
 #include <util.h>
 
 extern void *functionsStart;
@@ -30,6 +31,7 @@ Service *loadElf(void *elfStart, char *serviceName) {
     memset(service, 0, sizeof(Service));
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
+    service->nameHash = insertString(serviceName);
     void *current = &functionsStart;
     if (hlib) {
         service->pagingInfo.pageDirectory[0x3FC].pageTableID =
@@ -89,7 +91,7 @@ Provider *findProvider(Service *service, char *name) {
 }
 
 void scheduleProvider(Provider *provider, uintptr_t data1, uintptr_t data2,
-                      Syscall *respondingTo) {
+                      uintptr_t data3, Syscall *respondingTo) {
     Syscall *runCall = malloc(sizeof(Syscall));
     runCall->function = 0;
     runCall->esp = malloc(0x1000); // todo: free this
@@ -99,10 +101,11 @@ void scheduleProvider(Provider *provider, uintptr_t data1, uintptr_t data2,
     runCall->service = provider->service;
     runCall->resume = true;
     sharePage(&provider->service->pagingInfo, runCall->esp, runCall->esp);
-    runCall->esp += 0xFF0;
+    runCall->esp += 0x1000 - 0x20;
     *(void **)runCall->esp = provider->address;
     *(void **)(runCall->esp + 0x4) = &runEnd;
     *(uint32_t *)(runCall->esp + 0x8) = data1;
     *(uint32_t *)(runCall->esp + 0xC) = data2;
+    *(uint32_t *)(runCall->esp + 0x10) = data3;
     listAdd(&callsToProcess, runCall);
 }

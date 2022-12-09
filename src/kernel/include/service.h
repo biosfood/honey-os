@@ -8,6 +8,7 @@
 typedef struct {
     PagingInfo pagingInfo;
     char *name;
+    uintptr_t nameHash;
     ListElement *providers;
     ListElement *events;
 } Service;
@@ -35,5 +36,6 @@ extern Service *findService(char *);
 extern Provider *findProvider(Service *, char *);
 extern Service *currentService;
 extern void scheduleProvider(Provider *provider, uintptr_t data1,
-                             uintptr_t data2, Syscall *respondingTo);
+                             uintptr_t data2, uintptr_t data3,
+                             Syscall *respondingTo);
 #endif

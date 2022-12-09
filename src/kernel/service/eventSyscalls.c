@@ -37,7 +37,7 @@ void handleFireEventSyscall(Syscall *call) {
     Service *service = call->service;
     Event *event = listGet(service->events, call->parameters[0]);
     foreach (event->subscriptions, Provider *, provider,
-             { scheduleProvider(provider, 0, 0, 0); })
+             { scheduleProvider(provider, 0, 0, 0, 0); })
         ;
 }
 
