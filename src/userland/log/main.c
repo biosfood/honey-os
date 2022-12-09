@@ -17,13 +17,13 @@ void writeString(char *string) {
 
 void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller) {
     char buffer[100];
-    writeChar('[');
-    writeChar(' ');
+    writeString("[ ");
     readString(caller, buffer);
     writeString(buffer);
-    writeChar(' ');
-    writeChar(']');
-    writeChar(' ');
+    for (int32_t i = 10 - strlen(buffer); i > 0; i--) {
+        writeChar(' ');
+    }
+    writeString(" ] ");
     readString(stringId, buffer);
     writeString(buffer);
     writeChar('\r');
