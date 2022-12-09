@@ -27,7 +27,7 @@ uintptr_t insertString(char *string) {
     }
     if (!currentLayer[hash >> (BITS(uintptr_t) - 4)]) {
         currentLayer[hash >> (BITS(uintptr_t) - 4)] = string;
-    } else {
+    } else if (currentLayer[hash >> (BITS(uintptr_t) - 4)] != string) {
         free(string);
     }
     return hash;

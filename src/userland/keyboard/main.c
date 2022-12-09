@@ -3,7 +3,7 @@
 
 void onKey(void *data, uint32_t dataSize) {
     uint32_t keyCode = ioIn(0x60, 1);
-    log("key!");
+    log("key press detected");
 }
 
 int32_t main() {
