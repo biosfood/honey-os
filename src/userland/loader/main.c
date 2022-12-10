@@ -7,7 +7,7 @@ int32_t main() {
     loadFromInitrd("log");
     loadFromInitrd("vga");
     loadFromInitrd("parallel");
-    log("honey os is alive :)");
+    log("hello world! honey os is alive :)");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
     printf("test print string: '%s', number: %i, hex: 0x%x", "hello world",

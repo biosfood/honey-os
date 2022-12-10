@@ -25,15 +25,15 @@ void onInterrupt(void *eip, void *esp, uint32_t intNo, void *cr3) {
              { scheduleProvider(provider, intNo, 0, 0, NULL); })
         ;
     if (cr3 == PTR(0x500000)) {
+        // interrupt was triggered while the kernel was doing stuff
         return;
     }
     Syscall *call = malloc(sizeof(Syscall));
-    call->function = 0;
     call->service = currentSyscall->service;
     call->esp = esp;
     call->respondingTo = currentSyscall->respondingTo;
-    Service *currentService = currentSyscall->service;
     call->cr3 = cr3;
+    call->resume = true;
     listAdd(&callsToProcess, call);
     asm("jmp handleSyscallEnd");
 }

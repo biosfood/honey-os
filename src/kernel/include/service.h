@@ -38,4 +38,7 @@ extern Service *currentService;
 extern void scheduleProvider(Provider *provider, uintptr_t data1,
                              uintptr_t data2, uintptr_t data3,
                              Syscall *respondingTo);
+extern void fireEvent(Event *event, uint32_t data1);
+extern void installKernelEvents();
+
 #endif
