@@ -15,15 +15,19 @@ void handleCreateEventSyscall(Syscall *call) {
     listAdd(&service->events, event);
 }
 
+extern ListElement *kernelEvents;
+
 void handleGetEventSyscall(Syscall *call) {
     char *name = retrieveString(call->parameters[1]);
     if (!name) {
         return;
     }
     uint32_t i = 0;
-    Service *callService = call->service;
-    Service *service = listGet(services, call->parameters[0]);
-    foreach (service->events, Event *, event, {
+    ListElement *events = kernelEvents;
+    if (call->parameters[0]) {
+        events = ((Service *)listGet(services, call->parameters[0]))->events;
+    }
+    foreach (events, Event *, event, {
         if (stringEquals(event->name, name)) {
             call->returnValue = i;
             return;
@@ -36,14 +40,18 @@ void handleGetEventSyscall(Syscall *call) {
 void handleFireEventSyscall(Syscall *call) {
     Service *service = call->service;
     Event *event = listGet(service->events, call->parameters[0]);
-    foreach (event->subscriptions, Provider *, provider,
-             { scheduleProvider(provider, 0, 0, 0, 0); })
-        ;
+    fireEvent(event, 0);
 }
 
 void handleSubscribeEventSyscall(Syscall *call) {
+    ListElement *list = kernelEvents;
+    if (call->parameters[0]) {
+        // given another service as the target
+        Service *eventService = listGet(services, call->parameters[0]);
+        list = eventService->events;
+    }
+    Event *event = listGet(list, call->parameters[1]);
     Service *eventService = listGet(services, call->parameters[0]);
-    Event *event = listGet(eventService->events, call->parameters[1]);
     Provider *provider = malloc(sizeof(Provider));
     provider->name = "event subscription";
     provider->service = call->service;

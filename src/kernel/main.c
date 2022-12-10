@@ -30,6 +30,7 @@ Service *loadProgram(char *name, Syscall *respondingTo) {
 }
 
 void loadAndScheduleSystemServices(void *multibootInfo) {
+    installKernelEvents();
     void *address = kernelMapPhysicalCount(multibootInfo, 4);
     initrd = findInitrd(address, &initrdSize);
     hlib = readInitrdProgram("hlib");

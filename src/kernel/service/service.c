@@ -12,6 +12,7 @@ extern void(runFunction)();
 ListElement *services, *callsToProcess;
 Syscall *currentSyscall;
 extern Service *hlib;
+extern Event *loadInitrdEvent;
 
 void resume(Syscall *syscall) {
     if (U32(syscall) < 0x1000) {
@@ -32,6 +33,7 @@ Service *loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     service->nameHash = insertString(serviceName);
+    fireEvent(loadInitrdEvent, service->nameHash);
     void *current = &functionsStart;
     if (hlib) {
         service->pagingInfo.pageDirectory[0x3FC].pageTableID =

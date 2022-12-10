@@ -1,3 +1,5 @@
+#define ALLOC_MAIN
+
 #include <hlib.h>
 #include <stdint.h>
 
@@ -15,8 +17,14 @@ void writeString(char *string) {
     }
 }
 
+bool lock = false;
+char buffer[100];
+
 void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller) {
-    char buffer[100];
+    while (lock) {
+        ioIn(1, 1);
+    }
+    lock = true;
     writeString("[ ");
     readString(caller, buffer);
     writeString(buffer);
@@ -26,8 +34,8 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller) {
     writeString(" ] ");
     readString(stringId, buffer);
     writeString(buffer);
-    writeChar('\r');
-    writeChar('\n');
+    writeString("\r\n");
+    lock = false;
 }
 
 void registerOut(uintptr_t service, uintptr_t provider) {
@@ -36,8 +44,16 @@ void registerOut(uintptr_t service, uintptr_t provider) {
     outputCount++;
 }
 
+void onInitrdLoad(uint32_t programName) {
+    char buffer[100];
+    readString(programName, buffer);
+    printf("loading '%s' from initrd", buffer);
+}
+
 int32_t main() {
     installServiceProvider("log", (void *)handleLog);
     installServiceProvider("registerOut", (void *)registerOut);
+    uint32_t eventId = getEvent(0, "loadInitrd");
+    subscribeEvent(0, eventId, (void *)onInitrdLoad);
     return 0;
 }
