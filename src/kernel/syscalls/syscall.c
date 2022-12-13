@@ -21,6 +21,11 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
                    uint32_t parameter1, uint32_t parameter2,
                    uint32_t parameter3) {
     if (!function) {
+        Service *service = currentSyscall->service;
+        void *espPhysical = getPhysicalAddress(
+            service->pagingInfo.pageDirectory, currentSyscall->esp);
+        freePage(currentSyscall->esp);
+
         if (currentSyscall->respondingTo) {
             listAdd(&callsToProcess, currentSyscall->respondingTo);
         }

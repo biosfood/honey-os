@@ -254,3 +254,8 @@ void freePageFrom(PagingInfo *info, void *address) {
 }
 
 void freePage(void *address) { freePageFrom(kernelVirtualPages, address); }
+
+void freePhysicalPage(uint32_t pageId) {
+    markPageFree(kernelPhysicalPages, pageId / 32, pageId % 32,
+                 1 << (pageId % 32));
+}

@@ -43,6 +43,7 @@ extern void *getPhysicalPage();
 extern void *sharePage(PagingInfo *destination, void *sourceAddress,
                        void *destinationAddress);
 extern void freePage(void *pageAddress);
+extern void freePhysicalPage(uint32_t pageId);
 extern void unmapPage(void *pageAddress);
 
 extern void free(void *address);
