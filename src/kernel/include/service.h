@@ -9,7 +9,7 @@ typedef struct {
     PagingInfo pagingInfo;
     char *name;
     uintptr_t nameHash;
-    ListElement *providers;
+    ListElement *functions;
     ListElement *events;
 } Service;
 
@@ -18,7 +18,7 @@ typedef struct {
     char *name;
     void *address;
     Service *service;
-} Provider;
+} ServiceFunction;
 
 typedef struct {
     char *name;
@@ -33,9 +33,9 @@ extern void resume(Syscall *syscall);
 extern void *runEnd;
 
 extern Service *findService(char *);
-extern Provider *findProvider(Service *, char *);
+extern ServiceFunction *findFunction(Service *, char *);
 extern Service *currentService;
-extern void scheduleProvider(Provider *provider, uintptr_t data1,
+extern void scheduleFunction(ServiceFunction *provider, uintptr_t data1,
                              uintptr_t data2, uintptr_t data3,
                              Syscall *respondingTo);
 extern void fireEvent(Event *event, uint32_t data1);

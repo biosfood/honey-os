@@ -6,13 +6,13 @@
 
 typedef enum {
     SYS_RUN = 0,
-    SYS_REGISTER_FUNCTION = 1,
+    SYS_CREATE_FUNCTION = 1,
     SYS_REQUEST = 2,
     SYS_IO_IN = 3,
     SYS_IO_OUT = 4,
     SYS_LOAD_INITRD = 5,
     SYS_GET_SERVICE = 6,
-    SYS_GET_PROVIDER = 7,
+    SYS_GET_FUNCTION = 7,
     SYS_SUBSCRIBE_INTERRUPT = 8,
     SYS_CREATE_EVENT = 9,
     SYS_GET_EVENT = 10,
@@ -26,6 +26,6 @@ typedef enum {
     SYS_REQUEST_MEMORY = 18,
 } SyscallIds;
 
-extern uint32_t getProvider(uint32_t module, char *name);
+extern uint32_t getFunction(uint32_t module, char *name);
 
 #endif

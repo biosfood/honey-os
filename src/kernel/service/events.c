@@ -6,7 +6,7 @@ ListElement *kernelEvents;
 Event *loadInitrdEvent, *crashEvent;
 
 Event *createKernelEvent(char *name) {
-    Event *event = malloc(sizeof(Provider));
+    Event *event = malloc(sizeof(ServiceFunction));
     event->subscriptions = NULL;
     event->name = name;
     listAdd(&kernelEvents, event);
@@ -14,8 +14,8 @@ Event *createKernelEvent(char *name) {
 }
 
 void fireEvent(Event *event, uint32_t data1) {
-    foreach (event->subscriptions, Provider *, provider,
-             { scheduleProvider(provider, data1, 0, 0, 0); })
+    foreach (event->subscriptions, ServiceFunction *, function,
+             { scheduleFunction(function, data1, 0, 0, 0); })
         ;
 }
 

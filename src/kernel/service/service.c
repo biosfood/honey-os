@@ -63,12 +63,12 @@ Service *loadElf(void *elfStart, char *serviceName) {
     end:
         programHeader = (void *)programHeader + header->programHeaderEntrySize;
     }
-    Provider *main = malloc(sizeof(Provider));
+    ServiceFunction *main = malloc(sizeof(ServiceFunction));
     main->name = "main";
     main->service = service;
     main->address = PTR(header->entryPosition);
     listAdd(&services, service);
-    listAdd(&service->providers, main);
+    listAdd(&service->functions, main);
     return service;
 }
 
@@ -82,8 +82,8 @@ Service *findService(char *name) {
     return NULL;
 }
 
-Provider *findProvider(Service *service, char *name) {
-    foreach (service->providers, Provider *, provider, {
+ServiceFunction *findFunction(Service *service, char *name) {
+    foreach (service->functions, ServiceFunction *, provider, {
         if (stringEquals(provider->name, name)) {
             return provider;
         }
@@ -92,8 +92,8 @@ Provider *findProvider(Service *service, char *name) {
     return NULL;
 }
 
-void scheduleProvider(Provider *provider, uintptr_t data1, uintptr_t data2,
-                      uintptr_t data3, Syscall *respondingTo) {
+void scheduleFunction(ServiceFunction *provider, uintptr_t data1,
+                      uintptr_t data2, uintptr_t data3, Syscall *respondingTo) {
     Syscall *runCall = malloc(sizeof(Syscall));
     runCall->function = 0;
     runCall->esp = malloc(0x1000); // todo: free this

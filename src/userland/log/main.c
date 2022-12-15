@@ -51,8 +51,8 @@ void onInitrdLoad(uint32_t programName) {
 }
 
 int32_t main() {
-    installServiceProvider("log", (void *)handleLog);
-    installServiceProvider("registerOut", (void *)registerOut);
+    createFunction("log", (void *)handleLog);
+    createFunction("registerOut", (void *)registerOut);
     uint32_t eventId = getEvent(0, "loadInitrd");
     subscribeEvent(0, eventId, (void *)onInitrdLoad);
     return 0;

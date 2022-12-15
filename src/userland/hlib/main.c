@@ -32,7 +32,7 @@ uint32_t logModule = 0, logProvider;
 void log(char *message) {
     if (logModule == 0) {
         logModule = getService("log");
-        logProvider = getProvider(logModule, "log");
+        logProvider = getFunction(logModule, "log");
     }
     uintptr_t id = insertString(message);
     request(logModule, logProvider, id, 0);
@@ -42,7 +42,7 @@ void log(char *message) {
 void requestName(char *service, char *provider, uintptr_t data1,
                  uintptr_t data2) {
     uint32_t serviceId = getService(service);
-    uint32_t providerId = getProvider(serviceId, provider);
+    uint32_t providerId = getFunction(serviceId, provider);
     request(serviceId, providerId, data1, data2);
 }
 

@@ -56,8 +56,8 @@ void setupSyscalls() {
 
 extern uintptr_t handleLoadFromInitrdSyscall;
 extern uintptr_t handleIOInSyscall, handleIOOutSyscall;
-extern uintptr_t handleGetServiceIdSyscall, handleGetProviderSyscall,
-    handleGetServiceSyscall, handleInstallSyscall, handleRequestSyscall;
+extern uintptr_t handleGetServiceIdSyscall, handleGetFunctionSyscall,
+    handleGetServiceSyscall, handleCreateFunctionSyscall, handleRequestSyscall;
 extern uintptr_t handleCreateEventSyscall, handleGetEventSyscall,
     handleFireEventSyscall, handleSubscribeEventSyscall;
 extern uintptr_t handleSubscribeInterruptSyscall;
@@ -67,13 +67,13 @@ extern uintptr_t handleRequestMemorySyscall;
 
 void (*syscallHandlers[])(Syscall *) = {
     0,
-    (void *)&handleInstallSyscall,
+    (void *)&handleCreateFunctionSyscall,
     (void *)&handleRequestSyscall,
     (void *)&handleIOInSyscall,
     (void *)&handleIOOutSyscall,
     (void *)&handleLoadFromInitrdSyscall,
     (void *)&handleGetServiceSyscall,
-    (void *)&handleGetProviderSyscall,
+    (void *)&handleGetFunctionSyscall,
     (void *)&handleSubscribeInterruptSyscall,
     (void *)&handleCreateEventSyscall,
     (void *)&handleGetEventSyscall,

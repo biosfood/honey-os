@@ -29,7 +29,7 @@ void write(char c) {
 int32_t main() {
     videoSource = requestMemory(2, NULL, PTR(0xB8000));
     uint32_t thisService = getServiceId();
-    uint32_t functionId = installServiceProvider("writeVGA", (void *)write);
+    uint32_t functionId = createFunction("writeVGA", (void *)write);
     requestName("log", "registerOut", thisService, functionId);
     return 0;
 }

@@ -7,7 +7,7 @@ void handleCreateEventSyscall(Syscall *call) {
     if (!name) {
         return;
     }
-    Event *event = malloc(sizeof(Provider));
+    Event *event = malloc(sizeof(ServiceFunction));
     Service *service = call->service;
     event->subscriptions = NULL;
     event->name = name;
@@ -52,7 +52,7 @@ void handleSubscribeEventSyscall(Syscall *call) {
     }
     Event *event = listGet(list, call->parameters[1]);
     Service *eventService = listGet(services, call->parameters[0]);
-    Provider *provider = malloc(sizeof(Provider));
+    ServiceFunction *provider = malloc(sizeof(ServiceFunction));
     provider->name = "event subscription";
     provider->service = call->service;
     provider->address = PTR(call->parameters[2]);

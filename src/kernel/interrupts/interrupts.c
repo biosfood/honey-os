@@ -21,8 +21,8 @@ IdtEntry idtEntries[256] = {};
 
 void onInterrupt(void *eip, void *esp, uint32_t intNo, void *cr3) {
     // an external interrupt was triggered
-    foreach (interruptSubscriptions[intNo], Provider *, provider,
-             { scheduleProvider(provider, intNo, 0, 0, NULL); })
+    foreach (interruptSubscriptions[intNo], ServiceFunction *, provider,
+             { scheduleFunction(provider, intNo, 0, 0, NULL); })
         ;
     if (cr3 == PTR(0x500000)) {
         // interrupt was triggered while the kernel was doing stuff
@@ -88,7 +88,7 @@ void setupPic() {
 }
 
 void handleSubscribeInterruptSyscall(Syscall *call) {
-    Provider *provider = malloc(sizeof(Provider));
+    ServiceFunction *provider = malloc(sizeof(ServiceFunction));
     Service *service = call->service;
     char *providerName = "INTERRUPT";
     provider->name = providerName;

@@ -11,8 +11,7 @@
 
 #define NULL PTR(0)
 
-extern uint32_t installServiceProvider(char *name,
-                                       int32_t(provider)(void *, uint32_t));
+extern uint32_t createFunction(char *name, int32_t(handler)(void *, uint32_t));
 extern uint32_t strlen(char *string);
 extern uint32_t ioIn(uint16_t port, uint8_t size);
 extern void ioOut(uint16_t port, uint32_t value, uint8_t size);

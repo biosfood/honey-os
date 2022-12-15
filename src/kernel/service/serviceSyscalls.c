@@ -31,7 +31,7 @@ void handleGetServiceSyscall(Syscall *call) {
         ;
 }
 
-void handleGetProviderSyscall(Syscall *call) {
+void handleGetFunctionSyscall(Syscall *call) {
     uint32_t i = 0;
     Service *callService = call->service;
     char *name = retrieveString(call->parameters[1]);
@@ -39,7 +39,7 @@ void handleGetProviderSyscall(Syscall *call) {
         return;
     }
     Service *providerService = listGet(services, call->parameters[0]);
-    foreach (providerService->providers, Provider *, provider, {
+    foreach (providerService->functions, ServiceFunction *, provider, {
         if (stringEquals(provider->name, name)) {
             call->returnValue = i;
             return;
@@ -49,26 +49,26 @@ void handleGetProviderSyscall(Syscall *call) {
         ;
 }
 
-void handleInstallSyscall(Syscall *call) {
+void handleCreateFunctionSyscall(Syscall *call) {
     char *name = retrieveString(call->parameters[0]);
     if (!name) {
         return;
     }
-    Provider *provider = malloc(sizeof(Provider));
+    ServiceFunction *function = malloc(sizeof(ServiceFunction));
     Service *service = call->service;
-    provider->name = name;
-    provider->address = PTR(call->parameters[1]);
-    provider->service = call->service;
-    call->returnValue = listCount(service->providers);
-    listAdd(&service->providers, provider);
+    function->name = name;
+    function->address = PTR(call->parameters[1]);
+    function->service = call->service;
+    call->returnValue = listCount(service->functions);
+    listAdd(&service->functions, function);
 }
 
 void handleRequestSyscall(Syscall *call) {
     Service *service = call->service;
     Service *providerService = listGet(services, call->parameters[0]);
-    Provider *provider =
-        listGet(providerService->providers, call->parameters[1]);
-    scheduleProvider(provider, call->parameters[2], call->parameters[3],
+    ServiceFunction *function =
+        listGet(providerService->functions, call->parameters[1]);
+    scheduleFunction(function, call->parameters[2], call->parameters[3],
                      service->nameHash, call);
     call->avoidReschedule = true;
 }
