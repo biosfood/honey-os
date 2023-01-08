@@ -28,7 +28,9 @@ void handleReadStringSyscall(Syscall *call) {
     void *buffer = kernelMapPhysical(getPhysicalAddress(
         callService->pagingInfo.pageDirectory, PTR(call->parameters[1])));
     char *string = retrieveString(stringId);
-    memcpy(string, buffer, strlen(string) + 1);
+    if (string) {
+        memcpy(string, buffer, strlen(string) + 1);
+    }
     unmapPage(buffer);
 }
 

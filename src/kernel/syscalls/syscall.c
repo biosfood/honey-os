@@ -43,6 +43,10 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
     Service *currentService = currentSyscall->service;
     call->cr3 =
         getPhysicalAddressKernel(currentService->pagingInfo.pageDirectory);
+    if (function == -1) {
+        call->resume = true;
+        call->function = 0;
+    }
     listAdd(&callsToProcess, call);
 }
 

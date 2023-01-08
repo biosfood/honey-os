@@ -19,4 +19,7 @@ typedef struct Syscall {
 extern void setupSyscalls();
 extern void processSyscall(Syscall *call);
 
+extern void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
+                          uint32_t parameter1, uint32_t parameter2,
+                          uint32_t parameter3);
 #endif

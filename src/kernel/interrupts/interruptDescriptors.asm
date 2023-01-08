@@ -14,9 +14,8 @@ interruptReturn:
   ret
 
 exceptionAbort:
-  mov eax, cr3
-  cmp eax, 0x500000
-  je $
+  mov ebx, [esp+24]
+  jmp $
   mov eax, 0x500000
   mov cr3, eax
   mov eax, [temporaryESP]
@@ -36,40 +35,18 @@ handleInterrupt:
   mov eax, [esp+20]
   cmp eax, 31
   jng exceptionAbort
-.normalInterrupt:
-  push eax
-.checkUsermode:
-  mov eax, cr3
-  cmp eax, 0x500000
-  je .kernelPages
-.saveRegistersToOldStack:
-  mov eax, [esp+44] ; eax = old esp
-  mov ebx, [esp+32] ; ebx = old eip
-  mov [eax], ebx ; virtual push
-  add eax, 4
-.pushRegisters:
-  mov ebx, [esp+4] ; ebx = old edx
-  mov [eax], ebx ; virtual push ebx
-  add eax, 4
-  mov ebx, [esp+8] ; ebx = old ecx
-  mov [eax], ebx ; virtual push ebx
-  add eax, 4
-  mov ebx, [esp+12] ; ebx = old ebx
-  mov [eax], ebx ; virtual push ebx
-  add eax, 4
-  mov ebx, [esp+16] ; ebx = old edx
-  mov [eax], ebx ; virtual push ebx
-  add eax, 4
-.kernelPages:
-  push eax
+.goToKernelPages:
   mov eax, 0x500000
   mov cr3, eax
-.callHandler:
-  push interruptReturn
   call onInterrupt
-.iretNow:
-  add esp, 40
-  iret
+  pop eax
+  mov cr3, eax
+  pop edx
+  pop ecx
+  pop ebx
+  pop eax
+  add esp, 8
+  iretd
 
 %macro interruptHandler 1
   ALIGN 4

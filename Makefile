@@ -7,7 +7,7 @@ LD_FLAGS = -z max-page-size=0x1000 -T link.ld
 AS = nasm
 ASFlAGS = -felf32
 EMU = qemu-system-x86_64
-EMUFLAGS = -m 1G -drive format=raw,file=$(IMAGE_FILE) -no-reboot -no-shutdown -monitor stdio -d int -D crashlog.log -s
+EMUFLAGS = -m 1G -drive format=raw,file=$(IMAGE_FILE) -no-reboot -no-shutdown -monitor stdio -d int -D crashlog.log -s -d int
 
 BUILD_FOLDER = build
 

@@ -2,6 +2,7 @@
 #include <interrupts.h>
 #include <memory.h>
 #include <service.h>
+#include <syscall.h>
 #include <util.h>
 
 #define IDT_ENTRY(i)                                                           \
@@ -19,23 +20,11 @@ ListElement *interruptSubscriptions[255];
 __attribute__((section(".sharedFunctions"))) __attribute__((aligned(0x10)))
 IdtEntry idtEntries[256] = {};
 
-void onInterrupt(void *eip, void *esp, uint32_t intNo, void *cr3) {
-    // an external interrupt was triggered
+void onInterrupt(void *cr3, uint32_t d, uint32_t c, uint32_t b, uint32_t a,
+                 uint32_t intNo) {
     foreach (interruptSubscriptions[intNo], ServiceFunction *, provider,
              { scheduleFunction(provider, intNo, 0, 0, NULL); })
         ;
-    if (cr3 == PTR(0x500000)) {
-        // interrupt was triggered while the kernel was doing stuff
-        return;
-    }
-    Syscall *call = malloc(sizeof(Syscall));
-    call->service = currentSyscall->service;
-    call->esp = esp;
-    call->respondingTo = currentSyscall->respondingTo;
-    call->cr3 = cr3;
-    call->resume = true;
-    listAdd(&callsToProcess, call);
-    asm("jmp handleSyscallEnd");
 }
 
 extern void *interruptStack;
@@ -51,13 +40,15 @@ void registerInterrupts() {
     currentGdt[5].baseHigh = U32(&tss) >> 24;
     currentGdt[5].access = 0xE9;
     currentGdt[5].granularity = 0;
+    currentGdt[3].access = 0xFD;
+    currentGdt[4].access = 0xF2;
     tss.ss0 = tss.ss = 0x10;
     tss.esp0 = tss.esp = U32(&interruptStack) + 1024;
     asm("mov $40, %%ax" ::);
     asm("ltr %%ax" ::);
     for (uint16_t i = 0; i < 256; i++) {
         idtEntries[i].reserved = 0;
-        idtEntries[i].type = 0x8E;
+        idtEntries[i].type = 0xEE;
         idtEntries[i].segment = 0x8;
     }
     TIMES(IDT_ENTRY);

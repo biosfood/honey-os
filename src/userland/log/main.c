@@ -22,7 +22,7 @@ char buffer[100];
 
 void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller) {
     while (lock) {
-        ioIn(1, 1);
+        syscall(-1, 0, 0, 0, 0);
     }
     lock = true;
     writeString("[ ");
