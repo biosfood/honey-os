@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 int32_t main() {
-    printf("doing a crash test now . . . ");
+    printf("trying to divide by zero now . . . ");
     printf("0/0 = %i", 0 / 0);
     return 0;
 }

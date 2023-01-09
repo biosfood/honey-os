@@ -20,11 +20,21 @@ ListElement *interruptSubscriptions[255];
 __attribute__((section(".sharedFunctions"))) __attribute__((aligned(0x10)))
 IdtEntry idtEntries[256] = {};
 
+ListElement *exceptionSubscriptions;
+
 void onInterrupt(void *cr3, uint32_t d, uint32_t c, uint32_t b, uint32_t a,
                  uint32_t intNo) {
     foreach (interruptSubscriptions[intNo], ServiceFunction *, provider,
              { scheduleFunction(provider, intNo, 0, 0, NULL); })
         ;
+}
+
+void onException(void *cr3, uint32_t d, uint32_t c, uint32_t b, uint32_t a,
+                 uint32_t intNo) {
+    foreach (interruptSubscriptions[0], ServiceFunction *, provider, {
+        scheduleFunction(provider, intNo, 0,
+                         ((Service *)currentSyscall->service)->nameHash, NULL);
+    })
 }
 
 extern void *interruptStack;

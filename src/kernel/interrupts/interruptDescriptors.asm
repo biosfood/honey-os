@@ -3,6 +3,7 @@ section .sharedFunctions
 extern onInterrupt
 extern temporaryESP
 extern handleSyscallEnd
+extern onException
 
 global interruptStack
 interruptStack: resb 1024
@@ -20,6 +21,7 @@ exceptionAbort:
   je $
   mov ecx, 0x500000
   mov cr3, ecx
+  call onException
   mov eax, [temporaryESP]
   mov esp, eax
   pop ebp
