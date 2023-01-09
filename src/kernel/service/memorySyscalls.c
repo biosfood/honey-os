@@ -30,5 +30,5 @@ void handleRequestMemorySyscall(Syscall *call) {
                     ADDRESS(virtualStart + i), true);
         }
     }
-    call->returnValue = U32(ADDRESS(virtualStart));
+    call->returnValue = U32(ADDRESS(virtualStart)) + (U32(physical) & 0xFFF);
 }

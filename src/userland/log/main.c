@@ -66,9 +66,24 @@ void onInitrdLoad(uint32_t programName) {
     printf("loading '%s' from initrd", buffer);
 }
 
-void onException(uint32_t intNo, uint32_t unused, uint32_t serviceName) {
+typedef struct StackFrame {
+    struct StackFrame *ebp;
+    void *eip;
+} StackFrame;
+
+void trace(void *address, uint32_t serviceId) { printf("0x%x", address); }
+
+void onException(uint32_t intNo, uint32_t errorCode, void *crashAddress,
+                 void *start, uint32_t serviceName, uint32_t serviceId) {
     readString(serviceName, buffer);
-    printf("service \"%s\" commited a %s", buffer, EXCEPTION_NAMES[intNo]);
+    printf("service \"%s\" encountered a %s. Stacktrace:", buffer,
+           EXCEPTION_NAMES[intNo]);
+    StackFrame *frame = requestMemory(1, NULL, start);
+    trace(crashAddress, serviceId);
+    while (frame->ebp) {
+        trace(frame->eip, serviceId);
+        frame = PAGE_OFFSET(frame->ebp) + ADDRESS(PAGE_ID(frame));
+    }
 }
 
 int32_t main() {

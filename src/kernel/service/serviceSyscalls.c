@@ -68,7 +68,7 @@ void handleRequestSyscall(Syscall *call) {
     Service *providerService = listGet(services, call->parameters[0]);
     ServiceFunction *function =
         listGet(providerService->functions, call->parameters[1]);
-    scheduleFunction(function, call->parameters[2], call->parameters[3],
-                     service->nameHash, call);
+    scheduleFunction(function, call, call->parameters[2], call->parameters[3],
+                     service->nameHash);
     call->avoidReschedule = true;
 }

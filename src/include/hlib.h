@@ -9,6 +9,10 @@
 #define PTR(x) ((void *)(uintptr_t)(x))
 #define U32(x) ((uint32_t)(uintptr_t)(x))
 
+#define ADDRESS(pageId) PTR((pageId) << 12)
+#define PAGE_ID(address) (U32(address) >> 12)
+#define PAGE_OFFSET(address) (U32(address) & 0xFFF)
+
 #define NULL PTR(0)
 
 extern uint32_t createFunction(char *name, int32_t(handler)(void *, uint32_t));

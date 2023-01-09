@@ -35,9 +35,8 @@ extern void *runEnd;
 extern Service *findService(char *);
 extern ServiceFunction *findFunction(Service *, char *);
 extern Service *currentService;
-extern void scheduleFunction(ServiceFunction *provider, uintptr_t data1,
-                             uintptr_t data2, uintptr_t data3,
-                             Syscall *respondingTo);
+extern void scheduleFunction(ServiceFunction *provider, Syscall *respondingTo,
+                             ...);
 extern void fireEvent(Event *event, uint32_t data1);
 extern void installKernelEvents();
 

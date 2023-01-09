@@ -13,9 +13,9 @@ Event *createKernelEvent(char *name) {
     return event;
 }
 
-void fireEvent(Event *event, uint32_t data1) {
+void fireEvent(Event *event, uint32_t data) {
     foreach (event->subscriptions, ServiceFunction *, function,
-             { scheduleFunction(function, data1, 0, 0, 0); })
+             { scheduleFunction(function, NULL, data); })
         ;
 }
 

@@ -10,6 +10,7 @@
 #define NULL PTR(0)
 
 #define MIN(x, y) (x < y ? x : y)
+#define MAX(x, y) (x < y ? y : x)
 
 #define PAGE_COUNT(x) (((x - 1) / 4096) + 1)
 #define BITS(x) (sizeof(x) * 8)
