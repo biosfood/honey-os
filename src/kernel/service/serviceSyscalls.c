@@ -1,3 +1,4 @@
+#include "elf.h"
 #include <service.h>
 #include <stdint.h>
 #include <stringmap.h>
@@ -71,4 +72,19 @@ void handleRequestSyscall(Syscall *call) {
     scheduleFunction(function, call, call->parameters[2], call->parameters[3],
                      service->nameHash);
     call->avoidReschedule = true;
+}
+
+void handleLookupSymbolSyscall(Syscall *call) {
+    Service *service = listGet(services, call->parameters[0]);
+    uint32_t location = call->parameters[1];
+    for (uint32_t i = 0; i < service->symbolTableSize / sizeof(SymbolEntry);
+         i++) {
+        SymbolEntry *entry = &service->symbolTable[i];
+        if (location >= entry->value &&
+            location <= entry->value + entry->size) {
+            char *name = service->stringTable + entry->name;
+            call->returnValue = insertString(name);
+            return;
+        }
+    }
 }

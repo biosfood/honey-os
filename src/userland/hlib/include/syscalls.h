@@ -24,6 +24,7 @@ typedef enum {
     SYS_READ_STRING = 16,
     SYS_DISCARD_STRING = 17,
     SYS_REQUEST_MEMORY = 18,
+    SYS_LOOKUP_SYMBOL = 19,
 } SyscallIds;
 
 extern uint32_t getFunction(uint32_t module, char *name);

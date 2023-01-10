@@ -64,6 +64,18 @@ Service *loadElf(void *elfStart, char *serviceName) {
     end:
         programHeader = (void *)programHeader + header->programHeaderEntrySize;
     }
+    for (uint32_t i = 0; i < header->sectionHeaderEntryCount; i++) {
+        SectionHeader *sectionHeader = elfStart +
+                                       header->sectionHeaderTablePosition +
+                                       i * header->sectionHeaderEntrySize;
+        if (sectionHeader->type == 2 && !service->symbolTable) {
+            service->symbolTable = elfStart + sectionHeader->offset;
+            service->symbolTableSize = sectionHeader->size;
+        }
+        if (sectionHeader->type == 3 && !service->stringTable) {
+            service->stringTable = elfStart + sectionHeader->offset;
+        }
+    }
     ServiceFunction *main = malloc(sizeof(ServiceFunction));
     main->name = "main";
     main->service = service;

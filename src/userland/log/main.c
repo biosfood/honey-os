@@ -71,7 +71,11 @@ typedef struct StackFrame {
     void *eip;
 } StackFrame;
 
-void trace(void *address, uint32_t serviceId) { printf("0x%x", address); }
+void trace(void *address, uint32_t serviceId) {
+    uint32_t name = lookupSymbol(serviceId, U32(address));
+    readString(name, buffer);
+    printf("0x%x / %s", address, buffer);
+}
 
 void onException(uint32_t intNo, uint32_t errorCode, void *crashAddress,
                  void *start, uint32_t serviceName, uint32_t serviceId) {

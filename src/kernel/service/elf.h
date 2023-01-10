@@ -49,4 +49,13 @@ typedef struct {
     uint32_t entrySize;
 } SectionHeader;
 
+typedef struct {
+    uint32_t name;
+    uint32_t value;
+    uint32_t size;
+    uint8_t info;
+    uint8_t other;
+    uint16_t sectionHeaderIndex;
+} SymbolEntry;
+
 #endif

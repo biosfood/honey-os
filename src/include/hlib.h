@@ -43,6 +43,7 @@ extern void discardString(uintptr_t stringId);
 extern uintptr_t hashString(char *string);
 extern void *requestMemory(uint32_t pageCount, void *targetAddress,
                            void *physicalAddress);
+extern uint32_t lookupSymbol(uint32_t serviceId, uint32_t address);
 
 #define MAX(x, y) (x > y ? (x) : (y))
 

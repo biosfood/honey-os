@@ -1,6 +1,7 @@
 #ifndef SERVICE_H
 #define SERVICE_H
 
+#include "../service/elf.h"
 #include <memory.h>
 #include <syscall.h>
 #include <util.h>
@@ -11,6 +12,9 @@ typedef struct {
     uintptr_t nameHash;
     ListElement *functions;
     ListElement *events;
+    SymbolEntry *symbolTable;
+    char *stringTable;
+    uint32_t symbolTableSize;
 } Service;
 
 // the name is subject to change

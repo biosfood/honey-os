@@ -29,15 +29,28 @@ void onInterrupt(void *cr3, uint32_t d, uint32_t c, uint32_t b, uint32_t a,
         ;
 }
 
+uint32_t getServiceId(Service *searchService) {
+    uint32_t i = 0;
+    foreach (services, Service *, service, {
+        if (service == searchService) {
+            return i;
+        }
+        i++;
+    })
+        ;
+    return i;
+}
+
 void onException(void *ebp, void *cr3, uint32_t d, uint32_t c, uint32_t b,
                  uint32_t a, uint32_t intNo, uint32_t errorCode, uint32_t eip) {
     foreach (interruptSubscriptions[0], ServiceFunction *, provider, {
+        Service *service = (Service *)currentSyscall->service;
         scheduleFunction(
             provider, NULL, intNo, errorCode, eip,
             U32(getPhysicalAddress(
                 ((Service *)currentSyscall->service)->pagingInfo.pageDirectory,
                 ebp)),
-            ((Service *)currentSyscall->service)->nameHash);
+            service->nameHash, getServiceId(service));
     })
 }
 
