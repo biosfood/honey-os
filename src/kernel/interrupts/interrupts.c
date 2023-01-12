@@ -38,6 +38,7 @@ uint32_t getServiceId(Service *searchService) {
         i++;
     })
         ;
+    free(currentSyscall);
     return i;
 }
 
