@@ -114,6 +114,7 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
         return;
     case 'c':
         **write = x;
+        (*write)++;
         return;
     case 'i':
         putInt(write, x);
