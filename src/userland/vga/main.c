@@ -28,8 +28,6 @@ void write(char c) {
 
 int32_t main() {
     videoSource = requestMemory(2, NULL, PTR(0xB8000));
-    uint32_t thisService = getServiceId();
-    uint32_t functionId = createFunction("writeVGA", (void *)write);
-    requestName("log", "registerOut", thisService, functionId);
+    createFunction("writeChar", (void *)write);
     return 0;
 }

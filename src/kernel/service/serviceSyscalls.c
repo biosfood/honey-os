@@ -3,6 +3,20 @@
 #include <stdint.h>
 #include <stringmap.h>
 
+extern Syscall *currentSyscall;
+
+uint32_t getServiceId(Service *searchService) {
+    uint32_t i = 0;
+    foreach (services, Service *, service, {
+        if (service == searchService) {
+            return i;
+        }
+        i++;
+    })
+        ;
+    return i;
+}
+
 void handleGetServiceIdSyscall(Syscall *call) {
     uint32_t i = 0;
     foreach (services, Service *, service, {
@@ -70,7 +84,7 @@ void handleRequestSyscall(Syscall *call) {
     ServiceFunction *function =
         listGet(providerService->functions, call->parameters[1]);
     scheduleFunction(function, call, call->parameters[2], call->parameters[3],
-                     service->nameHash);
+                     service->nameHash, getServiceId(service));
     call->avoidReschedule = true;
 }
 

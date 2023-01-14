@@ -22,20 +22,16 @@ end:
     return 0;
 }
 
-void loadFromInitrd(char *name) {
+uint32_t loadFromInitrd(char *name) {
     uintptr_t id = insertString(name);
-    syscall(SYS_LOAD_INITRD, id, 0, 0, 0);
+    return syscall(SYS_LOAD_INITRD, id, 0, 0, 0);
 }
 
-uint32_t logModule = 0, logProvider;
+uint32_t logService, logFunction;
 
 void log(char *message) {
-    if (logModule == 0) {
-        logModule = getService("log");
-        logProvider = getFunction(logModule, "log");
-    }
     uintptr_t id = insertString(message);
-    request(logModule, logProvider, id, 0);
+    request(logService, logFunction, id, 0);
     discardString(id);
 }
 

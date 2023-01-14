@@ -21,7 +21,7 @@ extern uint32_t ioIn(uint16_t port, uint8_t size);
 extern void ioOut(uint16_t port, uint32_t value, uint8_t size);
 extern void log(char *);
 extern void subscribeInterrupt(uint32_t intNo, void *handler);
-extern void loadFromInitrd(char *name);
+extern uint32_t loadFromInitrd(char *name);
 extern uint32_t createEvent(char *name);
 extern uint32_t syscall(uint32_t function, uint32_t parameter0,
                         uint32_t parameter1, uint32_t parameter2,
@@ -44,6 +44,7 @@ extern uintptr_t hashString(char *string);
 extern void *requestMemory(uint32_t pageCount, void *targetAddress,
                            void *physicalAddress);
 extern uint32_t lookupSymbol(uint32_t serviceId, uint32_t address);
+extern uint32_t getFunction(uint32_t serviceId, char *functionName);
 
 #define MAX(x, y) (x > y ? (x) : (y))
 

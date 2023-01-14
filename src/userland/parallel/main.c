@@ -20,12 +20,4 @@ int32_t parallelIn(void *data, uint32_t dataLength) {
     return 0;
 }
 
-int32_t main() {
-    uint32_t provider = createFunction("out", (void *)parallelOut);
-    createFunction("writeParallel", (void *)parallelOut);
-    event0 = createEvent("in");
-    event1 = createEvent("parallelIn");
-    uint32_t thisService = getServiceId();
-    requestName("log", "registerOut", thisService, provider);
-    return 0;
-}
+int32_t main() { createFunction("writeChar", (void *)parallelOut); }

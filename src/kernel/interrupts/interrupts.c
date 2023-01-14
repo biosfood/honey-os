@@ -14,6 +14,7 @@ extern GDTEntry newGDT;
 extern TSS tss;
 extern Syscall *currentSyscall;
 extern ListElement *callsToProcess;
+extern uint32_t getServiceId(Service *service);
 
 ListElement *interruptSubscriptions[255];
 
@@ -29,19 +30,6 @@ void onInterrupt(void *cr3, uint32_t d, uint32_t c, uint32_t b, uint32_t a,
         ;
 }
 
-uint32_t getServiceId(Service *searchService) {
-    uint32_t i = 0;
-    foreach (services, Service *, service, {
-        if (service == searchService) {
-            return i;
-        }
-        i++;
-    })
-        ;
-    free(currentSyscall);
-    return i;
-}
-
 void onException(void *ebp, void *cr3, uint32_t d, uint32_t c, uint32_t b,
                  uint32_t a, uint32_t intNo, uint32_t errorCode, uint32_t eip) {
     foreach (interruptSubscriptions[0], ServiceFunction *, provider, {
@@ -53,6 +41,8 @@ void onException(void *ebp, void *cr3, uint32_t d, uint32_t c, uint32_t b,
                 ebp)),
             service->nameHash, getServiceId(service));
     })
+        ;
+    free(currentSyscall);
 }
 
 extern void *interruptStack;
