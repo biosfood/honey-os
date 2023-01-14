@@ -2,7 +2,10 @@
 
 uint32_t event0, event1;
 
-void parallelOut(void *data, uint32_t dataLength) {
+void parallelOut(uint32_t data, uint32_t dataLength) {
+    if (data == '\n') {
+        parallelOut('\r', 0);
+    }
     uint8_t control;
     while (!(ioIn(0x379, sizeof(uint8_t)) & 0x80)) {
     }

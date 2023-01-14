@@ -19,7 +19,6 @@ extern uint32_t createFunction(char *name, int32_t(handler)(void *, uint32_t));
 extern uint32_t strlen(char *string);
 extern uint32_t ioIn(uint16_t port, uint8_t size);
 extern void ioOut(uint16_t port, uint32_t value, uint8_t size);
-extern void log(char *);
 extern void subscribeInterrupt(uint32_t intNo, void *handler);
 extern uint32_t loadFromInitrd(char *name);
 extern uint32_t loadFromInitrdUninitialized(char *name);

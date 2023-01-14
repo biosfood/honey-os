@@ -60,7 +60,7 @@ void onKey() {
         if (scancode & 0x80) {
             return;
         }
-        printf("key press %s detected", altKeycodes[scancode]);
+        printf("key press %s detected\n", altKeycodes[scancode]);
         return;
     }
     if (scancode & 0x80) {
@@ -84,12 +84,12 @@ void onKey() {
     } else {
         data = keycodes[scancode];
     }
-    printf("key press %c detected", data);
+    printf("key press %c detected\n", data);
 }
 
 int32_t main() {
     uint32_t service = getService("pic");
     uint32_t event = getEvent(service, "irq1");
     subscribeEvent(service, event, onKey);
-    log("keyboard handler installed");
+    printf("keyboard handler installed\n");
 }

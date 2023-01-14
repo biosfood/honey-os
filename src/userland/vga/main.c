@@ -20,7 +20,7 @@ void write(char c) {
         offset = (offset / WIDTH) * WIDTH;
         return;
     case '\n':
-        offset += WIDTH;
+        offset = (offset / WIDTH + 1) * WIDTH;
         return;
     }
     writeChar(c, COLOR(white, black));

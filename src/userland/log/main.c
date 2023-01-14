@@ -23,7 +23,7 @@ char buffer[100];
 
 void onInitrdLoad(uint32_t programName) {
     readString(programName, buffer);
-    printf("loading '%s' from initrd", buffer);
+    printf("loading '%s' from initrd\n", buffer);
 }
 
 typedef struct StackFrame {
@@ -34,13 +34,13 @@ typedef struct StackFrame {
 void trace(void *address, uint32_t serviceId) {
     uint32_t name = lookupSymbol(serviceId, U32(address));
     readString(name, buffer);
-    printf("0x%x / %s", address, buffer);
+    printf("0x%x / %s\n", address, buffer);
 }
 
 void onException(uint32_t intNo, uint32_t errorCode, void *crashAddress,
                  void *start, uint32_t serviceName, uint32_t serviceId) {
     readString(serviceName, buffer);
-    printf("service \"%s\" encountered a %s. Stacktrace:", buffer,
+    printf("service \"%s\" encountered a %s. Stacktrace:\n", buffer,
            EXCEPTION_NAMES[intNo]);
     StackFrame *frame = requestMemory(1, NULL, start);
     trace(crashAddress, serviceId);

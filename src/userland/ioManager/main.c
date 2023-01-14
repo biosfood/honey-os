@@ -28,6 +28,7 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
         for (uint32_t i = 0; buffer[i]; i++) {
             request(mainService, mainOut, buffer[i], 0);
         }
+        return;
     }
     writeString("[ ");
     readString(caller, buffer);
@@ -38,7 +39,9 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
     writeString(" ] ");
     readString(stringId, buffer);
     writeString(buffer);
-    writeString("\r\n");
+    if (buffer[strlen(buffer) - 1] != '\n') {
+        writeString("\n");
+    }
     lock = false;
 }
 

@@ -1,3 +1,5 @@
+#define ALLOC_MAIN
+
 #include <hlib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -45,7 +47,7 @@ void irqMaster(uint32_t intNo) {
 }
 
 int32_t main() {
-    log("setting up interrupt handlers for the PIC");
+    printf("setting up interrupt handlers for the PIC\n");
     for (uint32_t i = 32; i < 48; i++) {
         subscribeInterrupt(i, irqMaster);
     }

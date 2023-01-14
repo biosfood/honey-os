@@ -5,8 +5,8 @@
 
 int32_t main() {
     loadFromInitrd("ioManager");
-    printf("HONEY-OS - made by Lukas Eisenhauer");
-    printf("finished loading all the essential modules");
+    printf("HONEY-OS - made by Lukas Eisenhauer\n");
+    printf("finished loading all the essential modules\n");
     loadFromInitrd("crashTest");
     uint32_t id = loadFromInitrdUninitialized("shell");
     requestName("ioManager", "setForeground", id, 0);
