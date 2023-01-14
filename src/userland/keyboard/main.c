@@ -1,4 +1,5 @@
 #define ALLOC_MAIN
+
 #include <hlib.h>
 #include <stdint.h>
 
@@ -53,6 +54,8 @@ uint8_t getScancode() {
     return scancode;
 }
 
+extern uint32_t ioManager, keyCallback;
+
 void onKey() {
     uint8_t scancode = getScancode();
     if (scancode == 0xE0) {
@@ -60,7 +63,7 @@ void onKey() {
         if (scancode & 0x80) {
             return;
         }
-        printf("key press %s detected\n", altKeycodes[scancode]);
+        request(ioManager, keyCallback, 0, U32(altKeycodes[scancode]));
         return;
     }
     if (scancode & 0x80) {
@@ -84,7 +87,7 @@ void onKey() {
     } else {
         data = keycodes[scancode];
     }
-    printf("key press %c detected\n", data);
+    request(ioManager, keyCallback, data, 0);
 }
 
 int32_t main() {

@@ -32,14 +32,6 @@ uint32_t loadFromInitrdUninitialized(char *name) {
     return syscall(SYS_LOAD_INITRD, id, 0, 0, 0);
 }
 
-uint32_t logService, logFunction;
-
-void log(char *message) {
-    uintptr_t id = insertString(message);
-    request(logService, logFunction, id, 0);
-    discardString(id);
-}
-
 void requestName(char *service, char *provider, uintptr_t data1,
                  uintptr_t data2) {
     uint32_t serviceId = getService(service);

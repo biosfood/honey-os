@@ -120,6 +120,7 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
         putInt(write, x);
     }
 }
+uint32_t ioManager, logFunction, keyCallback;
 
 void _printf(void *(malloc)(uint32_t), const char *format, ...) {
     uintptr_t size = 0;
@@ -145,6 +146,9 @@ void _printf(void *(malloc)(uint32_t), const char *format, ...) {
         write++;
     }
     va_end(valist);
-    log(data);
+
+    uintptr_t id = insertString(data);
+    request(ioManager, logFunction, id, 0);
+    discardString(id);
     free(data);
 }

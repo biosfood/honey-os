@@ -8,7 +8,7 @@ char buffer[100];
 
 uint32_t mainService, mainOut, globalService, globalOut;
 
-uint32_t focusService;
+uint32_t focusService, focusServiceKeyHandler;
 uint32_t currentKeyConsumerService, currentKeyConsumerFunction;
 
 void writeString(char *string) {
@@ -22,14 +22,16 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
     while (lock) {
         syscall(-1, 0, 0, 0, 0);
     }
-    lock = true;
     if (callerId == focusService) {
+        lock = true;
         readString(stringId, buffer);
         for (uint32_t i = 0; buffer[i]; i++) {
             request(mainService, mainOut, buffer[i], 0);
         }
+        lock = false;
         return;
     }
+    lock = true;
     writeString("[ ");
     readString(caller, buffer);
     writeString(buffer);
@@ -45,17 +47,26 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
     lock = false;
 }
 
-extern uint32_t logService, logFunction;
+extern uint32_t ioManager, logFunction, keyCallback;
 
-void setForeground(uint32_t service) { focusService = service; }
+void setForeground(uint32_t service) {
+    focusService = service;
+    focusServiceKeyHandler = 0;
+}
+
+void handleKey(uint32_t keycode, uint32_t stringId) {
+    focusServiceKeyHandler = getFunction(focusService, "onKey");
+    request(focusService, focusServiceKeyHandler, keycode, stringId);
+}
 
 int32_t main() {
-    logService = getServiceId();
+    ioManager = getServiceId();
     logFunction = createFunction("", (void *)handleLog);
+    keyCallback = createFunction("", (void *)handleKey);
     mainService = loadFromInitrd("vga");
     mainOut = getFunction(mainService, "writeChar");
     globalService = loadFromInitrd("parallel");
-    globalOut = getFunction(mainService, "writeChar");
+    globalOut = getFunction(globalService, "writeChar");
     loadFromInitrd("log");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
