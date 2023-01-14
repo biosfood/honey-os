@@ -22,10 +22,12 @@ Service *readInitrdProgram(char *name) {
     return loadElf(elfData, name);
 }
 
-Service *loadProgram(char *name, Syscall *respondingTo) {
+Service *loadProgram(char *name, Syscall *respondingTo, bool initialize) {
     Service *service = readInitrdProgram(name);
-    ServiceFunction *provider = findFunction(service, "main");
-    scheduleFunction(provider, respondingTo);
+    if (initialize) {
+        ServiceFunction *provider = findFunction(service, "main");
+        scheduleFunction(provider, respondingTo);
+    }
     return service;
 }
 
@@ -34,7 +36,7 @@ void loadAndScheduleSystemServices(void *multibootInfo) {
     void *address = kernelMapPhysicalCount(multibootInfo, 4);
     initrd = findInitrd(address, &initrdSize);
     hlib = readInitrdProgram("hlib");
-    loadProgram("loader", NULL);
+    loadProgram("loader", NULL, true);
 }
 
 void kernelMain(void *multibootInfo) {

@@ -44,6 +44,8 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
 
 extern uint32_t logService, logFunction;
 
+void setForeground(uint32_t service) { focusService = service; }
+
 int32_t main() {
     logService = getServiceId();
     logFunction = createFunction("", (void *)handleLog);
@@ -54,4 +56,5 @@ int32_t main() {
     loadFromInitrd("log");
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
+    createFunction("setForeground", (void *)setForeground);
 }

@@ -42,6 +42,9 @@ void onException(void *ebp, void *cr3, uint32_t d, uint32_t c, uint32_t b,
             service->nameHash, getServiceId(service));
     })
         ;
+    if (currentSyscall->respondingTo) {
+        listAdd(&callsToProcess, currentSyscall->respondingTo);
+    }
     free(currentSyscall);
 }
 

@@ -24,6 +24,11 @@ end:
 
 uint32_t loadFromInitrd(char *name) {
     uintptr_t id = insertString(name);
+    return syscall(SYS_LOAD_INITRD, id, 1, 0, 0);
+}
+
+uint32_t loadFromInitrdUninitialized(char *name) {
+    uintptr_t id = insertString(name);
     return syscall(SYS_LOAD_INITRD, id, 0, 0, 0);
 }
 

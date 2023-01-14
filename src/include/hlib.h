@@ -22,6 +22,7 @@ extern void ioOut(uint16_t port, uint32_t value, uint8_t size);
 extern void log(char *);
 extern void subscribeInterrupt(uint32_t intNo, void *handler);
 extern uint32_t loadFromInitrd(char *name);
+extern uint32_t loadFromInitrdUninitialized(char *name);
 extern uint32_t createEvent(char *name);
 extern uint32_t syscall(uint32_t function, uint32_t parameter0,
                         uint32_t parameter1, uint32_t parameter2,
