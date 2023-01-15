@@ -46,6 +46,8 @@ extern void *requestMemory(uint32_t pageCount, void *targetAddress,
 extern uint32_t lookupSymbol(uint32_t serviceId, uint32_t address);
 extern uint32_t getFunction(uint32_t serviceId, char *functionName);
 
+extern bool stackContains(uint32_t serviceId);
+
 #define MAX(x, y) (x > y ? (x) : (y))
 
 #endif

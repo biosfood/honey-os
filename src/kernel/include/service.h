@@ -15,6 +15,7 @@ typedef struct {
     SymbolEntry *symbolTable;
     char *stringTable;
     uint32_t symbolTableSize;
+    uint32_t id;
 } Service;
 
 // the name is subject to change

@@ -17,19 +17,26 @@ void writeString(char *string) {
     }
 }
 
-void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
-               uint32_t callerId) {
+void logMain(uint32_t stringId) {
     while (lock) {
         syscall(-1, 0, 0, 0, 0);
     }
-    if (callerId == focusService) {
-        lock = true;
-        readString(stringId, buffer);
-        for (uint32_t i = 0; buffer[i]; i++) {
-            request(mainService, mainOut, buffer[i], 0);
-        }
-        lock = false;
+    lock = true;
+    readString(stringId, buffer);
+    for (uint32_t i = 0; buffer[i]; i++) {
+        request(mainService, mainOut, buffer[i], 0);
+    }
+    lock = false;
+}
+
+void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
+               uint32_t callerId) {
+    if (stackContains(focusService)) {
+        logMain(stringId);
         return;
+    }
+    while (lock) {
+        syscall(-1, 0, 0, 0, 0);
     }
     lock = true;
     writeString("[ ");

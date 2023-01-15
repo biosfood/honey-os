@@ -34,6 +34,7 @@ Service *loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     service->nameHash = insertString(serviceName);
+    service->id = listCount(services);
     fireEvent(loadInitrdEvent, service->nameHash);
     void *current = &functionsStart;
     if (hlib) {

@@ -18,15 +18,7 @@ uint32_t getServiceId(Service *searchService) {
 }
 
 void handleGetServiceIdSyscall(Syscall *call) {
-    uint32_t i = 0;
-    foreach (services, Service *, service, {
-        if (service == call->service) {
-            call->returnValue = i;
-            return;
-        }
-        i++;
-    })
-        ;
+    call->returnValue = ((Service *)call->service)->id;
 }
 
 void handleGetServiceSyscall(Syscall *call) {
@@ -84,7 +76,7 @@ void handleRequestSyscall(Syscall *call) {
     ServiceFunction *function =
         listGet(providerService->functions, call->parameters[1]);
     scheduleFunction(function, call, call->parameters[2], call->parameters[3],
-                     service->nameHash, getServiceId(service));
+                     service->nameHash, service->id);
     call->avoidReschedule = true;
 }
 
@@ -101,4 +93,16 @@ void handleLookupSymbolSyscall(Syscall *call) {
             return;
         }
     }
+}
+
+void handleStackContainsSyscall(Syscall *call) {
+    Syscall *currentCall = call;
+    while (currentCall) {
+        if (((Service *)currentCall->service)->id == call->parameters[0]) {
+            call->returnValue = 1;
+            return;
+        }
+        currentCall = currentCall->respondingTo;
+    }
+    call->returnValue = 0;
 }

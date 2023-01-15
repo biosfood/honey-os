@@ -58,3 +58,7 @@ void memset(void *_target, uint8_t byte, uint32_t size) {
         target++;
     }
 }
+
+bool stackContains(uint32_t serviceId) {
+    return syscall(SYS_STACK_CONTAINS, serviceId, 0, 0, 0);
+}
