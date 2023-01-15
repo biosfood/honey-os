@@ -35,16 +35,13 @@ void onException(void *ebp, void *cr3, uint32_t d, uint32_t c, uint32_t b,
     foreach (interruptSubscriptions[0], ServiceFunction *, provider, {
         Service *service = (Service *)currentSyscall->service;
         scheduleFunction(
-            provider, NULL, intNo, errorCode, eip,
+            provider, currentSyscall->respondingTo, intNo, errorCode, eip,
             U32(getPhysicalAddress(
                 ((Service *)currentSyscall->service)->pagingInfo.pageDirectory,
                 ebp)),
             service->nameHash, getServiceId(service));
     })
         ;
-    if (currentSyscall->respondingTo) {
-        listAdd(&callsToProcess, currentSyscall->respondingTo);
-    }
     free(currentSyscall);
 }
 

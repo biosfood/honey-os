@@ -8,9 +8,11 @@ uint8_t inputBufferPosition;
 bool printInput = true;
 
 void onNewLine() {
-    printf("\nInput: %s\n> ", inputBuffer);
+    printf("\n");
+    loadFromInitrd(inputBuffer);
     inputBufferPosition = 0;
     inputBuffer[inputBufferPosition] = '\0';
+    printf("\n> ");
 }
 
 void onKeyInput(uint32_t keycode, uint32_t stringId) {
