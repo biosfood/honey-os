@@ -5,8 +5,36 @@
 
 char inputBuffer[256];
 uint8_t inputBufferPosition;
+bool printInput = true;
 
-void onKeyInput(uint32_t keycode, uint32_t stringId) { printf("%c", keycode); }
+void onNewLine() {
+    printf("\nInput: %s\n> ", inputBuffer);
+    inputBufferPosition = 0;
+    inputBuffer[inputBufferPosition] = '\0';
+}
+
+void onKeyInput(uint32_t keycode, uint32_t stringId) {
+    switch (keycode) {
+    case '\b':
+        if (inputBufferPosition) {
+            inputBufferPosition--;
+            inputBuffer[inputBufferPosition] = 0;
+            printf("\b");
+        }
+        break;
+    case '\n':
+        onNewLine();
+        break;
+    default:
+        if (printInput) {
+            printf("%c", keycode);
+        }
+        inputBuffer[inputBufferPosition] = (char)keycode;
+        inputBufferPosition++;
+        inputBuffer[inputBufferPosition] = '\0';
+        break;
+    }
+}
 
 int32_t main() {
     createFunction("onKey", (void *)onKeyInput);

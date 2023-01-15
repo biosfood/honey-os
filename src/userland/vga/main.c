@@ -22,6 +22,11 @@ void write(char c) {
     case '\n':
         offset = (offset / WIDTH + 1) * WIDTH;
         return;
+    case '\b':
+        offset--;
+        writeChar(' ', COLOR(white, black));
+        offset--;
+        return;
     }
     writeChar(c, COLOR(white, black));
 }
