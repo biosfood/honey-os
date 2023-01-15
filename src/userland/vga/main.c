@@ -1,4 +1,5 @@
 #include <color.h>
+#include <cursor.h>
 #include <hlib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -12,6 +13,7 @@ uint32_t offset = 0;
 void writeChar(char character, char colorCode) {
     videoSource[offset] = ((uint16_t)colorCode << 8) | character;
     offset++;
+    setCursorOffset(offset);
 }
 
 void write(char c) {
@@ -24,8 +26,8 @@ void write(char c) {
         return;
     case '\b':
         offset--;
-        writeChar(' ', COLOR(white, black));
-        offset--;
+        videoSource[offset] = ((uint16_t)COLOR(white, black) << 8) | ' ';
+        setCursorOffset(offset);
         return;
     }
     writeChar(c, COLOR(white, black));

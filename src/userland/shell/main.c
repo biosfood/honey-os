@@ -12,7 +12,7 @@ void onNewLine() {
     loadFromInitrd(inputBuffer);
     inputBufferPosition = 0;
     inputBuffer[inputBufferPosition] = '\0';
-    printf("\n> ");
+    printf("> ");
 }
 
 void onKeyInput(uint32_t keycode, uint32_t stringId) {
