@@ -13,10 +13,21 @@ Event *createKernelEvent(char *name) {
     return event;
 }
 
+extern ListElement *callsToProcess;
+
 void fireEvent(Event *event, uint32_t data) {
     foreach (event->subscriptions, ServiceFunction *, function,
              { scheduleFunction(function, NULL, data); })
         ;
+    for (ListElement *current = event->waitingSyscalls; current;) {
+        Syscall *call = current->data;
+        call->returnValue = data;
+        listAdd(&callsToProcess, call);
+        ListElement *old = current;
+        current = current->next;
+        free(old);
+    }
+    event->waitingSyscalls = NULL;
 }
 
 void installKernelEvents() {

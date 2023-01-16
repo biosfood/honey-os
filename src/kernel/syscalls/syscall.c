@@ -70,6 +70,7 @@ extern uintptr_t handleInsertStringSyscall, handleReadStringLengthSyscall,
 extern uintptr_t handleRequestMemorySyscall;
 extern uintptr_t handleLookupSymbolSyscall;
 extern uintptr_t handleStackContainsSyscall;
+extern uintptr_t handleAwaitSyscall;
 
 void (*syscallHandlers[])(Syscall *) = {
     0,
@@ -93,6 +94,10 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)&handleRequestMemorySyscall,
     (void *)&handleLookupSymbolSyscall,
     (void *)&handleStackContainsSyscall,
+    (void *)&handleAwaitSyscall,
+    0,
+    0,
+    0,
 };
 
 void processSyscall(Syscall *call) {

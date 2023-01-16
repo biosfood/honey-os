@@ -26,7 +26,7 @@ extern uint32_t createEvent(char *name);
 extern uint32_t syscall(uint32_t function, uint32_t parameter0,
                         uint32_t parameter1, uint32_t parameter2,
                         uint32_t parameter3);
-extern void fireEvent(uint32_t eventId);
+extern void fireEvent(uint32_t eventId, uint32_t data);
 extern void subscribeEvent(uint32_t service, uint32_t event,
                            void(handler)(void *, uint32_t));
 extern uint32_t getEvent(uint32_t service, char *name);
@@ -47,6 +47,8 @@ extern uint32_t lookupSymbol(uint32_t serviceId, uint32_t address);
 extern uint32_t getFunction(uint32_t serviceId, char *functionName);
 
 extern bool stackContains(uint32_t serviceId);
+
+extern uint32_t await(uint32_t service, uint32_t event);
 
 #define MAX(x, y) (x > y ? (x) : (y))
 

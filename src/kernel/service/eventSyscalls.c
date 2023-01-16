@@ -40,7 +40,7 @@ void handleGetEventSyscall(Syscall *call) {
 void handleFireEventSyscall(Syscall *call) {
     Service *service = call->service;
     Event *event = listGet(service->events, call->parameters[0]);
-    fireEvent(event, 0);
+    fireEvent(event, call->parameters[1]);
 }
 
 void handleSubscribeEventSyscall(Syscall *call) {
@@ -57,4 +57,16 @@ void handleSubscribeEventSyscall(Syscall *call) {
     provider->service = call->service;
     provider->address = PTR(call->parameters[2]);
     listAdd(&event->subscriptions, provider);
+}
+
+void handleAwaitSyscall(Syscall *call) {
+    call->avoidReschedule = true;
+    ListElement *list = kernelEvents;
+    if (call->parameters[0]) {
+        // given another service as the target
+        Service *eventService = listGet(services, call->parameters[0]);
+        list = eventService->events;
+    }
+    Event *event = listGet(list, call->parameters[1]);
+    listAdd(&event->waitingSyscalls, call);
 }

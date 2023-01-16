@@ -61,9 +61,12 @@ void setForeground(uint32_t service) {
     focusServiceKeyHandler = 0;
 }
 
+uint32_t keyEvent;
+
 void handleKey(uint32_t keycode, uint32_t stringId) {
     focusServiceKeyHandler = getFunction(focusService, "onKey");
     request(focusService, focusServiceKeyHandler, keycode, stringId);
+    fireEvent(keyEvent, keycode);
 }
 
 int32_t main() {
@@ -78,4 +81,5 @@ int32_t main() {
     loadFromInitrd("pic");
     loadFromInitrd("keyboard");
     createFunction("setForeground", (void *)setForeground);
+    keyEvent = createEvent("keyPress");
 }

@@ -28,6 +28,7 @@ typedef struct {
 typedef struct {
     char *name;
     ListElement *subscriptions;
+    ListElement *waitingSyscalls;
 } Event;
 
 extern ListElement *services;
