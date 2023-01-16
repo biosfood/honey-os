@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <syscalls.h>
 
-void request(uint32_t service, uint32_t function, uintptr_t data1,
-             uintptr_t data2) {
-    syscall(SYS_REQUEST, service, function, data1, data2);
+uint32_t request(uint32_t service, uint32_t function, uintptr_t data1,
+                 uintptr_t data2) {
+    return syscall(SYS_REQUEST, service, function, data1, data2);
 }
 
 uint32_t createFunction(char *name, int32_t(handler)(void *, uint32_t)) {

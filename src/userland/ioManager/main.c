@@ -61,12 +61,52 @@ void setForeground(uint32_t service) {
     focusServiceKeyHandler = 0;
 }
 
-uint32_t keyEvent;
+uint32_t keyEvent, newLineEvent;
+
+char inputBuffer[256];
+uint32_t inputBufferPosition;
+bool printInput = true;
+
+void onNewLine() {
+    uint32_t stringId = insertString(inputBuffer);
+    fireEvent(newLineEvent, stringId);
+    inputBufferPosition = 0;
+    inputBuffer[inputBufferPosition] = '\0';
+}
 
 void handleKey(uint32_t keycode, uint32_t stringId) {
-    focusServiceKeyHandler = getFunction(focusService, "onKey");
-    request(focusService, focusServiceKeyHandler, keycode, stringId);
+    if (!focusServiceKeyHandler) {
+        focusServiceKeyHandler = getFunction(focusService, "onKey");
+    }
+    if (focusServiceKeyHandler) {
+        request(focusService, focusServiceKeyHandler, keycode, stringId);
+    }
     fireEvent(keyEvent, keycode);
+    if (printInput) {
+        request(mainService, mainOut, keycode, 0);
+    }
+    switch (keycode) {
+    case '\b':
+        if (inputBufferPosition) {
+            inputBufferPosition--;
+            inputBuffer[inputBufferPosition] = 0;
+        }
+        break;
+    case '\n':
+        onNewLine();
+        return;
+    default:
+        inputBuffer[inputBufferPosition] = (char)keycode;
+        inputBufferPosition++;
+        inputBuffer[inputBufferPosition] = '\0';
+        break;
+    }
+}
+
+uint32_t getsImplementation() {
+    inputBufferPosition = 0;
+    inputBuffer[inputBufferPosition] = '\0';
+    return await(ioManager, newLineEvent);
 }
 
 int32_t main() {
@@ -82,4 +122,6 @@ int32_t main() {
     loadFromInitrd("keyboard");
     createFunction("setForeground", (void *)setForeground);
     keyEvent = createEvent("keyPress");
+    newLineEvent = createEvent("newLine");
+    createFunction("gets", (void *)getsImplementation);
 }

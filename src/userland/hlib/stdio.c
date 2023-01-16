@@ -152,3 +152,13 @@ void _printf(void *(malloc)(uint32_t), const char *format, ...) {
     discardString(id);
     free(data);
 }
+
+void gets(char *buffer) {
+    static uint32_t function = 0;
+    if (!function) {
+        function = getFunction(ioManager, "gets");
+    }
+    uint32_t stringId = request(ioManager, function, 0, 0);
+    asm("nop" ::"a"(stringId));
+    readString(stringId, buffer);
+}

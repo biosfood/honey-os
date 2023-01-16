@@ -27,6 +27,9 @@ void handleSyscall(void *esp, uint32_t function, uint32_t parameter0,
         freePage(currentSyscall->esp);
 
         if (currentSyscall->respondingTo) {
+            if (currentSyscall->respondingTo->function == 2) {
+                currentSyscall->respondingTo->returnValue = parameter0;
+            }
             listAdd(&callsToProcess, currentSyscall->respondingTo);
         }
         return;

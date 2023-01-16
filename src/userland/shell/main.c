@@ -3,42 +3,13 @@
 #include <hlib.h>
 #include <stdint.h>
 
-char inputBuffer[256];
-uint8_t inputBufferPosition;
-bool printInput = true;
-
-void onNewLine() {
-    printf("\n");
-    loadFromInitrd(inputBuffer);
-    inputBufferPosition = 0;
-    inputBuffer[inputBufferPosition] = '\0';
-    printf("> ");
-}
-
-void onKeyInput(uint32_t keycode, uint32_t stringId) {
-    switch (keycode) {
-    case '\b':
-        if (inputBufferPosition) {
-            inputBufferPosition--;
-            inputBuffer[inputBufferPosition] = 0;
-            printf("\b");
-        }
-        break;
-    case '\n':
-        onNewLine();
-        break;
-    default:
-        if (printInput) {
-            printf("%c", keycode);
-        }
-        inputBuffer[inputBufferPosition] = (char)keycode;
-        inputBufferPosition++;
-        inputBuffer[inputBufferPosition] = '\0';
-        break;
-    }
-}
+char buffer[256];
 
 int32_t main() {
-    createFunction("onKey", (void *)onKeyInput);
-    printf("HONEY-OS - made by Lukas Eisenhauer\n> ");
+    printf("HONEY-OS - made by Lukas Eisenhauer - shell\n");
+    while (1) {
+        printf("> ");
+        gets(buffer);
+        loadFromInitrd(buffer);
+    }
 }

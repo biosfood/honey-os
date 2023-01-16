@@ -23,6 +23,7 @@ runFunction:
   sti
   sysexit
 runEnd:
+  mov ebx, eax
   mov eax, 0
   sysenter
 
