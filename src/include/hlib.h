@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef struct ListElement {
+    struct ListElement *next;
+    void *data;
+} ListElement;
+
 #include "../userland/hlib/malloc.h"
 
 #define PTR(x) ((void *)(uintptr_t)(x))
@@ -52,5 +57,15 @@ extern uint32_t await(uint32_t service, uint32_t event);
 extern void gets(char *buffer);
 
 #define MAX(x, y) (x > y ? (x) : (y))
+
+#define foreach(list, type, varname, ...)                                      \
+    for (ListElement *current = list; current; current = current->next) {      \
+        type varname = current->data;                                          \
+        __VA_ARGS__                                                            \
+    }
+
+extern void *listPopFirst(ListElement **list);
+extern uint32_t listCount(ListElement *list);
+extern void *listGet(ListElement *list, uint32_t position);
 
 #endif

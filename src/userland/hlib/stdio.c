@@ -159,6 +159,5 @@ void gets(char *buffer) {
         function = getFunction(ioManager, "gets");
     }
     uint32_t stringId = request(ioManager, function, 0, 0);
-    asm("nop" ::"a"(stringId));
     readString(stringId, buffer);
 }

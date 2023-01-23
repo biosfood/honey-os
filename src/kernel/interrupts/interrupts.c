@@ -58,7 +58,7 @@ void registerInterrupts() {
     currentGdt[5].baseHigh = U32(&tss) >> 24;
     currentGdt[5].access = 0xE9;
     currentGdt[5].granularity = 0;
-    currentGdt[3].access = 0xFD;
+    currentGdt[3].access = 0xFE;
     currentGdt[4].access = 0xF2;
     tss.ss0 = tss.ss = 0x10;
     tss.esp0 = tss.esp = U32(&interruptStack) + 1024;

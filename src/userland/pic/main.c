@@ -42,7 +42,7 @@ void irqMaster(uint32_t intNo) {
             sentPic2EOI = true;
             ioOut(PIC2, 0x20, 1);
         }
-        fireEvent(eventIds[i]);
+        fireEvent(eventIds[i], 0);
     }
 }
 
