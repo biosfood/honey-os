@@ -31,8 +31,7 @@ bool checkedBuses[256];
 uint32_t deviceCount = 0;
 
 ListElement *pciDevices = NULL;
-
-ListElement **getPciDevices() { return &pciDevices; }
+bool initialized = false;
 
 uint8_t pciConfigReadByte(uint32_t bus, uint32_t device, uint32_t function,
                           uint8_t offset) {
@@ -132,18 +131,36 @@ void checkBus(uint8_t bus) {
     }
 }
 
-bool initialized = false;
+int32_t getDeviceClass(uint32_t deviceId);
+
+void initializePci() {
+    createFunction("getDeviceClass", (void *)getDeviceClass);
+    if (!(getHeaderType(0, 0, 0) & 0x80)) {
+        checkBus(0);
+    } else {
+        for (uint8_t bus = 0; bus < 8; bus++) {
+            checkBus(bus);
+        }
+    }
+    deviceCount = listCount(pciDevices);
+    initialized = true;
+}
+
+int32_t getDeviceClass(uint32_t deviceId) {
+    if (!initialized) {
+        initializePci();
+    }
+    if (deviceId >= deviceCount) {
+        return 0;
+    }
+    PciDevice *device = listGet(pciDevices, deviceId);
+    return device->class << 16 | device->subclass << 8 |
+           device->programmingInterface;
+}
 
 int32_t main() {
     if (!initialized) {
-        if (!(getHeaderType(0, 0, 0) & 0x80)) {
-            checkBus(0);
-        } else {
-            for (uint8_t bus = 0; bus < 8; bus++) {
-                checkBus(bus);
-            }
-        }
-        initialized = true;
+        initializePci();
         return 0;
     }
     foreach (pciDevices, PciDevice *, device, {
