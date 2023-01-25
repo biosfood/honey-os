@@ -132,14 +132,23 @@ void checkBus(uint8_t bus) {
     }
 }
 
+bool initialized = false;
+
 int32_t main() {
-    printf("enumerating PCI devices . . .\n");
-    if (!(getHeaderType(0, 0, 0) & 0x80)) {
-        checkBus(0);
-    } else {
-        for (uint8_t bus = 0; bus < 8; bus++) {
-            checkBus(bus);
+    if (!initialized) {
+        if (!(getHeaderType(0, 0, 0) & 0x80)) {
+            checkBus(0);
+        } else {
+            for (uint8_t bus = 0; bus < 8; bus++) {
+                checkBus(bus);
+            }
         }
+        initialized = true;
+        return 0;
     }
-    printf("enumerated %i pci devices\n", listCount(pciDevices));
+    foreach (pciDevices, PciDevice *, device, {
+        printf("[%i:%i:%i]: %s\n", device->bus, device->device,
+               device->function, classNames[device->class]);
+    })
+        ;
 }
