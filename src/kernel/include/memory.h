@@ -60,6 +60,6 @@ extern uint32_t findMultiplePages(PagingInfo *info, uint32_t size);
 extern void reservePagesCount(PagingInfo *info, uint32_t startPageId,
                               uint32_t count);
 extern void mapPage(PagingInfo *info, void *physical, void *virtual,
-                    bool userPage);
+                    bool userPage, bool isVolatile);
 
 #endif

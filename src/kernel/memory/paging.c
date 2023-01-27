@@ -64,7 +64,8 @@ void reservePagesCount(PagingInfo *info, uint32_t startPageId, uint32_t count) {
     }
 }
 
-void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage);
+void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage,
+             bool isVolatile);
 
 void reservePagesUntilPhysical(uint32_t endPageId) {
     void *buffer = (void *)0xFF800000;
@@ -128,7 +129,7 @@ void *kernelMapPhysicalCount(void *address, uint32_t size) {
     reservePagesCount(kernelVirtualPages, virtualPageStart, size);
     for (uint32_t i = 0; i < size; i++) {
         mapPage(kernelVirtualPages, ADDRESS(physicalPageStart + i),
-                ADDRESS(virtualPageStart + i), false);
+                ADDRESS(virtualPageStart + i), false, false);
     }
     return ADDRESS(virtualPageStart) + PAGE_OFFSET(address);
 }
@@ -139,11 +140,12 @@ void *kernelMapPhysical(void *address) {
     uint32_t virtualPageId = findPage(kernelVirtualPages);
     reservePage(kernelVirtualPages, virtualPageId);
     mapPage(kernelVirtualPages, ADDRESS(physicalPageId), ADDRESS(virtualPageId),
-            false);
+            false, false);
     return ADDRESS(virtualPageId) + PAGE_OFFSET(address);
 }
 
-void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage) {
+void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage,
+             bool isVolatile) {
     VirtualAddress *address = (void *)&virtual;
     PageDirectoryEntry *directory = info->pageDirectory;
     if (!directory[address->pageDirectoryIndex].present) {
@@ -163,6 +165,7 @@ void mapPage(PagingInfo *info, void *physical, void *virtual, bool userPage) {
     pageTable[address->pageTableIndex].targetAddress = PAGE_ID(physical);
     pageTable[address->pageTableIndex].present = 1;
     pageTable[address->pageTableIndex].writable = 1;
+    pageTable[address->pageTableIndex].isVolatile = isVolatile;
     pageTable[address->pageTableIndex].belongsToUserProcess = userPage;
     invalidatePage(PAGE_ID(virtual));
 }
@@ -172,7 +175,8 @@ void *getPage() {
     reservePage(kernelPhysicalPages, physical);
     uint32_t virtual = findPage(kernelVirtualPages);
     reservePage(kernelVirtualPages, virtual);
-    mapPage(kernelVirtualPages, ADDRESS(physical), ADDRESS(virtual), false);
+    mapPage(kernelVirtualPages, ADDRESS(physical), ADDRESS(virtual), false,
+            false);
     return ADDRESS(virtual);
 }
 
@@ -183,7 +187,7 @@ void *getPagesCount(uint32_t count) {
         uint32_t physical = findPage(kernelPhysicalPages);
         reservePage(kernelPhysicalPages, physical);
         mapPage(kernelVirtualPages, ADDRESS(physical),
-                ADDRESS(virtualPageId + i), false);
+                ADDRESS(virtualPageId + i), false, false);
     }
     return ADDRESS(virtualPageId);
 }
@@ -195,10 +199,10 @@ void *sharePage(PagingInfo *destination, void *sourceAddress,
         getPhysicalAddress(sourcePagingInfo->pageDirectory, sourceAddress);
     if (!destinationAddress) {
         void *target = ADDRESS(findPage(destination));
-        mapPage(destination, physicalSource, target, true);
+        mapPage(destination, physicalSource, target, true, false);
         return target + PAGE_OFFSET(sourceAddress);
     }
-    mapPage(destination, physicalSource, destinationAddress, true);
+    mapPage(destination, physicalSource, destinationAddress, true, false);
     return destinationAddress;
 }
 
