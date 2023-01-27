@@ -1,5 +1,7 @@
 # Honey OS
 
+![](honey-os.png)
+
 Honey os is an operating system developed by me. Its main goals consist of learning about x86 architecture and os development as well as ensuring good readability and easily understood code.
 
 ## Building
