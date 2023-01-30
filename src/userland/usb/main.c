@@ -97,6 +97,12 @@ void initializeUSB(uint32_t deviceId) {
     if (!(operational->usbStatus & 1)) {
         printf("controller is not halted, aborting...\n");
     }
+    operational->deviceNotificationControl = 2;
+    operational->configure |= 16;
+    DeviceContext *context = malloc(sizeof(DeviceContext));
+    operational->deviceContextArray =
+        (uint64_t)U32(getPhysicalAddress(context));
+
     XHCIPortRegister *ports = OFFSET(operational, 0x400);
     for (uint32_t i = 0; i < 16; i++) {
         resetRootPort(&ports[i]);

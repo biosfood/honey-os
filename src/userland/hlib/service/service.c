@@ -27,3 +27,7 @@ uint32_t getServiceId() { return syscall(SYS_GET_SERVICE_ID, 0, 0, 0, 0); }
 uint32_t lookupSymbol(uint32_t serviceId, uint32_t address) {
     return syscall(SYS_LOOKUP_SYMBOL, serviceId, address, 0, 0);
 }
+
+void *getPhysicalAddress(void *source) {
+    return PTR(syscall(SYS_GET_PHYSICAL, U32(source), 0, 0, 0));
+}

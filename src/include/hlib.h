@@ -67,5 +67,6 @@ extern void gets(char *buffer);
 extern void *listPopFirst(ListElement **list);
 extern uint32_t listCount(ListElement *list);
 extern void *listGet(ListElement *list, uint32_t position);
+extern void *getPhysicalAddress(void *address);
 
 #endif

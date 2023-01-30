@@ -32,3 +32,9 @@ void handleRequestMemorySyscall(Syscall *call) {
     }
     call->returnValue = U32(ADDRESS(virtualStart)) + (U32(physical) & 0xFFF);
 }
+
+void handleGetPhysicalSyscall(Syscall *call) {
+    Service *service = call->service;
+    call->returnValue = U32(getPhysicalAddress(
+        service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
+}

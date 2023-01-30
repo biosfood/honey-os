@@ -70,7 +70,7 @@ extern uintptr_t handleCreateEventSyscall, handleGetEventSyscall,
 extern uintptr_t handleSubscribeInterruptSyscall;
 extern uintptr_t handleInsertStringSyscall, handleReadStringLengthSyscall,
     handleReadStringSyscall, handleDiscardStringSyscall;
-extern uintptr_t handleRequestMemorySyscall;
+extern uintptr_t handleRequestMemorySyscall, handleGetPhysicalSyscall;
 extern uintptr_t handleLookupSymbolSyscall;
 extern uintptr_t handleStackContainsSyscall;
 extern uintptr_t handleAwaitSyscall;
@@ -98,6 +98,7 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)&handleLookupSymbolSyscall,
     (void *)&handleStackContainsSyscall,
     (void *)&handleAwaitSyscall,
+    (void *)&handleGetPhysicalSyscall,
     0,
     0,
     0,
