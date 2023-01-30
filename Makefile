@@ -1,4 +1,4 @@
-IMAGE_FILE = /run/user/1000/tree-os.img
+IMAGE_FILE = /run/user/1000/honey-os.img
 
 CC = i686-elf-gcc
 CCFLAGS = -m32 -mtune=generic -ffreestanding -nostdlib -c -I src/include -I src/kernel/include -Wno-discarded-qualifiers -fms-extensions -Wno-shift-count-overflow -O0

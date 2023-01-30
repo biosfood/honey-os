@@ -21,14 +21,88 @@ REQUEST(getDeviceClass, "lspci", "getDeviceClass");
 
 REQUEST(enableBusMaster, "lspci", "enableBusMaster");
 
+uint32_t getPortSpeed(XHCIPortRegister *port) {
+    return (port->statusControl > 5) & 0xF;
+}
+
+char *getPortSpeedString(XHCIPortRegister *port) {
+    switch (getPortSpeed(port)) {
+    case 1:
+        return "Full Speed (USB 1.0)";
+    case 2:
+        return "Low Speed (USB 1.0)";
+    case 3:
+        return "Full Speed (USB 2.0)";
+    case 4:
+        return "Super Speed (USB 3.0)";
+    }
+    return "unknown speed";
+}
+
+void resetRootPort(XHCIPortRegister *port) {
+    if (!(port->statusControl & 1)) {
+        // this port has nothing connected to it
+        return;
+    }
+    printf("port linkInfo: %x power: %x status: %x, speed: %s\n",
+           port->linkInfo, port->powerManagement, port->statusControl,
+           getPortSpeedString(port));
+}
+
+void resetController(XHCICapabilities *capabilities,
+                     XHCIOperationalRegisters *operational) {
+    operational->usbCommand &= ~(1); // stop controller
+    while (!(operational->usbStatus & 1))
+        syscall(-1, 0, 0, 0, 0);
+    operational->usbCommand |= 2; // reset controller
+    while (operational->usbStatus & 2)
+        syscall(-1, 0, 0, 0, 0);
+    printf("XHCI controller reset done\n");
+}
+
+uint16_t findExtendedCapabilities(XHCICapabilities *capabilities) {
+    uint16_t extendedCapabilityOffset =
+        capabilities->capabilityParameters1 >> 16;
+    uint8_t id = 0;
+    while (extendedCapabilityOffset) {
+        id = *(uint8_t *)OFFSET(capabilities, extendedCapabilityOffset);
+        uint8_t offset =
+            *(uint8_t *)OFFSET(capabilities, extendedCapabilityOffset + 1);
+        if (!offset) {
+            extendedCapabilityOffset = 0;
+        } else {
+            extendedCapabilityOffset += offset << 2;
+        }
+    }
+    return extendedCapabilityOffset;
+}
+
+void deactivateXHCILegacy(XHCICapabilities *capabilities) {
+    uint16_t extendedCapabilityOffset = findExtendedCapabilities(capabilities);
+    if (!extendedCapabilityOffset) {
+        printf("XHCI controller already owned by honey-OS\n");
+        return;
+    }
+    printf("TODO: get XHCI controller ownership from the BIOS\n");
+}
+
 void initializeUSB(uint32_t deviceId) {
     enableBusMaster(deviceId, 0);
     uint32_t baseAddress = getBaseAddress(deviceId, 0) & ~0xF;
     XHCICapabilities *capabilities = requestMemory(1, NULL, PTR(baseAddress));
-    uint32_t *ptr = (void *)capabilities;
-    printf("%x: capSize: 0x%x, version: 0x%x %x\n", capabilities,
-           capabilities->capabilitiesSize, capabilities->interfaceVersion,
-           ptr[0]);
+    XHCIOperationalRegisters *operational =
+        OFFSET(capabilities, capabilities->capabilitiesSize);
+    resetController(capabilities, operational);
+    deactivateXHCILegacy(capabilities);
+    if (!(operational->usbStatus & 1)) {
+        printf("controller is not halted, aborting...\n");
+    }
+    XHCIPortRegister *ports = OFFSET(operational, 0x400);
+    for (uint32_t i = 0; i < 16; i++) {
+        resetRootPort(&ports[i]);
+    }
+    printf("status: %x command: %x\n", operational->usbStatus,
+           operational->usbCommand);
 }
 
 int32_t main() {

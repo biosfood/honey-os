@@ -50,25 +50,11 @@ void pciConfigWriteByte(uint32_t bus, uint32_t device, uint32_t function,
     ioOut(0xCFC, data, 2);
 }
 
-// uint16_t pciConfigReadWord(uint8_t bus, uint8_t device, uint8_t function,
-//                           uint8_t offset) {
-//    return (uint16_t)pciConfigReadByte(bus, device, function, offset) |
-//           ((uint16_t)pciConfigReadByte(bus, device, function, offset + 1)
-//            << 8);
-//}
-
 void pciConfigWriteWord(uint8_t bus, uint8_t device, uint8_t function,
                         uint8_t offset, uint16_t data) {
     pciConfigWriteByte(bus, device, function, offset, (uint8_t)data);
     pciConfigWriteByte(bus, device, function, offset + 1, (uint8_t)(data >> 8));
 }
-
-// uint32_t pciConfigReadInt(uint8_t bus, uint8_t device, uint8_t function,
-//                          uint8_t offset) {
-//    return (uint32_t)pciConfigReadWord(bus, device, function, offset) |
-//           ((uint32_t)pciConfigReadWord(bus, device, function, offset + 2)
-//            << 16);
-//}
 
 uint8_t getHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
     return pciConfigRead(bus, device, function, 0x0E) & 0xFF;
