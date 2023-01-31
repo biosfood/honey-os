@@ -49,13 +49,12 @@ void resetRootPort(XHCIPortRegister *port) {
            getPortSpeedString(port));
 }
 
-void resetController(XHCICapabilities *capabilities,
-                     XHCIOperationalRegisters *operational) {
-    operational->usbCommand &= ~(1); // stop controller
-    while (!(operational->usbStatus & 1))
+void resetController(XHCIController *controller) {
+    controller->operational->usbCommand &= ~(1); // stop controller
+    while (!(controller->operational->usbStatus & 1))
         syscall(-1, 0, 0, 0, 0);
-    operational->usbCommand |= 2; // reset controller
-    while (operational->usbStatus & 2)
+    controller->operational->usbCommand |= 2; // reset controller
+    while (controller->operational->usbStatus & 2)
         syscall(-1, 0, 0, 0, 0);
     printf("XHCI controller reset done\n");
 }
@@ -77,8 +76,9 @@ uint16_t findExtendedCapabilities(XHCICapabilities *capabilities) {
     return extendedCapabilityOffset;
 }
 
-void deactivateXHCILegacy(XHCICapabilities *capabilities) {
-    uint16_t extendedCapabilityOffset = findExtendedCapabilities(capabilities);
+void deactivateXHCILegacy(XHCIController *controller) {
+    uint16_t extendedCapabilityOffset =
+        findExtendedCapabilities(controller->capabilities);
     if (!extendedCapabilityOffset) {
         printf("XHCI controller already owned by honey-OS\n");
         return;
@@ -86,45 +86,52 @@ void deactivateXHCILegacy(XHCICapabilities *capabilities) {
     printf("TODO: get XHCI controller ownership from the BIOS\n");
 }
 
-void initializeUSB(uint32_t deviceId) {
-    enableBusMaster(deviceId, 0);
-    uint32_t baseAddress = getBaseAddress(deviceId, 0) & ~0xF;
-    XHCICapabilities *capabilities = requestMemory(1, NULL, PTR(baseAddress));
-    XHCIOperationalRegisters *operational =
-        OFFSET(capabilities, capabilities->capabilitiesSize);
-    resetController(capabilities, operational);
-    deactivateXHCILegacy(capabilities);
-    if (!(operational->usbStatus & 1)) {
-        printf("controller is not halted, aborting...\n");
-    }
-    operational->deviceNotificationControl = 2;
-    operational->configure |= 16;
-    DeviceContextArray *deviceContextArray = malloc(sizeof(DeviceContextArray));
-    operational->deviceContextArray =
-        (uint64_t)U32(getPhysicalAddress(deviceContextArray));
-    uint32_t maxScratchpatchBufferCount =
-        ((capabilities->capabilityParameters2 >> 27) & 0x1F) |
-        ((capabilities->capabilityParameters2 >> 16) & 0xE0);
-    if (maxScratchpatchBufferCount) {
+void createScratchpadBuffers(XHCIController *controller) {
+    controller->scratchpadBufferCount =
+        ((controller->capabilities->capabilityParameters2 >> 27) & 0x1F) |
+        ((controller->capabilities->capabilityParameters2 >> 16) & 0xE0);
+    if (controller->scratchpadBufferCount) {
         printf("creatng scratchpad buffers\n");
-        uint64_t *scratchpadBuffers =
-            malloc(sizeof(uint64_t) * maxScratchpatchBufferCount);
-        for (uint32_t i = 0; i < maxScratchpatchBufferCount; i++) {
-            scratchpadBuffers[i] = U32(getPhysicalAddress(malloc(4096)));
+        controller->scratchpadBuffers =
+            malloc(sizeof(uint64_t) * controller->scratchpadBufferCount);
+        uint64_t *physicalScratchpadBuffers =
+            malloc(sizeof(uint64_t) * controller->scratchpadBufferCount);
+        for (uint32_t i = 0; i < controller->scratchpadBufferCount; i++) {
+            controller->scratchpadBuffers[i] = malloc(4096);
+            physicalScratchpadBuffers[i] =
+                U32(getPhysicalAddress(controller->scratchpadBuffers[i]));
         }
-        deviceContextArray->scratchpadBufferBase =
-            U32(getPhysicalAddress(scratchpadBuffers));
+        controller->deviceContextArray->scratchpadBufferBase =
+            U32(getPhysicalAddress(physicalScratchpadBuffers));
     } else {
         printf("no scratchpad buffers implemented\n");
-        deviceContextArray->scratchpadBufferBase = 0;
+        controller->deviceContextArray->scratchpadBufferBase = 0;
     }
+}
 
-    XHCIPortRegister *ports = OFFSET(operational, 0x400);
-    for (uint32_t i = 0; i < 16; i++) {
-        resetRootPort(&ports[i]);
+void initializeUSB(uint32_t deviceId) {
+    XHCIController *controller = malloc(sizeof(XHCIController));
+    controller->pciDeviceId = deviceId;
+    enableBusMaster(controller->pciDeviceId, 0);
+    uint32_t baseAddress = getBaseAddress(deviceId, 0) & ~0xF;
+    controller->capabilities = requestMemory(1, NULL, PTR(baseAddress));
+    controller->operational = OFFSET(
+        controller->capabilities, controller->capabilities->capabilitiesSize);
+    resetController(controller);
+    deactivateXHCILegacy(controller);
+    if (!(controller->operational->usbStatus & 1)) {
+        printf("controller is not halted, aborting...\n");
     }
-    printf("status: %x command: %x\n", operational->usbStatus,
-           operational->usbCommand);
+    controller->operational->deviceNotificationControl = 2;
+    controller->operational->configure |= 16;
+    controller->deviceContextArray = malloc(sizeof(DeviceContextArray));
+    controller->operational->deviceContextArray =
+        (uint64_t)U32(getPhysicalAddress(controller->deviceContextArray));
+    createScratchpadBuffers(controller);
+    controller->ports = OFFSET(controller->operational, 0x400);
+    for (uint32_t i = 0; i < 16; i++) {
+        resetRootPort(&controller->ports[i]);
+    }
 }
 
 int32_t main() {

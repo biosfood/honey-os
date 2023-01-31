@@ -91,4 +91,14 @@ typedef struct {
     uint32_t statusControl, powerManagement, linkInfo, reserved;
 } XHCIPortRegister;
 
+typedef struct {
+    uint32_t pciDeviceId;
+    XHCICapabilities *capabilities;
+    XHCIOperationalRegisters *operational;
+    DeviceContextArray *deviceContextArray;
+    void **scratchpadBuffers;
+    uint32_t scratchpadBufferCount;
+    XHCIPortRegister *ports;
+} XHCIController;
+
 #endif
