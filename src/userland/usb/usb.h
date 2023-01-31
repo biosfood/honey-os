@@ -83,6 +83,11 @@ typedef struct {
 } DeviceContext;
 
 typedef struct {
+    uint64_t scratchpadBufferBase;
+    uint64_t deviceContextPointer[16];
+} DeviceContextArray;
+
+typedef struct {
     uint32_t statusControl, powerManagement, linkInfo, reserved;
 } XHCIPortRegister;
 

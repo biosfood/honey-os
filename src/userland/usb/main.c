@@ -99,9 +99,25 @@ void initializeUSB(uint32_t deviceId) {
     }
     operational->deviceNotificationControl = 2;
     operational->configure |= 16;
-    DeviceContext *context = malloc(sizeof(DeviceContext));
+    DeviceContextArray *deviceContextArray = malloc(sizeof(DeviceContextArray));
     operational->deviceContextArray =
-        (uint64_t)U32(getPhysicalAddress(context));
+        (uint64_t)U32(getPhysicalAddress(deviceContextArray));
+    uint32_t maxScratchpatchBufferCount =
+        ((capabilities->capabilityParameters2 >> 27) & 0x1F) |
+        ((capabilities->capabilityParameters2 >> 16) & 0xE0);
+    if (maxScratchpatchBufferCount) {
+        printf("creatng scratchpad buffers\n");
+        uint64_t *scratchpadBuffers =
+            malloc(sizeof(uint64_t) * maxScratchpatchBufferCount);
+        for (uint32_t i = 0; i < maxScratchpatchBufferCount; i++) {
+            scratchpadBuffers[i] = U32(getPhysicalAddress(malloc(4096)));
+        }
+        deviceContextArray->scratchpadBufferBase =
+            U32(getPhysicalAddress(scratchpadBuffers));
+    } else {
+        printf("no scratchpad buffers implemented\n");
+        deviceContextArray->scratchpadBufferBase = 0;
+    }
 
     XHCIPortRegister *ports = OFFSET(operational, 0x400);
     for (uint32_t i = 0; i < 16; i++) {
