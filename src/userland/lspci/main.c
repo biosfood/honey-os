@@ -128,11 +128,13 @@ void checkBus(uint8_t bus) {
 int32_t getDeviceClass(uint32_t deviceId);
 int32_t getBaseAddress(uint32_t deviceId, uint32_t n);
 int32_t enableBusMaster(uint32_t deviceId);
+int32_t getPCIInterrupt(uint32_t deviceId);
 
 void initializePci() {
     createFunction("getDeviceClass", (void *)getDeviceClass);
     createFunction("getBaseAddress", (void *)getBaseAddress);
     createFunction("enableBusMaster", (void *)enableBusMaster);
+    createFunction("getInterrupt", (void *)getPCIInterrupt);
     if (!(getHeaderType(0, 0, 0) & 0x80)) {
         checkBus(0);
     } else {
@@ -179,6 +181,12 @@ int32_t enableBusMaster(uint32_t deviceId) {
             0xFFFF;
     }
     return 0;
+}
+
+int32_t getPCIInterrupt(uint32_t deviceId) {
+    GET_HEADER
+    return pciConfigRead(device->bus, device->device, device->function, 0x3C) &
+           0xFF;
 }
 
 int32_t main() {
