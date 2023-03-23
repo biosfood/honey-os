@@ -57,7 +57,7 @@ Service *loadElf(void *elfStart, char *serviceName) {
              page += 0x1000) {
             void *data = malloc(0x1000);
             memset(data, 0, 0x1000);
-            memcpy(elfStart + programHeader->dataOffset, data,
+            memcpy(elfStart + programHeader->dataOffset + page, data,
                    MIN(0x1000, programHeader->segmentFileSize - page));
             sharePage(&service->pagingInfo, data,
                       PTR(programHeader->virtualAddress + page));
