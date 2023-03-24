@@ -14,6 +14,13 @@ uint32_t strlen(char *string) {
     return size;
 }
 
+void memcpy(void *from, void *to, uint32_t size) {
+    uint8_t *a = from, *b = to;
+    for (uint32_t i = 0; i < size; i++) {
+        b[i] = a[i];
+    }
+}
+
 uintptr_t insertString(char *string) {
     return syscall(SYS_INSERT_STRING, U32(string), 0, 0, 0);
 }

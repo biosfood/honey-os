@@ -59,7 +59,7 @@ typedef struct {
     uint32_t maxEndpointServiceTime : 8;
 
     uint32_t reserved1 : 1;
-    uint32_t errorCont : 2;
+    uint32_t errorCount : 2;
     uint32_t endpointType : 3;
     uint32_t reserved2 : 1;
     uint32_t hostInitiateDisable : 1;
@@ -68,10 +68,10 @@ typedef struct {
 
     uint32_t dequeueCycleState : 1;
     uint32_t reserved3 : 3;
-    uint32_t TRDequePointerLow : 28;
-    uint32_t TRDequePointerHigh;
+    uint32_t TRBDequePointerLow : 28;
+    uint32_t TRBDequePointerHigh;
 
-    uint32_t everageTRBLength : 16;
+    uint32_t averageTRBLength : 16;
     uint32_t maxServiceTimeIntervalPayloadLow : 16;
 
     uint32_t reserved4[3];
@@ -178,6 +178,11 @@ typedef struct {
 } XHCIRuntimeRegisters;
 
 typedef struct {
+    uint8_t slotNumber;
+    XHCITransferRequestBlock *command;
+} PortSlotLink;
+
+typedef struct {
     uint32_t pciDeviceId;
     XHCICapabilities *capabilities;
     XHCIOperationalRegisters *operational;
@@ -190,12 +195,16 @@ typedef struct {
     XHCISlot *slots[16];
     XHCITransferRequestBlock *trbs[16][32];
     XHCITransferRequestBlock *commandRing;
+    XHCITransferRequestBlock *commandRingEnque;
+    bool commandRingCycleState;
+    volatile uint32_t *doorbells;
     uint32_t interrupt;
     uint32_t eventSegmentSize;
     uint32_t eventSegmentCounter;
     uint32_t eventSegmentNumber;
     XHCITransferRequestBlock *eventRing;
     XHCIRuntimeRegisters *runtime;
+    PortSlotLink portSlotLinks[10];
 } XHCIController;
 
 #endif

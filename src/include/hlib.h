@@ -55,6 +55,7 @@ extern bool stackContains(uint32_t serviceId);
 
 extern uint32_t await(uint32_t service, uint32_t event);
 extern void gets(char *buffer);
+extern void memcpy(void *from, void *to, uint32_t size);
 
 #define MAX(x, y) (x > y ? (x) : (y))
 

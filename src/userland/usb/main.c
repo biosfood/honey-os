@@ -171,9 +171,103 @@ void setupEvents(XHCIController *controller) {
     controller->runtime->interrupterRegisters[0].enabled = 1;
 }
 
+void advanceEnqueuePointer(XHCIController *controller) {
+    XHCITransferRequestBlock block = {};
+    block.cycle = !controller->commandRingCycleState;
+    memcpy(controller->commandRingEnque, &block, sizeof(block));
+}
+
+XHCITransferRequestBlock *enqueueCommand(XHCIController *controller,
+                                         XHCITransferRequestBlock *block) {
+    block->cycle = controller->commandRingCycleState;
+    memcpy(controller->commandRingEnque, block,
+           sizeof(XHCITransferRequestBlock));
+    XHCITransferRequestBlock *commandRing = controller->commandRingEnque;
+    controller->commandRingEnque++;
+    if (controller->commandRingEnque->type == 6) {
+        controller->commandRingEnque->cycle = controller->commandRingCycleState;
+        controller->commandRingEnque = controller->commandRing;
+        controller->commandRingCycleState = !controller->commandRingCycleState;
+    }
+    advanceEnqueuePointer(controller);
+    return commandRing;
+}
+
+XHCITransferRequestBlock *enableSlot(XHCIController *controller, uint8_t port) {
+    XHCITransferRequestBlock block = {0};
+    block.type = 9;
+    return enqueueCommand(controller, &block);
+}
+
+void ringXHCIDoorbellAndWait(XHCIController *controller) {
+    controller->doorbells[0] = 0;
+}
+
+void resetSlot(XHCIController *controller, uint8_t slotNumber) {
+    XHCIInputContext *context = controller->inputContexts[slotNumber - 1];
+    context->A = 3;
+    context->D = ~context->A;
+    SlotContext *slot = &(context->deviceContext.slotContext);
+    if (slot) {
+        slot->routeString = 0;
+        slot->speed = 3;
+        slot->contextEntries = 1;
+        slot->rootHubPortNumber = slotNumber;
+        slot->interrupterTarget = 0;
+        slot->multiTT = 0;
+        slot->isHub = 0;
+        slot->deviceAddress = 0;
+    }
+    EndpointContext *endpoints = context->deviceContext.endpoints;
+    if (endpoints) {
+        endpoints[0].endpointState = 0;
+        endpoints[0].endpointType = 4;
+        endpoints[0].maxPacketSize = 8;
+        endpoints[0].maxBurstSize = 0;
+        endpoints[0].TRBDequePointerLow =
+            U32(getPhysicalAddress(
+                controller->slots[slotNumber - 1]->endpoints[0].trbs)) >>
+            4;
+        endpoints[0].TRBDequePointerHigh = 0;
+        endpoints[0].maxPrimaryStreams = 0;
+        // endpoints[0].mult = 0;
+        endpoints[0].errorCount = 3;
+        endpoints[0].dequeueCycleState = 1;
+        endpoints[0].averageTRBLength = 8;
+    }
+}
+
+void prepareControlTransfer(XHCIController *controller) {
+    for (uint8_t i = 0; i < 16; i++) {
+        controller->portSlotLinks[i].command = enableSlot(controller, i);
+        resetSlot(controller, i + 1);
+        XHCITransferRequestBlock block = {0};
+        block.type = 4;
+        enqueueCommand(controller, &block);
+    }
+    ringXHCIDoorbellAndWait(controller);
+}
+
+void printControllerStatus(XHCIController *controller) {
+    printf("status: halted: %i, host system error: %i, internal host "
+           "controller error: %i save/restore error: %i\n",
+           controller->operational->usbStatus & 1,
+           controller->operational->usbStatus >> 2 & 1,
+           controller->operational->usbStatus >> 12 & 1,
+           controller->operational->usbStatus >> 10 & 1);
+    printf("status: event: %i, portChange: %i, saveState: %i, restoreState: %i "
+           "not ready: %i\n",
+           controller->operational->usbStatus >> 3 & 1,
+           controller->operational->usbStatus >> 4 & 1,
+           controller->operational->usbStatus >> 8 & 1,
+           controller->operational->usbStatus >> 9 & 1,
+           controller->operational->usbStatus >> 11 & 1);
+}
+
 void initializeUSB(uint32_t deviceId) {
     XHCIController *controller = malloc(sizeof(XHCIController));
     controller->pciDeviceId = deviceId;
+    controller->commandRingCycleState = true;
     enableBusMaster(controller->pciDeviceId, 0);
     uint32_t baseAddress = getBaseAddress(deviceId, 0) & ~0xF;
     controller->capabilities = requestMemory(1, NULL, PTR(baseAddress));
@@ -182,6 +276,8 @@ void initializeUSB(uint32_t deviceId) {
     controller->runtime =
         OFFSET(controller->capabilities,
                controller->capabilities->runtimeRegistersSpaceOffset);
+    controller->doorbells = OFFSET(controller->capabilities,
+                                   controller->capabilities->doorbellOffset);
     resetController(controller);
     deactivateXHCILegacy(controller);
     if (!(controller->operational->usbStatus & 1)) {
@@ -199,6 +295,7 @@ void initializeUSB(uint32_t deviceId) {
         initializePort(controller, i);
     }
     controller->commandRing = malloc(256 * sizeof(XHCITransferRequestBlock));
+    controller->commandRingEnque = controller->commandRing;
     controller->commandRing[255].dataLow =
         U32(getPhysicalAddress(controller->commandRing));
     controller->commandRing[255].type = 6;
@@ -212,20 +309,9 @@ void initializeUSB(uint32_t deviceId) {
     printf("irq pin : %i\n", controller->interrupt);
     uint32_t pic = getService("pic");
     subscribeEvent(pic, getEvent(pic, "irq11"), (void *)usbInterrupt);
+    subscribeEvent(pic, getEvent(pic, "irq3"), (void *)usbInterrupt);
     waitForKeyPress();
-    printf("status: halted: %i, host system error: %i, internal host "
-           "controller error: %i save/restore error: %i\n",
-           controller->operational->usbStatus & 1,
-           controller->operational->usbStatus >> 2 & 1,
-           controller->operational->usbStatus >> 12 & 1,
-           controller->operational->usbStatus >> 10 & 1);
-    printf("status: event: %i, portChange: %i, saveState: %i, restoreState: %i "
-           "not ready: %i\n",
-           controller->operational->usbStatus >> 3 & 1,
-           controller->operational->usbStatus >> 4 & 1,
-           controller->operational->usbStatus >> 8 & 1,
-           controller->operational->usbStatus >> 9 & 1,
-           controller->operational->usbStatus >> 11 & 1);
+    prepareControlTransfer(controller);
 }
 
 int32_t main() {
