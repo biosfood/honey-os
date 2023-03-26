@@ -10,5 +10,5 @@ int32_t main() {
     loadFromInitrd("lspci");
     uint32_t id = loadFromInitrdUninitialized("shell");
     requestName("ioManager", "setForeground", id, 0);
-    request(id, getFunction(id, "main"), 0, 0);
+    request(id, 0, 0, 0);
 }

@@ -36,7 +36,11 @@ uint32_t listCount(ListElement *list) {
 
 void *listGet(ListElement *list, uint32_t position) {
     for (uint32_t i = 0; i < position; i++) {
+        if (!list)
+            return NULL;
         list = list->next;
     }
+    if (!list)
+        return NULL;
     return list->data;
 }

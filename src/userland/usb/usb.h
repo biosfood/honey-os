@@ -3,208 +3,85 @@
 
 #include <hlib.h>
 
-#define OFFSET(ptr, off) (((void *)ptr) + off)
+#define OFFSET(ptr, off) (((void *)(ptr)) + (off))
 
-typedef struct {
-    uint8_t capabilitiesSize;
+typedef volatile struct {
+    uint8_t capabilitiesLength;
     uint8_t reserved;
     uint16_t interfaceVersion;
     uint32_t structuralParameters[3];
-    uint32_t capabilityParameters1;
+    uint32_t capabilityParameter1;
     uint32_t doorbellOffset;
-    uint32_t runtimeRegistersSpaceOffset;
-    uint32_t capabilityParameters2;
-} XHCICapabilities;
+    uint32_t runtimeOffset;
+    uint32_t capabilityParameter2;
+} __attribute__((packed)) XHCICapabilities;
 
-typedef struct {
-    uint32_t usbCommand, usbStatus;
-    uint64_t pageSize;
-    uint32_t deviceNotificationControl, commandRingControl;
-    uint64_t deviceContextArray;
-    uint32_t configure;
-} XHCIOperationalRegisters;
+typedef volatile struct {
+    uint32_t status;
+    uint32_t pm_status;
+    uint32_t link_info;
+    uint32_t lpm_control;
+} __attribute__((packed)) XHCIPort;
 
-typedef struct {
-    uint32_t routeString : 20;
-    uint32_t speed : 4;
-    uint32_t reserved : 1;
-    uint32_t multiTT : 1;
-    uint32_t isHub : 1;
-    uint32_t contextEntries : 5;
+typedef volatile struct {
+    uint32_t command;
+    uint32_t status;
+    uint32_t pageSize;
+    uint32_t reserved[2];
+    uint32_t op_dnctrl;
+    uint32_t commandRingControl[2];
+    uint32_t reserved1[4];
+    uint32_t deviceContextBaseAddressArray[2];
+    uint32_t config;
+    uint8_t reserved2[964];
+    XHCIPort ports[256];
+} __attribute__((packed)) XHCIOperational;
 
-    uint32_t maxExitLatency : 16;
-    uint32_t rootHubPortNumber : 8;
-    uint32_t portCount : 8; // only if this is a hub
-
-    uint32_t parentHubSlot : 8;
-    uint32_t parentPortNumber : 8;
-    uint32_t TTThinkTime : 2;
-    uint32_t reserved1 : 4;
-    uint32_t interrupterTarget : 10;
-
-    uint32_t deviceAddress : 8;
-    uint32_t reserved2 : 20;
-    uint32_t slotState : 4;
-
-    uint32_t reserved3[4];
-} SlotContext;
-
-typedef struct {
-    uint32_t endpointState : 3;
-    uint32_t reserved : 5;
-    uint32_t maximumBurstCount : 2;
-    uint32_t maxPrimaryStreams : 5;
-    uint32_t linearStreamArray : 1;
-    uint32_t interval : 8;
-    uint32_t maxEndpointServiceTime : 8;
-
-    uint32_t reserved1 : 1;
-    uint32_t errorCount : 2;
-    uint32_t endpointType : 3;
-    uint32_t reserved2 : 1;
-    uint32_t hostInitiateDisable : 1;
-    uint32_t maxBurstSize : 8;
-    uint32_t maxPacketSize : 16;
-
-    uint32_t dequeueCycleState : 1;
-    uint32_t reserved3 : 3;
-    uint32_t TRBDequePointerLow : 28;
-    uint32_t TRBDequePointerHigh;
-
-    uint32_t averageTRBLength : 16;
-    uint32_t maxServiceTimeIntervalPayloadLow : 16;
-
-    uint32_t reserved4[3];
-} EndpointContext;
-
-typedef struct {
-    SlotContext slotContext;
-    EndpointContext endpoints[31];
-} DeviceContext;
-
-typedef struct {
-    uint32_t D; // drop contextFlags
-    uint32_t A; // add context flags
-    uint32_t reserved[5];
-    uint8_t configValue;
-    uint8_t interfaceNumber;
-    uint8_t alternateSetting;
-    uint8_t reserved1;
-    DeviceContext deviceContext;
-} XHCIInputContext;
-
-typedef struct {
-    uint64_t scratchpadBufferBase;
-    uint64_t deviceContextPointer[16];
-} DeviceContextArray;
-
-typedef struct {
-    uint32_t statusControl, powerManagement, linkInfo, reserved;
-} XHCIPortRegister;
-
-typedef struct {
+typedef volatile struct {
     uint32_t dataLow;
     uint32_t dataHigh;
+    uint32_t status;
+    uint32_t control;
+} __attribute__((packed)) XHCITRB;
 
-    uint32_t dataSize : 17;
-    uint32_t transferSize : 5;
-    uint32_t interruptTarget : 10;
-
-    uint32_t cycle : 1;
-    uint32_t ent : 1;
-    uint32_t interruptOnShortPacket : 1;
-    uint32_t noSnoop : 1;
-    uint32_t chainBit : 1;
-    uint32_t interruptOnCompletion : 1;
-    uint32_t immediateData : 1;
-    uint32_t reserved : 2;
-    uint32_t blockEventInterrupt : 1;
-    uint32_t type : 6;
-    uint32_t reserved1 : 16;
-} XHCITransferRequestBlock;
-
-typedef struct {
-    uint32_t timeTransfer;
-    uint32_t timeEvent;
-    uint8_t epState;
-    bool pendingTransfer;
-    uint8_t transferError;
-
-    bool cycleState;
-
-    uint32_t transferCount;
-
-    XHCITransferRequestBlock *trbs;
-} XHCIEndpoint;
-
-typedef struct {
-    XHCIEndpoint endpoints[31];
-    uint8_t slotState;
-} XHCISlot;
-
-typedef struct {
-    uint32_t baseLow;
-    uint32_t baseHigh;
-    uint32_t ringSegmentSize : 16;
-    uint32_t reserved : 16;
-    uint32_t reserved1;
-} XHCIEventRingTableEntry;
-
-typedef struct {
-    uint32_t pending : 1;
-    uint32_t enabled : 1;
-    uint32_t reserved : 30;
-
-    uint16_t moderationInterval;
-    uint16_t moderationCounter;
-
-    uint16_t eventRingSize;
-    uint16_t reserved1;
-
+typedef volatile struct {
+    uint32_t pending : 1, enabled : 1, reserved : 30;
+    uint32_t moderationCounter : 16, moderationInterval : 16;
+    uint32_t eventRingSegmentTableSize; // MAX 16 bit
     uint32_t reserved2;
+    uint32_t eventRingSegmentTableAddress[2];
+    uint32_t eventRingDequeuePointer[2];
+} __attribute__((packed)) XHCIInterrupter;
 
-    uint32_t eventRingBaseLow;
-    uint32_t eventRingBaseHigh;
+typedef volatile struct {
+    uint8_t microframeIndex;
+    uint8_t reserved[0x20 - 1];
+    XHCIInterrupter interrupters[1023];
+} __attribute__((packed)) XHCIRuntime;
 
-    uint32_t eventRingDequeueLow;
-    uint32_t eventRingDequeueHigh;
-} XHCIInterrupterRegisterSet;
-
-typedef struct {
-    uint32_t microframeIndex : 14;
-    uint32_t reserved : 18;
-    uint32_t reserved1[7];
-    XHCIInterrupterRegisterSet interrupterRegisters[128];
-} XHCIRuntimeRegisters;
-
-typedef struct {
-    uint8_t slotNumber;
-    XHCITransferRequestBlock *command;
-} PortSlotLink;
+typedef volatile struct {
+    uint32_t ringSegmentBaseAddress[2];
+    uint16_t ringSegmentSize, reserved;
+    uint32_t reserved1;
+} __attribute__((packed)) XHCIEventRingSegmentTableEntry;
 
 typedef struct {
-    uint32_t pciDeviceId;
+    XHCITRB *trbs, *physical;
+    uint32_t size, enqueue, dequeue;
+    bool cycle;
+} TrbRing;
+
+typedef struct {
     XHCICapabilities *capabilities;
-    XHCIOperationalRegisters *operational;
-    DeviceContextArray *deviceContextArray;
-    void **scratchpadBuffers;
-    uint32_t scratchpadBufferCount;
-    XHCIPortRegister *ports;
-    DeviceContext *deviceContexts[16];
-    XHCIInputContext *inputContexts[16];
-    XHCISlot *slots[16];
-    XHCITransferRequestBlock *trbs[16][32];
-    XHCITransferRequestBlock *commandRing;
-    XHCITransferRequestBlock *commandRingEnque;
-    bool commandRingCycleState;
+    XHCIOperational *operational;
+    XHCIRuntime *runtime;
+    TrbRing commands;
+    TrbRing events;
+    uint32_t pciDevice;
     volatile uint32_t *doorbells;
-    uint32_t interrupt;
-    uint32_t eventSegmentSize;
-    uint32_t eventSegmentCounter;
-    uint32_t eventSegmentNumber;
-    XHCITransferRequestBlock *eventRing;
-    XHCIRuntimeRegisters *runtime;
-    PortSlotLink portSlotLinks[10];
+    XHCIEventRingSegmentTableEntry *eventRingSegmentTable,
+        *eventRingSegmentTablePhysical;
+    uint64_t *deviceContextBaseAddressArray;
 } XHCIController;
 
 #endif
