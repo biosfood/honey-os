@@ -51,7 +51,7 @@ int32_t main() {
     for (uint32_t i = 32; i < 48; i++) {
         subscribeInterrupt(i, irqMaster);
     }
-    ioOut(0x21, 0x1, 1);
+    ioOut(0x21, 0x0, 1);
     ioOut(0xA1, 0x0, 1);
     ioOut(0x70, ioIn(0x70, 1) | 0x80, 1);
     ioIn(0x71, 1);

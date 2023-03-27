@@ -8,6 +8,7 @@ int32_t main() {
     printf("HONEY-OS - made by Lukas Eisenhauer\n");
     printf("finished loading all the essential modules\n");
     loadFromInitrd("lspci");
+    loadFromInitrd("pit");
     uint32_t id = loadFromInitrdUninitialized("shell");
     requestName("ioManager", "setForeground", id, 0);
     request(id, 0, 0, 0);
