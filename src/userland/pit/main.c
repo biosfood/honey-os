@@ -24,21 +24,24 @@
 
 uint32_t systemTime = 0;
 
-void interruptHandler() {
-    systemTime++;
-    if (!(systemTime % 100)) {
-        printf("system time: %is\n", systemTime / 100);
-    }
-}
+void interruptHandler() { systemTime++; }
+
+bool initialized = false;
 
 int32_t main() {
-    uint32_t service = getService("pic");
-    uint32_t event = getEvent(service, "irq0");
-    subscribeEvent(service, event, interruptHandler);
-    uint32_t hz = 100;
-    int divisor = PIT_SCALE / hz;
-    ioOut(PIT_CONTROL, CMD_BINARY | CMD_MODE3 | CMD_RW_BOTH | CMD_COUNTER0, 1);
-    ioOut(PIT_A, (uint8_t)divisor, 1);
-    ioOut(PIT_A, (uint8_t)(divisor >> 8), 1);
-    printf("timer handler installed\n");
+    if (!initialized) {
+        initialized = true;
+        uint32_t service = getService("pic");
+        uint32_t event = getEvent(service, "irq0");
+        subscribeEvent(service, event, interruptHandler);
+        uint32_t hz = 100;
+        int divisor = PIT_SCALE / hz;
+        ioOut(PIT_CONTROL, CMD_BINARY | CMD_MODE3 | CMD_RW_BOTH | CMD_COUNTER0,
+              1);
+        ioOut(PIT_A, (uint8_t)divisor, 1);
+        ioOut(PIT_A, (uint8_t)(divisor >> 8), 1);
+        printf("timer handler installed\n");
+    } else {
+        printf("current uptime: %i.%is\n", systemTime / 100, systemTime % 100);
+    }
 }
