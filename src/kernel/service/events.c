@@ -1,4 +1,5 @@
 #include <service.h>
+#include <stringmap.h>
 #include <util.h>
 
 ListElement *kernelEvents;
@@ -8,7 +9,7 @@ Event *loadInitrdEvent, *crashEvent;
 Event *createKernelEvent(char *name) {
     Event *event = malloc(sizeof(ServiceFunction));
     event->subscriptions = NULL;
-    event->name = name;
+    event->name = insertString(name);
     listAdd(&kernelEvents, event);
     return event;
 }

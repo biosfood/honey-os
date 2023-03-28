@@ -26,7 +26,7 @@ typedef struct {
 } ServiceFunction;
 
 typedef struct {
-    char *name;
+    uint32_t name; // this is a string ID
     ListElement *subscriptions;
     ListElement *waitingSyscalls;
 } Event;

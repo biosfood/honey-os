@@ -68,6 +68,7 @@ extern void memcpy(void *from, void *to, uint32_t size);
 extern void *listPopFirst(ListElement **list);
 extern uint32_t listCount(ListElement *list);
 extern void *listGet(ListElement *list, uint32_t position);
+extern bool listRemoveValue(ListElement **list, void *value);
 extern void *getPhysicalAddress(void *address);
 
 #endif

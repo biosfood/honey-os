@@ -39,3 +39,24 @@ void *listGet(ListElement *list, uint32_t position) {
     }
     return list->data;
 }
+
+bool listRemoveValue(ListElement **list, void *value) {
+    if (!*list) {
+        return false;
+    }
+    ListElement *element = *list, *previous = NULL;
+    while (element) {
+        if (element->data == value) {
+            if (previous) {
+                previous->next = element->next;
+            } else {
+                *list = element->next;
+            }
+            free(element);
+            return true;
+        }
+        previous = element;
+        element = element->next;
+    }
+    return false;
+}

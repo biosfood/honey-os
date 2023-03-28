@@ -3,7 +3,7 @@
 #include <util.h>
 
 void handleCreateEventSyscall(Syscall *call) {
-    char *name = retrieveString(call->parameters[0]);
+    uint32_t name = call->parameters[0];
     if (!name) {
         return;
     }
@@ -18,7 +18,7 @@ void handleCreateEventSyscall(Syscall *call) {
 extern ListElement *kernelEvents;
 
 void handleGetEventSyscall(Syscall *call) {
-    char *name = retrieveString(call->parameters[1]);
+    uint32_t name = call->parameters[1];
     if (!name) {
         return;
     }
@@ -28,7 +28,7 @@ void handleGetEventSyscall(Syscall *call) {
         events = ((Service *)listGet(services, call->parameters[0]))->events;
     }
     foreach (events, Event *, event, {
-        if (stringEquals(event->name, name)) {
+        if (event->name == name) {
             call->returnValue = i;
             return;
         }
