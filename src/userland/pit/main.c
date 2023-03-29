@@ -31,17 +31,12 @@ bool initialized = false;
 
 void interruptHandler() {
     systemTime++;
-    if (systemTime % 1000 == 0) {
-        printf("test\n");
-    }
     if (listRemoveValue(&sleepNotifications, PTR(systemTime))) {
-        printf("sleep end %i with call %i\n", systemTime,
-               syscall(SYS_GET_EVENT, serviceId, systemTime, 0, 0));
         fireEvent(syscall(SYS_GET_EVENT, serviceId, systemTime, 0, 0), 0);
     }
 }
 
-void sleep(uint32_t millis) {
+void doSleep(uint32_t millis) {
     uint32_t targetTime = systemTime + millis / 10;
     listAdd(&sleepNotifications, PTR(targetTime));
     uint32_t event = syscall(SYS_GET_EVENT, serviceId, targetTime, 0, 0);
@@ -56,7 +51,7 @@ int32_t main() {
     if (!initialized) {
         initialized = true;
         serviceId = getServiceId();
-        createFunction("sleep", (void *)sleep);
+        createFunction("sleep", (void *)doSleep);
         uint32_t service = getService("pic");
         uint32_t event = getEvent(service, "irq0");
         subscribeEvent(service, event, interruptHandler);
@@ -69,7 +64,7 @@ int32_t main() {
         printf("timer handler installed\n");
     } else {
         printf("current uptime: %i.%is\n", systemTime / 100, systemTime % 100);
-        printf("waiting one second...\n");
-        sleep(1000);
+        printf("waiting one second to demonstrate sleeping\n");
+        doSleep(1000);
     }
 }

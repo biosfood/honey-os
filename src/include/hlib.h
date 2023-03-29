@@ -70,5 +70,6 @@ extern uint32_t listCount(ListElement *list);
 extern void *listGet(ListElement *list, uint32_t position);
 extern bool listRemoveValue(ListElement **list, void *value);
 extern void *getPhysicalAddress(void *address);
+extern void sleep(uint32_t millis);
 
 #endif

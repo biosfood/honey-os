@@ -25,12 +25,6 @@ void xhci_command(XHCIController *controller, uint32_t p1, uint32_t p2,
     controller->doorbells[0] = 0;
 }
 
-void waitForKeyPress() {
-    printf("press a key to continue...\n");
-    uint32_t ioManager = getService("ioManager");
-    await(ioManager, getEvent(ioManager, "keyPress"));
-}
-
 #define REQUEST(functionName, service, function)                               \
     uint32_t functionName(uint32_t data1, uint32_t data2) {                    \
         static uint32_t serviceId = 0;                                         \
@@ -212,7 +206,7 @@ static void initializeUSB(uint32_t deviceId) {
     setupScratchpadBuffers(controller);
 
     controller->operational->command |= (1 << 0) | (1 << 2);
-    waitForKeyPress();
+    sleep(100);
 
     if (controller->operational->status & (1 << 2))
         return printf("critical XHCI problem\n");

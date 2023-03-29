@@ -67,3 +67,19 @@ void memset(void *_target, uint8_t byte, uint32_t size) {
 bool stackContains(uint32_t serviceId) {
     return syscall(SYS_STACK_CONTAINS, serviceId, 0, 0, 0);
 }
+
+#define REQUEST1(returnType, functionName, service, function)                  \
+    returnType functionName(uint32_t data) {                                   \
+        static uint32_t serviceId = 0;                                         \
+        if (!serviceId) {                                                      \
+            serviceId = getService(service);                                   \
+            serviceId = getService(service);                                   \
+        }                                                                      \
+        static uint32_t functionId = 0;                                        \
+        if (!functionId) {                                                     \
+            functionId = getFunction(serviceId, function);                     \
+        }                                                                      \
+        return (returnType)request(serviceId, functionId, data, 0);            \
+    }
+
+REQUEST1(void, sleep, "pit", "sleep")
