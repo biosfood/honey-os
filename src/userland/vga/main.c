@@ -20,9 +20,11 @@ void write(char c) {
     switch (c) {
     case '\r':
         offset = (offset / WIDTH) * WIDTH;
+        setCursorOffset(offset);
         return;
     case '\n':
         offset = (offset / WIDTH + 1) * WIDTH;
+        setCursorOffset(offset);
         return;
     case '\b':
         offset--;
