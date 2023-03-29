@@ -91,7 +91,7 @@ setupFullPageTable:
     pop eax
     ret
 
-earlyGDT:
+earlyGDT: ; using this GDT before activating paging
 .start:
 	dq 0
 .code:

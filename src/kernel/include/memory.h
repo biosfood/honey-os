@@ -31,7 +31,6 @@ typedef struct {
 
 extern PagingInfo *kernelPhysicalPages;
 
-extern void setupMemory();
 extern void reservePagesUntilPhysical(uint32_t endPageId);
 
 extern void *findTarFile(void *fileStart, uint32_t fileSize, char *filename);

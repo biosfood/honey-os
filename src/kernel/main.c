@@ -1,3 +1,4 @@
+#include <util.h>
 #define ALLOC_MAIN
 #include "memory/malloc.h"
 
@@ -40,7 +41,7 @@ void loadAndScheduleSystemServices(void *multibootInfo) {
 }
 
 void kernelMain(void *multibootInfo) {
-    setupMemory();
+    reservePagesUntilPhysical(0x900);
     loadAndScheduleSystemServices(multibootInfo);
     setupSyscalls();
     registerInterrupts();
