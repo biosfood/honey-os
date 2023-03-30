@@ -130,6 +130,9 @@ void *kernelMapPhysicalCount(void *address, uint32_t size) {
     for (uint32_t i = 0; i < size; i++) {
         mapPage(kernelVirtualPages, ADDRESS(physicalPageStart + i),
                 ADDRESS(virtualPageStart + i), false, false);
+        uint32_t pageId = virtualPageStart + i;
+        kernelVirtualPages->isPageConnectedToNext[pageId / 32] |=
+            1 << (pageId % 32);
     }
     return ADDRESS(virtualPageStart) + PAGE_OFFSET(address);
 }
@@ -233,6 +236,7 @@ void unmapPageFrom(PagingInfo *info, void *address) {
         fineBit = 1 << fine;
         markPageFree(info, coarse, fine, fineBit);
         unmapSinglePageFrom(info, ADDRESS(pageId));
+        pageId++;
     } while (info->isPageConnectedToNext[coarse] & fineBit);
 }
 
@@ -254,6 +258,7 @@ void freePageFrom(PagingInfo *info, void *address) {
         markPageFree(kernelPhysicalPages, physicalPageId / 32, physicalFine,
                      1 << physicalFine);
         unmapSinglePageFrom(info, ADDRESS(pageId));
+        pageId++;
     } while (info->isPageConnectedToNext[coarse] & fineBit);
 }
 

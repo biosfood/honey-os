@@ -4,8 +4,14 @@
 
 void handleInsertStringSyscall(Syscall *call) {
     Service *callService = call->service;
-    void *string = kernelMapPhysical(getPhysicalAddress(
-        callService->pagingInfo.pageDirectory, PTR(call->parameters[0])));
+    if (!call->parameters[0]) {
+        return;
+    }
+    // need to make sure the whole string is allocated
+    void *string = kernelMapPhysicalCount(
+        getPhysicalAddress(callService->pagingInfo.pageDirectory,
+                           PTR(call->parameters[0])),
+        2);
     uintptr_t size = strlen(string);
     char *savedString = malloc(size + 1);
     memcpy(string, savedString, size);
