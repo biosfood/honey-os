@@ -3,8 +3,8 @@
 
 #include "usb.h"
 
-void xhci_command(XHCIController *controller, uint32_t p1, uint32_t p2,
-                  uint32_t status, uint32_t control) {
+void xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
+                 uint32_t status, uint32_t control) {
     control &= ~1;
     control |= controller->commands.cycle;
 
@@ -57,8 +57,8 @@ void restartXHCIController(XHCIController *controller) {
 }
 
 XHCITRB *trbRingFetch(TrbRing *ring) {
-    while ((ring->trbs[ring->dequeue].control & 1) != ring->cycle) {
-        syscall(-1, 0, 0, 0, 0);
+    if ((ring->trbs[ring->dequeue].control & 1) != ring->cycle) {
+        return NULL;
     }
     XHCITRB *result = &ring->trbs[ring->dequeue];
     ring->dequeue++;
@@ -86,8 +86,6 @@ void setupTrbRing(TrbRing *ring, uint32_t size) {
 void setupRuntime(XHCIController *controller) {
     controller->runtime = OFFSET(controller->capabilities,
                                  controller->capabilities->runtimeOffset);
-    controller->runtime->interrupters[0].enabled = true;
-    controller->runtime->interrupters[0].moderationCounter = 500;
     controller->runtime->interrupters[0].eventRingSegmentTableSize = 1;
     controller->runtime->interrupters[0].eventRingSegmentTableAddress[0] =
         U32(controller->eventRingSegmentTablePhysical);
@@ -96,6 +94,9 @@ void setupRuntime(XHCIController *controller) {
         U32(&controller->events.physical[controller->events.dequeue]) |
         (1 << 3);
     controller->runtime->interrupters[0].eventRingDequeuePointer[1] = 0;
+
+    controller->runtime->interrupters[0].management |= 3;
+    sleep(100);
 }
 
 void setupEventRingSegmentTable(XHCIController *controller) {
@@ -192,33 +193,15 @@ XHCIController *initializeController(uint32_t deviceId) {
            slotInfo >> 24);
     return controller;
 }
+XHCIController *controller;
 
-static void initializeUSB(uint32_t deviceId) {
-    XHCIController *controller = initializeController(deviceId);
-    restartXHCIController(controller);
-
-    setupTrbRing(&controller->commands, 256);
-    setupTrbRing(&controller->events, 256);
-    readExtendedCapabilities(controller);
-    setupOperationalRegisters(controller);
-    setupEventRingSegmentTable(controller);
-    setupRuntime(controller);
-    setupScratchpadBuffers(controller);
-
-    controller->operational->command |= (1 << 0) | (1 << 2);
-    sleep(100);
-
-    if (controller->operational->status & (1 << 2))
-        return printf("critical XHCI problem\n");
-
-    // just testing for now...
-    xhci_command(controller, 0, 0, 0, (9 << 10));
-    xhci_command(controller, 0, 0, 0, (9 << 10));
-    xhci_command(controller, 0, 0, 0, (9 << 10));
-    xhci_command(controller, 0, 0, 0, (9 << 10));
-
-    while (1) {
-        XHCITRB *trb = trbRingFetch(&controller->events);
+void xhciInterrupt() {
+    if (!(controller->runtime->interrupters[0].management & 1)) {
+        printf("no interrupt pending\n");
+        return;
+    }
+    XHCITRB *trb;
+    while ((trb = trbRingFetch(&controller->events))) {
         uint32_t type = (trb->control >> 10) & 0x3F;
 
         printf("event %i [%x %x %x %x] type: %i, slotId: %i\n",
@@ -229,6 +212,35 @@ static void initializeUSB(uint32_t deviceId) {
             U32(&controller->events.physical[controller->events.dequeue]) |
             (1 << 3);
     }
+}
+
+void initializeUSB(uint32_t deviceId) {
+    controller = initializeController(deviceId);
+    restartXHCIController(controller);
+
+    setupTrbRing(&controller->commands, 256);
+    setupTrbRing(&controller->events, 256);
+    readExtendedCapabilities(controller);
+    setupOperationalRegisters(controller);
+    setupEventRingSegmentTable(controller);
+    setupRuntime(controller);
+    setupScratchpadBuffers(controller);
+
+    controller->operational->status |= (1 << 3);
+    controller->operational->command |= (1 << 0) | (1 << 2);
+    printf("using irq no. %i\n", getPCIInterrupt(deviceId, 0));
+    int pic = getService("pic");
+    subscribeEvent(pic, getEvent(pic, "irq11"), xhciInterrupt);
+    sleep(100);
+
+    if (controller->operational->status & (1 << 2))
+        return printf("critical XHCI problem\n");
+
+    // just testing for now...
+    xhciCommand(controller, 0, 0, 0, (9 << 10));
+    xhciCommand(controller, 0, 0, 0, (9 << 10));
+    xhciCommand(controller, 0, 0, 0, (9 << 10));
+    xhciCommand(controller, 0, 0, 0, (9 << 10));
 }
 
 int32_t main() {

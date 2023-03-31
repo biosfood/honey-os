@@ -24,8 +24,10 @@ uint16_t getIRR() {
 #define PIC_READ_ISR 0x0B
 uint16_t getISR() {
     ioOut(PIC1, PIC_READ_ISR, 1);
+    uint16_t first = ioIn(PIC1, 1);
     ioOut(PIC2, PIC_READ_ISR, 1);
-    return (ioIn(PIC2, 1) << 8) | ioIn(PIC1, 1);
+    uint16_t second = ioIn(PIC2, 1) << 8;
+    return first | second;
 }
 
 void irqMaster(uint32_t intNo) {

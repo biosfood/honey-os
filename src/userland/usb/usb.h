@@ -28,7 +28,7 @@ typedef volatile struct {
     uint32_t status;
     uint32_t pageSize;
     uint32_t reserved[2];
-    uint32_t op_dnctrl;
+    uint32_t notification;
     uint32_t commandRingControl[2];
     uint32_t reserved1[4];
     uint32_t deviceContextBaseAddressArray[2];
@@ -45,7 +45,7 @@ typedef volatile struct {
 } __attribute__((packed)) XHCITRB;
 
 typedef volatile struct {
-    uint32_t pending : 1, enabled : 1, reserved : 30;
+    uint32_t management;
     uint32_t moderationCounter : 16, moderationInterval : 16;
     uint32_t eventRingSegmentTableSize; // MAX 16 bit
     uint32_t reserved2;
