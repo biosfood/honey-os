@@ -18,9 +18,9 @@ typedef volatile struct {
 
 typedef volatile struct {
     uint32_t status;
-    uint32_t pm_status;
-    uint32_t link_info;
-    uint32_t lpm_control;
+    uint32_t powerStatus;
+    uint32_t linkInfo;
+    uint32_t hardwareLPM;
 } __attribute__((packed)) XHCIPort;
 
 typedef volatile struct {
@@ -41,7 +41,13 @@ typedef volatile struct {
     uint32_t dataLow;
     uint32_t dataHigh;
     uint32_t status;
-    uint32_t control;
+    struct {
+        uint32_t cycle : 1;
+        uint32_t toggleCycle : 1;
+        uint32_t reserved : 8;
+        uint32_t type : 6;
+        uint32_t reserved1 : 16;
+    } __attribute__((packed)) control;
 } __attribute__((packed)) XHCITRB;
 
 typedef volatile struct {
@@ -82,6 +88,7 @@ typedef struct {
     XHCIEventRingSegmentTableEntry *eventRingSegmentTable,
         *eventRingSegmentTablePhysical;
     uint64_t *deviceContextBaseAddressArray;
+    uint32_t portCount;
 } XHCIController;
 
 #endif
