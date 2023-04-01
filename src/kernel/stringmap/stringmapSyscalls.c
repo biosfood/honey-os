@@ -14,8 +14,7 @@ void handleInsertStringSyscall(Syscall *call) {
         2);
     uintptr_t size = strlen(string);
     char *savedString = malloc(size + 1);
-    memcpy(string, savedString, size);
-    savedString[size] = 0;
+    memcpy(string, savedString, size + 1);
     call->returnValue = insertString(savedString);
     unmapPage(string);
 }
@@ -31,8 +30,14 @@ void handleReadStringLengthSyscall(Syscall *call) {
 void handleReadStringSyscall(Syscall *call) {
     uintptr_t stringId = call->parameters[0];
     Service *callService = call->service;
-    void *buffer = kernelMapPhysical(getPhysicalAddress(
-        callService->pagingInfo.pageDirectory, PTR(call->parameters[1])));
+    char *buffer = kernelMapPhysicalCount(
+        getPhysicalAddress(callService->pagingInfo.pageDirectory,
+                           PTR(call->parameters[1])),
+        2);
+    if (!stringId) {
+        buffer[0] = 0;
+        return;
+    }
     char *string = retrieveString(stringId);
     if (string) {
         memcpy(string, buffer, strlen(string) + 1);

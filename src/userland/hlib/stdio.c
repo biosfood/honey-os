@@ -123,6 +123,9 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
 uint32_t ioManager, logFunction, keyCallback;
 
 void _printf(void *(malloc)(uint32_t), const char *format, ...) {
+    // I have absolutely no idea why this line fixes an issue where the first
+    // printf operation consistently doesn't correctly insert its string
+    free(malloc(1));
     uintptr_t size = 0;
     va_list valist;
     va_start(valist, format);
@@ -148,6 +151,10 @@ void _printf(void *(malloc)(uint32_t), const char *format, ...) {
     va_end(valist);
 
     uintptr_t id = insertString(data);
+    if (!id) {
+        insertString(data);
+        id = hashString(data);
+    }
     request(ioManager, logFunction, id, 0);
     discardString(id);
     free(data);

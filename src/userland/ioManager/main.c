@@ -3,9 +3,6 @@
 #include <hlib.h>
 #include <stdint.h>
 
-bool lock = false;
-char buffer[100];
-
 uint32_t mainService, mainOut, globalService, globalOut;
 
 uint32_t focusService, focusServiceKeyHandler;
@@ -18,6 +15,8 @@ void writeString(char *string) {
 }
 
 void logMain(uint32_t stringId) {
+    static char buffer[100];
+    static bool lock = false;
     while (lock) {
         syscall(-1, 0, 0, 0, 0);
     }
@@ -35,6 +34,8 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
         logMain(stringId);
         return;
     }
+    static bool lock = false;
+    static char buffer[100];
     while (lock) {
         syscall(-1, 0, 0, 0, 0);
     }
