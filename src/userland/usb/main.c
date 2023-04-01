@@ -31,27 +31,25 @@ uint32_t xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
     return result;
 }
 
-void xhciCommandAsync(XHCIController *controller, uint32_t p1, uint32_t p2,
-                      uint32_t status, uint32_t control) {
-    uint32_t event = xhciCommand(controller, p1, p2, status, control);
+XHCITRB *xhciCommandAsync(XHCIController *controller, uint32_t p1, uint32_t p2,
+                          uint32_t status, uint32_t type) {
+    uint32_t event = xhciCommand(controller, p1, p2, status, type);
     XHCITRB *trb = PTR(await(serviceId, event));
-
-    printf("event %i [%x %x %x %x]\n", controller->events.dequeue, trb->dataLow,
-           trb->dataHigh, trb->status, trb->control.type);
+    return trb;
 }
 
 #define REQUEST(functionName, service, function)                               \
     uint32_t functionName(uint32_t data1, uint32_t data2) {                    \
         static uint32_t serviceId, functionId, initialized = false;            \
         if (!initialized) {                                                    \
-            serviceId = getService(service);                                   \
-            serviceId = getService(service);                                   \
-            serviceId = getService(service);                                   \
-            serviceId = getService(service);                                   \
-            functionId = getFunction(serviceId, function);                     \
-            functionId = getFunction(serviceId, function);                     \
-            functionId = getFunction(serviceId, function);                     \
-            functionId = getFunction(serviceId, function);                     \
+            while (!serviceId) {                                               \
+                serviceId = getService(service);                               \
+                serviceId = getService(service);                               \
+            }                                                                  \
+            while (!functionId) {                                              \
+                functionId = getFunction(serviceId, function);                 \
+                functionId = getFunction(serviceId, function);                 \
+            }                                                                  \
             initialized = true;                                                \
         }                                                                      \
         return request(serviceId, functionId, data1, data2);                   \
@@ -228,7 +226,17 @@ void xhciInterrupt() {
                 U32(&controller->events.physical[controller->events.dequeue]) |
                 (1 << 3);
             if (trb->control.type == 34) {
-                printf("port status change detected\n");
+                // slot status change
+                XHCIPort *port =
+                    &controller->operational->ports[(trb->dataLow >> 24) - 1];
+                if (port->status & 1 << 1) {
+                    printf("port: %i\n", trb->dataLow >> 24);
+                    XHCITRB *enableSlotResult =
+                        xhciCommandAsync(controller, 0, 0, 0, 9);
+                    printf("now connecting port %i to slot %i\n",
+                           (trb->dataLow >> 24) - 1,
+                           enableSlotResult->control.reserved1 >> 8);
+                }
             }
             printf("event %i [%x %x %x %x]: %i\n", controller->events.dequeue,
                    trb->dataLow, trb->dataHigh, trb->status,
