@@ -1,10 +1,14 @@
 #define ALLOC_MAIN
 #include <hlib.h>
 
+#include "../hlib/include/syscalls.h"
 #include "usb.h"
 
-void xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
-                 uint32_t status, uint32_t control) {
+uint32_t events[256];
+uint32_t serviceId;
+
+uint32_t xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
+                     uint32_t status, uint32_t control) {
     control &= ~1;
     control |= controller->commands.cycle;
 
@@ -12,6 +16,7 @@ void xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
     controller->commands.trbs[controller->commands.enqueue].dataHigh = p2;
     controller->commands.trbs[controller->commands.enqueue].status = status;
     controller->commands.trbs[controller->commands.enqueue].control = control;
+    uint32_t result = events[controller->commands.enqueue];
 
     controller->commands.enqueue++;
     if (controller->commands.enqueue == 63) {
@@ -23,18 +28,33 @@ void xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
         controller->commands.enqueue = 0;
     }
     controller->doorbells[0] = 0;
+    return result;
+}
+
+void xhciCommandAsync(XHCIController *controller, uint32_t p1, uint32_t p2,
+                      uint32_t status, uint32_t control) {
+    uint32_t event = xhciCommand(controller, p1, p2, status, control);
+    XHCITRB *trb = PTR(await(serviceId, event));
+    uint32_t type = (trb->control >> 10) & 0x3F;
+
+    printf("event %i [%x %x %x %x] type: %i, slotId: %i\n",
+           controller->events.dequeue, trb->dataLow, trb->dataHigh, trb->status,
+           trb->control, type, trb->control >> 24);
 }
 
 #define REQUEST(functionName, service, function)                               \
     uint32_t functionName(uint32_t data1, uint32_t data2) {                    \
-        static uint32_t serviceId = 0;                                         \
-        if (!serviceId) {                                                      \
+        static uint32_t serviceId, functionId, initialized = false;            \
+        if (!initialized) {                                                    \
             serviceId = getService(service);                                   \
             serviceId = getService(service);                                   \
-        }                                                                      \
-        static uint32_t functionId = 0;                                        \
-        if (!functionId) {                                                     \
+            serviceId = getService(service);                                   \
+            serviceId = getService(service);                                   \
             functionId = getFunction(serviceId, function);                     \
+            functionId = getFunction(serviceId, function);                     \
+            functionId = getFunction(serviceId, function);                     \
+            functionId = getFunction(serviceId, function);                     \
+            initialized = true;                                                \
         }                                                                      \
         return request(serviceId, functionId, data1, data2);                   \
     }
@@ -56,13 +76,16 @@ void restartXHCIController(XHCIController *controller) {
         ;
 }
 
-XHCITRB *trbRingFetch(TrbRing *ring) {
+XHCITRB *trbRingFetch(TrbRing *ring, uint32_t *index) {
     if ((ring->trbs[ring->dequeue].control & 1) != ring->cycle) {
         return NULL;
     }
+    if (index) {
+        *index = ring->dequeue;
+    }
     XHCITRB *result = &ring->trbs[ring->dequeue];
     ring->dequeue++;
-    if (ring->dequeue == 64) {
+    if (ring->dequeue == ring->size) {
         ring->dequeue = 0;
         ring->cycle ^= -1;
     }
@@ -201,16 +224,12 @@ void xhciInterrupt() {
         return;
     }
     XHCITRB *trb;
-    while ((trb = trbRingFetch(&controller->events))) {
-        uint32_t type = (trb->control >> 10) & 0x3F;
-
-        printf("event %i [%x %x %x %x] type: %i, slotId: %i\n",
-               controller->events.dequeue, trb->dataLow, trb->dataHigh,
-               trb->status, trb->control, type, trb->control >> 24);
-
+    uint32_t index;
+    while ((trb = trbRingFetch(&controller->events, &index))) {
         controller->runtime->interrupters[0].eventRingDequeuePointer[0] =
             U32(&controller->events.physical[controller->events.dequeue]) |
             (1 << 3);
+        fireEvent(events[index], U32(trb));
     }
 }
 
@@ -231,19 +250,21 @@ void initializeUSB(uint32_t deviceId) {
     printf("using irq no. %i\n", getPCIInterrupt(deviceId, 0));
     int pic = getService("pic");
     subscribeEvent(pic, getEvent(pic, "irq11"), xhciInterrupt);
+    for (uint32_t i = 0; i < 256; i++) {
+        events[i] = syscall(SYS_CREATE_EVENT, i, 0, 0, 0);
+    }
     sleep(100);
 
     if (controller->operational->status & (1 << 2))
         return printf("critical XHCI problem\n");
 
-    // just testing for now...
-    xhciCommand(controller, 0, 0, 0, (9 << 10));
-    xhciCommand(controller, 0, 0, 0, (9 << 10));
-    xhciCommand(controller, 0, 0, 0, (9 << 10));
-    xhciCommand(controller, 0, 0, 0, (9 << 10));
+    for (uint32_t i = 0; i < 10; i++) {
+        xhciCommandAsync(controller, 0, 0, 0, (9 << 10));
+    }
 }
 
 int32_t main() {
+    serviceId = getServiceId();
     uint32_t i = 0, class = 0;
     while ((class = getDeviceClass(i, 0))) {
         if (class == 0x0C0330) {
