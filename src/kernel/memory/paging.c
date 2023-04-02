@@ -42,7 +42,7 @@ void *getPhysicalAddress(PageDirectoryEntry *pageDirectory, void *address) {
         pageDirectory[virtual->pageDirectoryIndex].pageTableID;
     PageTableEntry *pageTable = mapTemporary(ADDRESS(pageTableId));
     uint32_t pageBase = pageTable[virtual->pageTableIndex].targetAddress;
-    return PTR(pageBase << 12 | virtual->pageOffset);
+    return ADDRESS(pageBase) + PAGE_OFFSET(address);
 }
 
 void *getPhysicalAddressKernel(void *address) {
