@@ -32,7 +32,7 @@ uint32_t xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
     controller->commands.trbs[controller->commands.enqueue].control.type = type;
     controller->commands.trbs[controller->commands.enqueue].control.cycle =
         controller->commands.cycle;
-    uint32_t result = events[controller->commands.enqueue];
+    uint32_t result = events[controller->events.dequeue];
 
     controller->commands.enqueue++;
     if (controller->commands.enqueue == 63) {
@@ -242,10 +242,30 @@ void addressDevice(void *inputContext, uint32_t slotNumber, bool BSR) {
     enqueueCommand(&controller->commands, (void *)&command);
 }
 
+void configureEndpoint(void *inputContext, uint32_t slotNumber,
+                       bool deconfigure) {
+    XHCIDeviceTRB command = {0};
+    command.inputContext[0] = U32(inputContext);
+    command.inputContext[1] = 0;
+    command.type = 12;
+    command.slotID = slotNumber;
+    command.BSR = deconfigure;
+    enqueueCommand(&controller->commands, (void *)&command);
+}
+
+void evaluateContext(void *inputContext, uint32_t slotNumber) {
+    XHCIDeviceTRB command = {0};
+    command.inputContext[0] = U32(inputContext);
+    command.inputContext[1] = 0;
+    command.type = 13;
+    command.slotID = slotNumber;
+    enqueueCommand(&controller->commands, (void *)&command);
+}
+
 void setupPort(XHCITRB *trb) {
     XHCIPort *port = &controller->operational->ports[(trb->dataLow >> 24) - 1];
     if (!(port->status & 1 << 1)) {
-        return;
+        // return;
     }
     XHCITRB *enableSlotResult = xhciCommandAsync(controller, 0, 0, 0, 9);
     uint32_t slotIndex = enableSlotResult->control.reserved1 >> 8;
@@ -274,12 +294,30 @@ void setupPort(XHCITRB *trb) {
     inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
         U32(ring->physical) | 1;
     inputContext->deviceContext.endpoints[0].transferDequeuePointerHigh = 0;
-    printf("%x %x\n", (void *)ring->physical,
-           getPhysicalAddress((void *)inputContext));
     controller->deviceContextBaseAddressArray[slotIndex] =
         U32(getPhysicalAddress((void *)&inputContext->deviceContext));
     addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
-                  slotIndex, 1);
+                  slotIndex, false);
+    addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
+                  slotIndex, true);
+    printf("address: %x / %x, isHub: %i, speed: %i, state: %x\n",
+           inputContext->deviceContext.slot.routeString,
+           inputContext->deviceContext.slot.deviceAddress,
+           inputContext->deviceContext.slot.isHub,
+           inputContext->deviceContext.slot.speed, port->status);
+    inputContext->inputControl.addContextFlags = 1;
+    // inputContext->inputControl.dropContextFlags =
+    //    ~inputContext->inputControl.addContextFlags;
+    configureEndpoint(getPhysicalAddress((void *)&inputContext->inputControl),
+                      slotIndex, true);
+    configureEndpoint(getPhysicalAddress((void *)&inputContext->inputControl),
+                      slotIndex, false);
+    printf("address: %x / %x, isHub: %i, speed: %i, state: %x, root hub: %i\n",
+           inputContext->deviceContext.slot.routeString,
+           inputContext->deviceContext.slot.deviceAddress,
+           inputContext->deviceContext.slot.isHub,
+           inputContext->deviceContext.slot.speed, port->status,
+           inputContext->deviceContext.slot.rootHubPort);
 }
 
 void xhciInterrupt() {
@@ -337,6 +375,7 @@ void initializeUSB(uint32_t deviceId) {
         }
         printf("port %i is connected, resetting...\n", i);
         controller->operational->ports[i].status |= 1 << 4;
+        sleep(5000);
     }
     return;
 
