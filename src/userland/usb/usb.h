@@ -71,6 +71,58 @@ typedef volatile struct {
     uint32_t reserved1;
 } __attribute__((packed)) XHCIEventRingSegmentTableEntry;
 
+typedef volatile struct {
+    uint32_t inputContext[2];
+    uint32_t reserved;
+
+    uint32_t cycle : 1;
+    uint32_t reserved1 : 8;
+    uint32_t BSR : 1;
+    uint32_t type : 6;
+    uint32_t reserved2 : 8;
+    uint32_t slotID : 8;
+} __attribute__((packed)) XHCIDeviceTRB;
+
+typedef volatile struct {
+    uint32_t routeString : 20, speed : 4, reserved : 1, multiTT : 1, isHub : 1,
+        contextEntryCount : 5;
+    uint32_t maxLatency : 16, rootHubPort : 8, portCount : 8;
+    uint32_t parentHubSlotId : 8, partentPortNumber : 8, thinkTime : 2,
+        reserved1 : 4, interrupterTarget : 10;
+    uint32_t deviceAddress : 8, reserved2 : 19, slotState : 5;
+    uint32_t reserved3[4];
+} __attribute__((packed)) XHCISlotContext;
+
+typedef volatile struct {
+    uint32_t endpointState : 3, reserved : 5, multiplier : 2,
+        maxPrimaryStreams : 5, linearStreamArray : 1, interval : 8,
+        maxEISTPayloadHigh : 8;
+    uint32_t reserved1 : 1, errorCount : 2, endpointType : 3, reserved2 : 1,
+        hostInitiateDisable : 1, maxBurstSize : 8, maxPacketSize : 16;
+    uint32_t transferDequeuePointerLow;
+    uint32_t transferDequeuePointerHigh;
+    uint32_t averageTRBLength : 16, maxEISTPayloadLow : 16;
+    uint32_t reserved4[3];
+} __attribute__((packed)) XHCIEndpointContext;
+
+typedef volatile struct {
+    XHCISlotContext slot;
+    XHCIEndpointContext endpoints[32];
+} __attribute__((packed)) XHCIDevice;
+
+typedef volatile struct {
+    uint32_t dropContextFlags;
+    uint32_t addContextFlags;
+    uint32_t reserved[5];
+    uint32_t configuration : 8, interfaceNumber : 8, AlternateSetting : 8,
+        reserved1 : 8;
+} __attribute__((packed)) XHCIInputControl;
+
+typedef volatile struct {
+    XHCIInputControl inputControl;
+    XHCIDevice deviceContext;
+} __attribute__((packed)) XHCIInputContext;
+
 typedef struct {
     XHCITRB *trbs, *physical;
     uint32_t size, enqueue, dequeue;
@@ -89,6 +141,7 @@ typedef struct {
         *eventRingSegmentTablePhysical;
     uint64_t *deviceContextBaseAddressArray;
     uint32_t portCount;
+    XHCIInputContext *inputContexts[32];
 } XHCIController;
 
 #endif
