@@ -234,8 +234,8 @@ void evaluateContext(void *inputContext, uint32_t slotNumber) {
     xhciCommand(controller, U32(inputContext), 0, 0, control);
 }
 
-uint32_t *getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
-                               uint32_t slotIndex) {
+void *getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
+                           uint32_t slotIndex) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x80;
     setup.request = 6;
@@ -326,9 +326,18 @@ void resetPort(XHCIController *controller, uint32_t portIndex) {
     printf("port %i: addressing slot\n", portIndex - 1);
     addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
                   slotIndex, true);
-    uint32_t *data = getDeviceInformation(inputContext, ring, slotIndex);
-    printf("port %i: device information: %x, %x\n", portIndex - 1, data[0],
-           data[1]);
+    UsbDeviceDescriptor *data =
+        getDeviceInformation(inputContext, ring, slotIndex);
+    printf("port %i: device information: length: %i, type: %i, release %x\n",
+           portIndex - 1, data->size, data->descriptorType, data->usbVersion);
+    printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
+           portIndex - 1, data->deviceClass, data->deviceSubclass,
+           data->deviceProtocol, data->maxPacketSize);
+    printf("port %i: vendor: %i, product: %i, deviceRelease: %x, manufacturer: "
+           "%i, product: %i\n",
+           portIndex - 1, data->vendor, data->product, data->deviceRelease,
+           data->manufacturerStringDescriptor);
+    printf("--------\n");
     // configure endpoint gives a trb error as of now ...
     // configureEndpoint(getPhysicalAddress((void
     // *)&inputContext->inputControl),

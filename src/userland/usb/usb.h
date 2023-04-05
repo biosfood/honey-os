@@ -148,6 +148,23 @@ typedef volatile struct {
     XHCIDevice deviceContext;
 } __attribute__((packed)) XHCIInputContext;
 
+typedef volatile struct {
+    uint8_t size;
+    uint8_t descriptorType;
+    uint16_t usbVersion;
+    uint8_t deviceClass;
+    uint8_t deviceSubclass;
+    uint8_t deviceProtocol;
+    uint8_t maxPacketSize;
+    uint16_t vendor;
+    uint16_t product;
+    uint16_t deviceRelease;
+    uint8_t manufacturerStringDescriptor;
+    uint8_t deviceStringDescriptor;
+    uint8_t serialNumberStringDescriptor;
+    uint8_t configurationCount;
+} __attribute__((packed)) UsbDeviceDescriptor;
+
 typedef struct {
     XHCITRB *trbs, *physical;
     uint32_t size, enqueue, dequeue;
