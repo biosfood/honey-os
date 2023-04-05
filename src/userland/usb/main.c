@@ -240,6 +240,7 @@ void addressDevice(void *inputContext, uint32_t slotNumber, bool BSR) {
     command.slotID = slotNumber;
     command.BSR = BSR;
     enqueueCommand(&controller->commands, (void *)&command);
+    await(serviceId, events[controller->events.dequeue]);
 }
 
 void configureEndpoint(void *inputContext, uint32_t slotNumber,
@@ -251,6 +252,7 @@ void configureEndpoint(void *inputContext, uint32_t slotNumber,
     command.slotID = slotNumber;
     command.BSR = deconfigure;
     enqueueCommand(&controller->commands, (void *)&command);
+    await(serviceId, events[controller->events.dequeue]);
 }
 
 void evaluateContext(void *inputContext, uint32_t slotNumber) {
@@ -262,10 +264,41 @@ void evaluateContext(void *inputContext, uint32_t slotNumber) {
     enqueueCommand(&controller->commands, (void *)&command);
 }
 
+void getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
+                          uint32_t slotIndex) {
+    XHCISetupStageTRB setup = {0};
+    setup.requestType = 0x80;
+    setup.request = 6;
+    setup.value = 0x100;
+    setup.index = 0;
+    setup.length = 8;
+    setup.transferLegnth = 8;
+    setup.interruptOnCompletion = 0;
+    setup.interrupterTarget = 0;
+    setup.type = 2;
+    setup.transferType = 3;
+    setup.immediateData = 1;
+    enqueueCommand(ring, (void *)&setup);
+    XHCIDataStageTRB data = {0};
+    data.dataBuffer[0] = U32(getPhysicalAddress(requestMemory(1, 0, 0)));
+    data.inDirection = 1;
+    data.transferSize = 8;
+    data.type = 3;
+    data.interrupterTarget = 0;
+    enqueueCommand(ring, (void *)&data);
+    XHCIStatusStageTRB status = {0};
+    status.inDirection = 1;
+    status.evaluateNext = 0;
+    status.interruptOnCompletion = 1;
+    status.type = 4;
+    enqueueCommand(ring, (void *)&status);
+    controller->doorbells[slotIndex] = 1;
+}
+
 void setupPort(XHCITRB *trb) {
     XHCIPort *port = &controller->operational->ports[(trb->dataLow >> 24) - 1];
     if (!(port->status & 1 << 1)) {
-        // return;
+        return;
     }
     XHCITRB *enableSlotResult = xhciCommandAsync(controller, 0, 0, 0, 9);
     uint32_t slotIndex = enableSlotResult->control.reserved1 >> 8;
@@ -273,14 +306,12 @@ void setupPort(XHCITRB *trb) {
            slotIndex);
     XHCIInputContext *inputContext = requestMemory(1, 0, 0);
     inputContext->inputControl.addContextFlags = 3;
-    // inputContext->inputControl.dropContextFlags =
-    //    ~inputContext->inputControl.addContextFlags;
     inputContext->deviceContext.slot.rootHubPort = trb->dataLow >> 24;
     inputContext->deviceContext.slot.interrupterTarget = 0;
     inputContext->deviceContext.slot.multiTT = 0;
     inputContext->deviceContext.slot.deviceAddress = 0;
-    inputContext->deviceContext.slot.portCount = 1;
     inputContext->deviceContext.slot.contextEntryCount = 1;
+    inputContext->deviceContext.slot.speed = (port->status >> 10) & 3;
     inputContext->deviceContext.endpoints[0].endpointType = 4;
     inputContext->deviceContext.endpoints[0].maxPacketSize = 8; // TODO
     inputContext->deviceContext.endpoints[0].maxBurstSize = 0;
@@ -294,30 +325,16 @@ void setupPort(XHCITRB *trb) {
     inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
         U32(ring->physical) | 1;
     inputContext->deviceContext.endpoints[0].transferDequeuePointerHigh = 0;
+    XHCIDevice *device = malloc(sizeof(XHCIDevice));
     controller->deviceContextBaseAddressArray[slotIndex] =
-        U32(getPhysicalAddress((void *)&inputContext->deviceContext));
-    addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
-                  slotIndex, false);
+        U32(getPhysicalAddress((void *)device));
     addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
                   slotIndex, true);
-    printf("address: %x / %x, isHub: %i, speed: %i, state: %x\n",
-           inputContext->deviceContext.slot.routeString,
-           inputContext->deviceContext.slot.deviceAddress,
-           inputContext->deviceContext.slot.isHub,
-           inputContext->deviceContext.slot.speed, port->status);
-    inputContext->inputControl.addContextFlags = 1;
-    // inputContext->inputControl.dropContextFlags =
-    //    ~inputContext->inputControl.addContextFlags;
-    configureEndpoint(getPhysicalAddress((void *)&inputContext->inputControl),
-                      slotIndex, true);
-    configureEndpoint(getPhysicalAddress((void *)&inputContext->inputControl),
-                      slotIndex, false);
-    printf("address: %x / %x, isHub: %i, speed: %i, state: %x, root hub: %i\n",
-           inputContext->deviceContext.slot.routeString,
-           inputContext->deviceContext.slot.deviceAddress,
-           inputContext->deviceContext.slot.isHub,
-           inputContext->deviceContext.slot.speed, port->status,
-           inputContext->deviceContext.slot.rootHubPort);
+    getDeviceInformation(inputContext, ring, slotIndex);
+    // configure endpoint gives a trb error as of now ...
+    // configureEndpoint(getPhysicalAddress((void
+    // *)&inputContext->inputControl),
+    //                  slotIndex, false);
 }
 
 void xhciInterrupt() {

@@ -84,6 +84,37 @@ typedef volatile struct {
 } __attribute__((packed)) XHCIDeviceTRB;
 
 typedef volatile struct {
+    uint32_t requestType : 8, request : 8, value : 16;
+    uint32_t index : 16, length : 16;
+
+    uint32_t transferLegnth : 17, // always 8
+        reserved : 5, interrupterTarget : 10;
+
+    uint32_t cycle : 1, reserved1 : 4, interruptOnCompletion : 1,
+        immediateData : 1, // here 1
+        reserved2 : 3, type : 6, transferType : 2;
+} __attribute__((packed)) XHCISetupStageTRB;
+
+typedef volatile struct {
+    uint32_t reserved[2];
+
+    uint32_t reserved1 : 22, interrupterTarget : 10;
+
+    uint32_t cycle : 1, evaluateNext : 1, reserved2 : 2, chain : 1,
+        interruptOnCompletion : 1, reserved3 : 4, type : 6, inDirection : 1;
+} __attribute__((packed)) XHCIStatusStageTRB;
+
+typedef volatile struct {
+    uint32_t dataBuffer[2];
+
+    uint32_t transferSize : 17, tdSize : 5, interrupterTarget : 10;
+
+    uint32_t cycle : 1, evaluateNext : 1, interruptOnShortPacket : 1,
+        noSnoop : 1, chain : 1, interruptOnCompletion : 1, immediateData : 1,
+        reserved : 3, type : 6, inDirection : 1;
+} __attribute__((packed)) XHCIDataStageTRB;
+
+typedef volatile struct {
     uint32_t routeString : 20, speed : 4, reserved : 1, multiTT : 1, isHub : 1,
         contextEntryCount : 5;
     uint32_t maxLatency : 16, rootHubPort : 8, portCount : 8;
