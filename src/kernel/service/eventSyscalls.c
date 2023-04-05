@@ -40,7 +40,9 @@ void handleGetEventSyscall(Syscall *call) {
 void handleFireEventSyscall(Syscall *call) {
     Service *service = call->service;
     Event *event = listGet(service->events, call->parameters[0]);
-    fireEvent(event, call->parameters[1]);
+    if (event) {
+        fireEvent(event, call->parameters[1]);
+    }
 }
 
 void handleSubscribeEventSyscall(Syscall *call) {

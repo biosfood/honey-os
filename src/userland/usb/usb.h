@@ -41,14 +41,20 @@ typedef volatile struct {
     uint32_t dataLow;
     uint32_t dataHigh;
     uint32_t status;
-    struct {
-        uint32_t cycle : 1;
-        uint32_t toggleCycle : 1;
-        uint32_t reserved : 8;
-        uint32_t type : 6;
-        uint32_t reserved1 : 16;
-    } __attribute__((packed)) control;
+    uint32_t control;
 } __attribute__((packed)) XHCITRB;
+
+#define COMMAND_TYPE(x) (x << 10)
+#define COMMAND_CYCLE(x) (x)
+#define COMMAND_BSR(x) (x << 9)
+#define COMMAND_SLOT_ID(x) (x << 24)
+
+typedef volatile struct {
+    uint32_t commandLow;
+    uint32_t commandHigh;
+    uint32_t completionParameter : 24, completionCode : 8;
+    uint32_t cycle : 1, reserved : 9, type : 6, vfId : 8, slotId : 8;
+} __attribute__((packed)) CommandCompletionEvent;
 
 typedef volatile struct {
     uint32_t management;
@@ -70,18 +76,6 @@ typedef volatile struct {
     uint16_t ringSegmentSize, reserved;
     uint32_t reserved1;
 } __attribute__((packed)) XHCIEventRingSegmentTableEntry;
-
-typedef volatile struct {
-    uint32_t inputContext[2];
-    uint32_t reserved;
-
-    uint32_t cycle : 1;
-    uint32_t reserved1 : 8;
-    uint32_t BSR : 1;
-    uint32_t type : 6;
-    uint32_t reserved2 : 8;
-    uint32_t slotID : 8;
-} __attribute__((packed)) XHCIDeviceTRB;
 
 typedef volatile struct {
     uint32_t requestType : 8, request : 8, value : 16;

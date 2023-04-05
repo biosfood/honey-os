@@ -4,55 +4,41 @@
 #include "../hlib/include/syscalls.h"
 #include "usb.h"
 
-uint32_t events[256];
 uint32_t serviceId;
 
 XHCIController *controller;
 
-void enqueueCommand(TrbRing *ring, XHCITRB *trb) {
-    trb->control.cycle = ring->cycle;
+XHCITRB *enqueueCommand(TrbRing *ring, XHCITRB *trb) {
+    trb->control |= ring->cycle;
     memcpy((void *)trb, (void *)&ring->trbs[ring->enqueue], sizeof(XHCITRB));
-
+    XHCITRB *result = &ring->physical[ring->enqueue];
     ring->enqueue++;
     if (ring->enqueue == ring->size - 1) {
-        ring->trbs[ring->enqueue].control.cycle ^= 1;
-        if (ring->trbs[ring->enqueue].control.toggleCycle) {
+        if (ring->trbs[ring->enqueue].control & 1) {
+            ring->trbs[ring->enqueue].control &= ~1;
+        } else {
+            ring->trbs[ring->enqueue].control |= 1;
+        }
+        if (ring->trbs[ring->enqueue].control & 1) {
             ring->cycle ^= 1;
         }
         ring->enqueue = 0;
     }
-    controller->doorbells[0] = 0;
-}
-
-uint32_t xhciCommand(XHCIController *controller, uint32_t p1, uint32_t p2,
-                     uint32_t status, uint32_t type) {
-    controller->commands.trbs[controller->commands.enqueue].dataLow = p1;
-    controller->commands.trbs[controller->commands.enqueue].dataHigh = p2;
-    controller->commands.trbs[controller->commands.enqueue].status = status;
-    controller->commands.trbs[controller->commands.enqueue].control.type = type;
-    controller->commands.trbs[controller->commands.enqueue].control.cycle =
-        controller->commands.cycle;
-    uint32_t result = events[controller->events.dequeue];
-
-    controller->commands.enqueue++;
-    if (controller->commands.enqueue == 63) {
-        controller->commands.trbs[controller->commands.enqueue].control.cycle ^=
-            1;
-        if (controller->commands.trbs[controller->commands.enqueue]
-                .control.cycle) {
-            controller->commands.cycle ^= 1;
-        }
-        controller->commands.enqueue = 0;
-    }
-    controller->doorbells[0] = 0;
     return result;
 }
 
-XHCITRB *xhciCommandAsync(XHCIController *controller, uint32_t p1, uint32_t p2,
-                          uint32_t status, uint32_t type) {
-    uint32_t event = xhciCommand(controller, p1, p2, status, type);
-    XHCITRB *trb = PTR(await(serviceId, event));
-    return trb;
+CommandCompletionEvent *xhciCommand(XHCIController *controller,
+                                    uint32_t dataLow, uint32_t dataHigh,
+                                    uint32_t status, uint32_t control) {
+    XHCITRB trb = {0};
+    trb.dataLow = dataLow;
+    trb.dataHigh = dataHigh;
+    trb.status = status;
+    trb.control = control;
+    uint32_t commandAddress = U32(enqueueCommand(&controller->commands, &trb));
+    controller->doorbells[0] = 0;
+    uint32_t eventId = syscall(SYS_CREATE_EVENT, commandAddress, 0, 0, 0);
+    return PTR(await(serviceId, eventId));
 }
 
 #define REQUEST(functionName, service, function)                               \
@@ -90,7 +76,7 @@ void restartXHCIController(XHCIController *controller) {
 }
 
 XHCITRB *trbRingFetch(TrbRing *ring, uint32_t *index) {
-    if (ring->trbs[ring->dequeue].control.cycle != ring->cycle) {
+    if ((ring->trbs[ring->dequeue].control & 1) != ring->cycle) {
         return NULL;
     }
     if (index) {
@@ -114,10 +100,7 @@ void setupTrbRing(TrbRing *ring, uint32_t size) {
     ring->size = size;
     // define link to beginning
     ring->trbs[ring->size - 1].dataLow = U32(ring->physical);
-    ring->trbs[ring->size - 1].control.toggleCycle = true;
-    ring->trbs[ring->size - 1].control.type = 6;
-
-    printf("TRB ring setup: %x (%x)\n", ring->trbs, ring->physical);
+    ring->trbs[ring->size - 1].control |= COMMAND_CYCLE(true) | COMMAND_TYPE(6);
 }
 
 void setupRuntime(XHCIController *controller) {
@@ -144,7 +127,8 @@ void setupEventRingSegmentTable(XHCIController *controller) {
 
     controller->eventRingSegmentTable[0].ringSegmentBaseAddress[0] =
         U32(controller->events.physical);
-    controller->eventRingSegmentTable[0].ringSegmentSize = 64;
+    controller->eventRingSegmentTable[0].ringSegmentSize =
+        controller->events.size;
 }
 
 void readExtendedCapabilities(XHCIController *controller) {
@@ -233,39 +217,25 @@ XHCIController *initializeController(uint32_t deviceId) {
 }
 
 void addressDevice(void *inputContext, uint32_t slotNumber, bool BSR) {
-    XHCIDeviceTRB command = {0};
-    command.inputContext[0] = U32(inputContext);
-    command.inputContext[1] = 0;
-    command.type = 11;
-    command.slotID = slotNumber;
-    command.BSR = BSR;
-    enqueueCommand(&controller->commands, (void *)&command);
-    await(serviceId, events[controller->events.dequeue]);
+    uint32_t control =
+        COMMAND_TYPE(11) | COMMAND_SLOT_ID(slotNumber) | COMMAND_BSR(BSR);
+    xhciCommand(controller, U32(inputContext), 0, 0, control);
 }
 
 void configureEndpoint(void *inputContext, uint32_t slotNumber,
                        bool deconfigure) {
-    XHCIDeviceTRB command = {0};
-    command.inputContext[0] = U32(inputContext);
-    command.inputContext[1] = 0;
-    command.type = 12;
-    command.slotID = slotNumber;
-    command.BSR = deconfigure;
-    enqueueCommand(&controller->commands, (void *)&command);
-    await(serviceId, events[controller->events.dequeue]);
+    uint32_t control = COMMAND_TYPE(12) | COMMAND_SLOT_ID(slotNumber) |
+                       COMMAND_BSR(deconfigure);
+    xhciCommand(controller, U32(inputContext), 0, 0, control);
 }
 
 void evaluateContext(void *inputContext, uint32_t slotNumber) {
-    XHCIDeviceTRB command = {0};
-    command.inputContext[0] = U32(inputContext);
-    command.inputContext[1] = 0;
-    command.type = 13;
-    command.slotID = slotNumber;
-    enqueueCommand(&controller->commands, (void *)&command);
+    uint32_t control = COMMAND_TYPE(13) | COMMAND_SLOT_ID(slotNumber);
+    xhciCommand(controller, U32(inputContext), 0, 0, control);
 }
 
-void getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
-                          uint32_t slotIndex) {
+uint32_t *getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
+                               uint32_t slotIndex) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x80;
     setup.request = 6;
@@ -278,35 +248,35 @@ void getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
     setup.type = 2;
     setup.transferType = 3;
     setup.immediateData = 1;
-    enqueueCommand(ring, (void *)&setup);
+
     XHCIDataStageTRB data = {0};
-    data.dataBuffer[0] = U32(getPhysicalAddress(requestMemory(1, 0, 0)));
+    uint32_t *buffer = requestMemory(1, 0, 0);
+    data.dataBuffer[0] = U32(getPhysicalAddress(buffer));
     data.inDirection = 1;
     data.transferSize = 8;
     data.type = 3;
     data.interrupterTarget = 0;
-    enqueueCommand(ring, (void *)&data);
+
     XHCIStatusStageTRB status = {0};
     status.inDirection = 1;
     status.evaluateNext = 0;
     status.interruptOnCompletion = 1;
     status.type = 4;
-    enqueueCommand(ring, (void *)&status);
+
+    enqueueCommand(ring, (void *)&setup);
+    enqueueCommand(ring, (void *)&data);
+    uint32_t commandAddress = U32(enqueueCommand(ring, (void *)&status));
+    uint32_t eventId = syscall(SYS_CREATE_EVENT, commandAddress, 0, 0, 0);
     controller->doorbells[slotIndex] = 1;
+    CommandCompletionEvent *completionEvent = PTR(await(serviceId, eventId));
+    return buffer;
 }
 
-void setupPort(XHCITRB *trb) {
-    XHCIPort *port = &controller->operational->ports[(trb->dataLow >> 24) - 1];
-    if (!(port->status & 1 << 1)) {
-        return;
-    }
-    XHCITRB *enableSlotResult = xhciCommandAsync(controller, 0, 0, 0, 9);
-    uint32_t slotIndex = enableSlotResult->control.reserved1 >> 8;
-    printf("now connecting port %i to slot %i\n", (trb->dataLow >> 24) - 1,
-           slotIndex);
+XHCIInputContext *createInputContext(XHCIController *controller, XHCIPort *port,
+                                     uint32_t portIndex, uint32_t slotIndex) {
     XHCIInputContext *inputContext = requestMemory(1, 0, 0);
     inputContext->inputControl.addContextFlags = 3;
-    inputContext->deviceContext.slot.rootHubPort = trb->dataLow >> 24;
+    inputContext->deviceContext.slot.rootHubPort = portIndex;
     inputContext->deviceContext.slot.interrupterTarget = 0;
     inputContext->deviceContext.slot.multiTT = 0;
     inputContext->deviceContext.slot.deviceAddress = 0;
@@ -320,6 +290,11 @@ void setupPort(XHCITRB *trb) {
     inputContext->deviceContext.endpoints[0].multiplier = 0;
     inputContext->deviceContext.endpoints[0].errorCount = 3;
     inputContext->deviceContext.endpoints[0].averageTRBLength = 8;
+    return inputContext;
+}
+
+TrbRing *createTRB(XHCIController *controller, XHCIInputContext *inputContext,
+                   uint32_t slotIndex) {
     TrbRing *ring = malloc(sizeof(TrbRing));
     setupTrbRing(ring, 256);
     inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
@@ -328,9 +303,32 @@ void setupPort(XHCITRB *trb) {
     XHCIDevice *device = malloc(sizeof(XHCIDevice));
     controller->deviceContextBaseAddressArray[slotIndex] =
         U32(getPhysicalAddress((void *)device));
+    return ring;
+}
+
+void resetPort(XHCIController *controller, uint32_t portIndex) {
+    XHCIPort *port = &controller->operational->ports[portIndex - 1];
+    printf("port %i: connected, resetting and setting it up now ...\n",
+           portIndex - 1);
+    port->status |= 1 << 4;
+    await(serviceId, syscall(SYS_CREATE_EVENT, portIndex << 24, 0, 0, 0));
+    if (!(port->status & 1 << 1)) {
+        return printf("port %i reset could not be done, aborting\n",
+                      portIndex - 1);
+    }
+    uint32_t slotIndex =
+        xhciCommand(controller, 0, 0, 0, COMMAND_TYPE(9))->slotId;
+    printf("port %i: reset done, now connecting to slot %i\n", portIndex - 1,
+           slotIndex);
+    XHCIInputContext *inputContext =
+        createInputContext(controller, port, portIndex, slotIndex);
+    TrbRing *ring = createTRB(controller, inputContext, slotIndex);
+    printf("port %i: addressing slot\n", portIndex - 1);
     addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
                   slotIndex, true);
-    getDeviceInformation(inputContext, ring, slotIndex);
+    uint32_t *data = getDeviceInformation(inputContext, ring, slotIndex);
+    printf("port %i: device information: %x, %x\n", portIndex - 1, data[0],
+           data[1]);
     // configure endpoint gives a trb error as of now ...
     // configureEndpoint(getPhysicalAddress((void
     // *)&inputContext->inputControl),
@@ -346,19 +344,15 @@ void xhciInterrupt() {
             controller->runtime->interrupters[0].eventRingDequeuePointer[0] =
                 U32(&controller->events.physical[controller->events.dequeue]) |
                 (1 << 3);
+            uint32_t eventId =
+                syscall(SYS_GET_EVENT, serviceId, trb->dataLow, 0, 0);
             printf("event %i [%x %x %x %x]: %i\n", controller->events.dequeue,
-                   trb->dataLow, trb->dataHigh, trb->status,
-                   *((uint32_t *)&trb->control), trb->control.type);
-            fireEvent(events[index], U32(trb));
-            if (trb->control.type == 34) {
-                // port status change event
-                setupPort(trb);
+                   trb->dataLow, trb->dataHigh, trb->status, trb->control,
+                   trb->control >> 10 & 0x3F);
+            if (eventId) {
+                fireEvent(eventId, U32(trb));
             }
         }
-    }
-    if (controller->operational->status & (1 << 4)) {
-        printf("port change detected\n");
-        controller->operational->status |= (1 << 4);
     }
 }
 
@@ -378,31 +372,29 @@ void initializeUSB(uint32_t deviceId) {
     printf("using irq no. %i\n", getPCIInterrupt(deviceId, 0));
     int pic = getService("pic");
     subscribeEvent(pic, getEvent(pic, "irq11"), xhciInterrupt);
-    for (uint32_t i = 0; i < 256; i++) {
-        events[i] = syscall(SYS_CREATE_EVENT, i, 0, 0, 0);
-    }
     controller->operational->command |= (1 << 0) | (1 << 2);
     sleep(100);
 
-    if (controller->operational->status & (1 << 2))
+    if (controller->operational->status & (1 << 2)) {
         return printf("critical XHCI problem\n");
+    }
+
     for (uint32_t i = 0; i < controller->portCount; i++) {
         if (!(controller->operational->ports[i].status & 1 << 0)) {
             continue;
         }
-        printf("port %i is connected, resetting...\n", i);
-        controller->operational->ports[i].status |= 1 << 4;
+        resetPort(controller, i + 1);
         sleep(5000);
     }
     return;
-
-    for (uint32_t i = 0; i < 10; i++) {
-        xhciCommandAsync(controller, 0, 0, 0, (9 << 10));
-    }
 }
 
 int32_t main() {
     serviceId = getServiceId();
+    // this is needed so we can decide wether or not sys_get_event
+    // returns no event or an event TODO: start event indexing
+    // with index 1 or add a sensible default event
+    createEvent("unused");
     uint32_t i = 0, class = 0;
     while ((class = getDeviceClass(i, 0))) {
         if (class == 0x0C0330) {
