@@ -81,7 +81,7 @@ typedef volatile struct {
     uint32_t requestType : 8, request : 8, value : 16;
     uint32_t index : 16, length : 16;
 
-    uint32_t transferLegnth : 17, // always 8
+    uint32_t transferLength : 17, // always 8
         reserved : 5, interrupterTarget : 10;
 
     uint32_t cycle : 1, reserved1 : 4, interruptOnCompletion : 1,

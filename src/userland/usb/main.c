@@ -234,15 +234,16 @@ void evaluateContext(void *inputContext, uint32_t slotNumber) {
     xhciCommand(controller, U32(inputContext), 0, 0, control);
 }
 
-void *getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
-                           uint32_t slotIndex) {
+void *usbGetDeviceDescriptor(XHCIInputContext *inputContext, TrbRing *ring,
+                             uint32_t slotIndex, uint32_t value, uint32_t index,
+                             void *buffer) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x80;
     setup.request = 6;
-    setup.value = 0x100;
-    setup.index = 0;
-    setup.length = 8;
-    setup.transferLegnth = 8;
+    setup.value = value;
+    setup.index = index;
+    setup.length = 4096;
+    setup.transferLength = 8;
     setup.interruptOnCompletion = 0;
     setup.interrupterTarget = 0;
     setup.type = 2;
@@ -250,10 +251,9 @@ void *getDeviceInformation(XHCIInputContext *inputContext, TrbRing *ring,
     setup.immediateData = 1;
 
     XHCIDataStageTRB data = {0};
-    uint32_t *buffer = requestMemory(1, 0, 0);
     data.dataBuffer[0] = U32(getPhysicalAddress(buffer));
     data.inDirection = 1;
-    data.transferSize = 8;
+    data.transferSize = 4096;
     data.type = 3;
     data.interrupterTarget = 0;
 
@@ -306,6 +306,19 @@ TrbRing *createTRB(XHCIController *controller, XHCIInputContext *inputContext,
     return ring;
 }
 
+char *usbReadString(XHCIInputContext *inputContext, TrbRing *ring,
+                    uint32_t slotIndex, uint32_t language,
+                    uint32_t stringDescriptor, void *buffer) {
+    usbGetDeviceDescriptor(inputContext, ring, slotIndex,
+                           3 << 8 | stringDescriptor, language, buffer);
+    uint32_t length = ((*(uint8_t *)buffer) - 2) / 2;
+    char *string = malloc(length);
+    for (uint32_t i = 0; i < length; i++) {
+        string[i] = ((char *)buffer)[(i + 1) * 2];
+    }
+    return string;
+}
+
 void resetPort(XHCIController *controller, uint32_t portIndex) {
     XHCIPort *port = &controller->operational->ports[portIndex - 1];
     printf("port %i: connected, resetting and setting it up now ...\n",
@@ -326,17 +339,28 @@ void resetPort(XHCIController *controller, uint32_t portIndex) {
     printf("port %i: addressing slot\n", portIndex - 1);
     addressDevice(getPhysicalAddress((void *)&inputContext->inputControl),
                   slotIndex, true);
-    UsbDeviceDescriptor *data =
-        getDeviceInformation(inputContext, ring, slotIndex);
-    printf("port %i: device information: length: %i, type: %i, release %x\n",
-           portIndex - 1, data->size, data->descriptorType, data->usbVersion);
+    void *buffer = requestMemory(1, 0, 0);
+    UsbDeviceDescriptor *data = malloc(sizeof(UsbDeviceDescriptor));
+    usbGetDeviceDescriptor(inputContext, ring, slotIndex, 1 << 8, 0, buffer);
+    memcpy(buffer, (void *)data, sizeof(UsbDeviceDescriptor));
+    printf("port %i: type: %i, version %x\n", portIndex - 1, data->size,
+           data->descriptorType, data->usbVersion);
     printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
            portIndex - 1, data->deviceClass, data->deviceSubclass,
            data->deviceProtocol, data->maxPacketSize);
-    printf("port %i: vendor: %i, product: %i, deviceRelease: %x, manufacturer: "
-           "%i, product: %i\n",
-           portIndex - 1, data->vendor, data->product, data->deviceRelease,
-           data->manufacturerStringDescriptor);
+    inputContext->deviceContext.endpoints[0].maxPacketSize =
+        data->maxPacketSize == 9 ? 512 : data->maxPacketSize;
+    usbGetDeviceDescriptor(inputContext, ring, slotIndex, 3 << 8, 0, buffer);
+    uint32_t language = *((uint16_t *)(buffer + 2));
+    char *manufacturer =
+        usbReadString(inputContext, ring, slotIndex, language,
+                      data->manufacturerStringDescriptor, buffer);
+    char *device = usbReadString(inputContext, ring, slotIndex, language,
+                                 data->deviceStringDescriptor, buffer);
+    char *serial = usbReadString(inputContext, ring, slotIndex, language,
+                                 data->serialNumberStringDescriptor, buffer);
+    printf("manufacturer: %s, device: %s, serial: %s\n", manufacturer, device,
+           serial);
     printf("--------\n");
     // configure endpoint gives a trb error as of now ...
     // configureEndpoint(getPhysicalAddress((void
