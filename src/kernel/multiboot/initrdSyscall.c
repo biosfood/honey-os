@@ -8,6 +8,8 @@ void handleLoadFromInitrdSyscall(Syscall *call) {
     char *name = retrieveString(call->parameters[0]);
     Service *service = call->service;
     Service *result = loadProgram(name, (void *)call, call->parameters[1]);
-    call->returnValue = result->id;
+    if (result) {
+        call->returnValue = result->id;
+    }
     call->avoidReschedule = call->parameters[1];
 }

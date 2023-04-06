@@ -20,7 +20,10 @@ Service *readInitrdProgram(char *name) {
     char *fileName = combineStrings("initrd/", name);
     void *elfData = findTarFile(initrd, initrdSize, fileName);
     free(fileName);
-    return loadElf(elfData, name);
+    if (elfData) {
+        return loadElf(elfData, name);
+    }
+    return NULL;
 }
 
 Service *loadProgram(char *name, Syscall *respondingTo, bool initialize) {
