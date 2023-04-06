@@ -83,31 +83,36 @@ void handleKey(uint32_t keycode, uint32_t stringId) {
         request(focusService, focusServiceKeyHandler, keycode, stringId);
     }
     fireEvent(keyEvent, keycode);
-    if (printInput) {
-        request(mainService, mainOut, keycode, 0);
+    if (!printInput) {
+        return;
     }
     switch (keycode) {
     case '\b':
-        if (inputBufferPosition) {
-            inputBufferPosition--;
-            inputBuffer[inputBufferPosition] = 0;
+        if (!inputBufferPosition) {
+            return;
         }
+        inputBufferPosition--;
+        inputBuffer[inputBufferPosition] = 0;
         break;
     case '\n':
         onNewLine();
-        return;
+        break;
     default:
         inputBuffer[inputBufferPosition] = (char)keycode;
         inputBufferPosition++;
         inputBuffer[inputBufferPosition] = '\0';
         break;
     }
+    request(mainService, mainOut, keycode, 0);
 }
 
 uint32_t getsImplementation() {
+    printInput = true;
     inputBufferPosition = 0;
     inputBuffer[inputBufferPosition] = '\0';
-    return await(ioManager, newLineEvent);
+    uint32_t result = await(ioManager, newLineEvent);
+    printInput = false;
+    return result;
 }
 
 int32_t main() {
