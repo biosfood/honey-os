@@ -16,6 +16,17 @@ void writeChar(char character, char colorCode) {
     setCursorOffset(offset);
 }
 
+void scrollUp() {
+    for (int y = 1; y < HEIGHT; y++) {
+        for (int x = 0; x < WIDTH; x++) {
+            videoSource[x + (y - 1) * WIDTH] = videoSource[x + y * WIDTH];
+        }
+    }
+    for (int x = 0; x < WIDTH; x++) {
+        videoSource[x + (HEIGHT - 1) * WIDTH] = 0;
+    }
+}
+
 void write(char c) {
     switch (c) {
     case '\r':
@@ -24,6 +35,10 @@ void write(char c) {
         return;
     case '\n':
         offset = (offset / WIDTH + 1) * WIDTH;
+        if (offset / WIDTH >= HEIGHT) {
+            offset -= WIDTH;
+            scrollUp();
+        }
         setCursorOffset(offset);
         return;
     case '\b':
