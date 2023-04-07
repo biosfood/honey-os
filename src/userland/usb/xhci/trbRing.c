@@ -47,15 +47,12 @@ void setupTrbRing(TrbRing *ring, uint32_t size) {
     ring->trbs[ring->size - 1].control |= 1 << 1 | COMMAND_TYPE(6);
 }
 
-TrbRing *createTRB(XHCIController *controller, XHCIInputContext *inputContext,
-                   uint32_t slotIndex) {
+TrbRing *createSlotTRB(SlotXHCI *slot) {
     TrbRing *ring = malloc(sizeof(TrbRing));
     setupTrbRing(ring, 256);
-    inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
+    slot->inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
         U32(ring->physical) | 1;
-    inputContext->deviceContext.endpoints[0].transferDequeuePointerHigh = 0;
-    XHCIDevice *device = malloc(sizeof(XHCIDevice));
-    controller->deviceContextBaseAddressArray[slotIndex] =
-        U32(getPhysicalAddress((void *)device));
+    slot->inputContext->deviceContext.endpoints[0].transferDequeuePointerHigh =
+        0;
     return ring;
 }

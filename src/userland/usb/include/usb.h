@@ -188,4 +188,12 @@ typedef struct {
     XHCIInputContext *inputContexts[32];
 } XHCIController;
 
+typedef struct {
+    XHCIController *controller;
+    uint32_t slotIndex, portIndex;
+    XHCIInputContext *inputContext;
+    XHCIPort *port;
+    TrbRing *controlRing;
+} SlotXHCI;
+
 #endif

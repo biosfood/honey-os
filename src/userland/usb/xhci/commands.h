@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <usb.h>
 
-extern void addressDevice(XHCIController *controller, void *inputContext,
-                          uint32_t slotNumber, bool BSR);
+extern void addressDevice(SlotXHCI *slot, bool BSR);
 extern void configureEndpoint(XHCIController *controller, void *inputContext,
                               uint32_t slotNumber, bool deconfigure);
 extern void evaluateContext(XHCIController *controller, void *inputContext,
@@ -13,13 +12,9 @@ extern void evaluateContext(XHCIController *controller, void *inputContext,
 
 extern uint32_t requestSlotIndex(XHCIController *controller);
 
-extern void *usbGetDeviceDescriptor(XHCIController *controller,
-                                    XHCIInputContext *inputContext,
-                                    TrbRing *ring, uint32_t slotIndex,
-                                    uint32_t value, uint32_t index,
-                                    void *buffer);
+extern void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value,
+                                    uint32_t index, void *buffer);
 
-extern TrbRing *createTRB(XHCIController *controller,
-                          XHCIInputContext *inputContext, uint32_t slotIndex);
+extern TrbRing *createSlotTRB(SlotXHCI *slot);
 
 #endif

@@ -157,16 +157,15 @@ XHCIController *initializeController(uint32_t deviceId) {
     return controller;
 }
 
-XHCIInputContext *createInputContext(XHCIController *controller, XHCIPort *port,
-                                     uint32_t portIndex, uint32_t slotIndex) {
+XHCIInputContext *createInputContext(SlotXHCI *slot) {
     XHCIInputContext *inputContext = requestMemory(1, 0, 0);
     inputContext->inputControl.addContextFlags = 3;
-    inputContext->deviceContext.slot.rootHubPort = portIndex;
+    inputContext->deviceContext.slot.rootHubPort = slot->portIndex;
     inputContext->deviceContext.slot.interrupterTarget = 0;
     inputContext->deviceContext.slot.multiTT = 0;
     inputContext->deviceContext.slot.deviceAddress = 0;
     inputContext->deviceContext.slot.contextEntryCount = 1;
-    inputContext->deviceContext.slot.speed = (port->status >> 10) & 3;
+    inputContext->deviceContext.slot.speed = (slot->port->status >> 10) & 3;
     inputContext->deviceContext.endpoints[0].endpointType = 4;
     inputContext->deviceContext.endpoints[0].maxPacketSize = 8; // TODO
     inputContext->deviceContext.endpoints[0].maxBurstSize = 0;
@@ -178,11 +177,9 @@ XHCIInputContext *createInputContext(XHCIController *controller, XHCIPort *port,
     return inputContext;
 }
 
-char *usbReadString(XHCIController *controller, XHCIInputContext *inputContext,
-                    TrbRing *ring, uint32_t slotIndex, uint32_t language,
+char *usbReadString(SlotXHCI *slot, uint32_t language,
                     uint32_t stringDescriptor, void *buffer) {
-    usbGetDeviceDescriptor(controller, inputContext, ring, slotIndex,
-                           3 << 8 | stringDescriptor, language, buffer);
+    usbGetDeviceDescriptor(slot, 3 << 8 | stringDescriptor, language, buffer);
     uint32_t length = ((*(uint8_t *)buffer) - 2) / 2;
     char *string = malloc(length);
     for (uint32_t i = 0; i < length; i++) {
@@ -192,49 +189,47 @@ char *usbReadString(XHCIController *controller, XHCIInputContext *inputContext,
 }
 
 void resetPort(XHCIController *controller, uint32_t portIndex) {
-    XHCIPort *port = &controller->operational->ports[portIndex - 1];
+    SlotXHCI *slot = malloc(sizeof(SlotXHCI));
+    slot->portIndex = portIndex;
+    slot->controller = controller;
+    slot->slotIndex = requestSlotIndex(controller);
+    slot->port = &controller->operational->ports[portIndex - 1];
+
     printf("port %i: connected, resetting and setting it up now ...\n",
            portIndex - 1);
-    port->status |= 1 << 4;
-    await(serviceId, syscall(SYS_CREATE_EVENT, portIndex << 24, 0, 0, 0));
-    if (!(port->status & 1 << 1)) {
+    slot->port->status |= 1 << 4;
+    await(serviceId, syscall(SYS_CREATE_EVENT, slot->portIndex << 24, 0, 0, 0));
+    if (!(slot->port->status & 1 << 1)) {
         return printf("port %i reset could not be done, aborting\n",
                       portIndex - 1);
     }
-    uint32_t slotIndex = requestSlotIndex(controller);
     printf("port %i: reset done, now connecting to slot %i\n", portIndex - 1,
-           slotIndex);
-    XHCIInputContext *inputContext =
-        createInputContext(controller, port, portIndex, slotIndex);
-    TrbRing *ring = createTRB(controller, inputContext, slotIndex);
+           slot->slotIndex);
+    slot->inputContext = createInputContext(slot);
+    slot->controlRing = createSlotTRB(slot);
+    slot->controller->deviceContextBaseAddressArray[slot->slotIndex] =
+        U32(getPhysicalAddress(malloc(sizeof(XHCIDevice))));
     printf("port %i: addressing slot\n", portIndex - 1);
-    addressDevice(controller,
-                  getPhysicalAddress((void *)&inputContext->inputControl),
-                  slotIndex, true);
+    addressDevice(slot, true);
     void *buffer = requestMemory(1, 0, 0);
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
-    usbGetDeviceDescriptor(controller, inputContext, ring, slotIndex, 1 << 8, 0,
-                           buffer);
+    usbGetDeviceDescriptor(slot, 1 << 8, 0, buffer);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
     printf("port %i: type: %i, version %x\n", portIndex - 1, descriptor->size,
            descriptor->descriptorType, descriptor->usbVersion);
     printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
            portIndex - 1, descriptor->deviceClass, descriptor->deviceSubclass,
            descriptor->deviceProtocol, descriptor->maxPacketSize);
-    inputContext->deviceContext.endpoints[0].maxPacketSize =
+    slot->inputContext->deviceContext.endpoints[0].maxPacketSize =
         descriptor->maxPacketSize == 9 ? 512 : descriptor->maxPacketSize;
-    usbGetDeviceDescriptor(controller, inputContext, ring, slotIndex, 3 << 8, 0,
-                           buffer);
+    usbGetDeviceDescriptor(slot, 3 << 8, 0, buffer);
     uint32_t language = *((uint16_t *)(buffer + 2));
-    char *manufacturer =
-        usbReadString(controller, inputContext, ring, slotIndex, language,
-                      descriptor->manufacturerStringDescriptor, buffer);
-    char *device =
-        usbReadString(controller, inputContext, ring, slotIndex, language,
-                      descriptor->deviceStringDescriptor, buffer);
-    char *serial =
-        usbReadString(controller, inputContext, ring, slotIndex, language,
-                      descriptor->serialNumberStringDescriptor, buffer);
+    char *manufacturer = usbReadString(
+        slot, language, descriptor->manufacturerStringDescriptor, buffer);
+    char *device = usbReadString(slot, language,
+                                 descriptor->deviceStringDescriptor, buffer);
+    char *serial = usbReadString(
+        slot, language, descriptor->serialNumberStringDescriptor, buffer);
     printf("manufacturer: %s, device: %s, serial: %s\n", manufacturer, device,
            serial);
     printf("--------\n");
@@ -289,7 +284,6 @@ void initializeUSB(uint32_t deviceId) {
             continue;
         }
         resetPort(controller, i + 1);
-        sleep(5000);
     }
     return;
 }

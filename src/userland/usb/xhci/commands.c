@@ -18,11 +18,13 @@ CommandCompletionEvent *xhciCommand(XHCIController *controller,
     return PTR(await(serviceId, eventId));
 }
 
-void addressDevice(XHCIController *controller, void *inputContext,
-                   uint32_t slotNumber, bool BSR) {
+void addressDevice(SlotXHCI *slot, bool BSR) {
     uint32_t control =
-        COMMAND_TYPE(11) | COMMAND_SLOT_ID(slotNumber) | COMMAND_BSR(BSR);
-    xhciCommand(controller, U32(inputContext), 0, 0, control);
+        COMMAND_TYPE(11) | COMMAND_SLOT_ID(slot->slotIndex) | COMMAND_BSR(BSR);
+    xhciCommand(
+        slot->controller,
+        U32(getPhysicalAddress((void *)&slot->inputContext->inputControl)), 0,
+        0, control);
 }
 
 void configureEndpoint(XHCIController *controller, void *inputContext,
@@ -42,9 +44,7 @@ uint32_t requestSlotIndex(XHCIController *controller) {
     return xhciCommand(controller, 0, 0, 0, COMMAND_TYPE(9))->slotId;
 }
 
-void *usbGetDeviceDescriptor(XHCIController *controller,
-                             XHCIInputContext *inputContext, TrbRing *ring,
-                             uint32_t slotIndex, uint32_t value, uint32_t index,
+void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
                              void *buffer) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x80;
@@ -72,11 +72,12 @@ void *usbGetDeviceDescriptor(XHCIController *controller,
     status.interruptOnCompletion = 1;
     status.type = 4;
 
-    enqueueCommand(ring, (void *)&setup);
-    enqueueCommand(ring, (void *)&data);
-    uint32_t commandAddress = U32(enqueueCommand(ring, (void *)&status));
+    enqueueCommand(slot->controlRing, (void *)&setup);
+    enqueueCommand(slot->controlRing, (void *)&data);
+    uint32_t commandAddress =
+        U32(enqueueCommand(slot->controlRing, (void *)&status));
     uint32_t eventId = syscall(SYS_CREATE_EVENT, commandAddress, 0, 0, 0);
-    controller->doorbells[slotIndex] = 1;
+    slot->controller->doorbells[slot->slotIndex] = 1;
     CommandCompletionEvent *completionEvent = PTR(await(serviceId, eventId));
     return buffer;
 }
