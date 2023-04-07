@@ -5,6 +5,8 @@
 
 #define OFFSET(ptr, off) (((void *)(ptr)) + (off))
 
+extern uint32_t serviceId;
+
 typedef volatile struct {
     uint8_t capabilitiesLength;
     uint8_t reserved;
