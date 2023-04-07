@@ -27,6 +27,10 @@ typedef AllocationBlock *AllocationData[12];
 
 extern void free(void *);
 
+extern void _printf(void *(malloc)(uint32_t), const char *format, ...);
+
+#define printf(...) _printf(malloc, __VA_ARGS__)
+
 #ifdef ALLOC_MAIN
 #undef ALLOC_MAIN
 
@@ -35,9 +39,6 @@ AllocationData allocationData;
 extern void *_malloc(void *, uintptr_t);
 void *malloc(uint32_t size) { _malloc(&allocationData, size); }
 
-extern void _printf(void *(malloc)(uint32_t), const char *format, ...);
-
-#define printf(...) _printf(malloc, __VA_ARGS__)
 extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
 
 #define listAdd(list, data) _listAdd(malloc, list, data)
