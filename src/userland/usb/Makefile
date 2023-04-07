@@ -7,7 +7,7 @@ ASFlAGS = -felf32
 
 BUILD_FOLDER = build
 
-SOURCE_FILES := $(shell find . -name *.c -or -name *.asm -or -name *.s)
+SOURCE_FILES := $(shell find . -name "*.c" -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 
 NAME = usb
