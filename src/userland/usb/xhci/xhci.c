@@ -1,5 +1,4 @@
 #include "xhci.h"
-#include "../../hlib/include/syscalls.h"
 #include "commands.h"
 #include "controller.h"
 #include <hlib.h>
@@ -36,7 +35,7 @@ void *resetSlot(XHCIController *controller, uint32_t portIndex) {
     printf("port %i: connecting to slot %i\n", portIndex, slot->slotIndex);
 
     slot->port->status |= 1 << 4;
-    await(serviceId, syscall(SYS_CREATE_EVENT, slot->portIndex << 24, 0, 0, 0));
+    await(serviceId, createDirectEventSave(slot->portIndex << 24));
     if (!(slot->port->status & 1 << 1)) {
         printf("port %i reset not succesful, aborting\n", portIndex);
         return NULL;

@@ -1,5 +1,4 @@
 #include "controller.h"
-#include "../../hlib/include/syscalls.h"
 #include "commands.h"
 #include "trbRing.h"
 #include "xhci.h"
@@ -143,12 +142,11 @@ void xhciInterrupt() {
                 U32(&globalController->events
                          .physical[globalController->events.dequeue]) |
                 (1 << 3);
-            uint32_t eventId =
-                syscall(SYS_GET_EVENT, serviceId, trb->dataLow, 0, 0);
-            printf("event %i [%x %x %x %x]: %i\n",
+            uint32_t eventId = getDirectEvent(serviceId, trb->dataLow);
+            printf("event %i [%x %x %x %x]: %i -> %i\n",
                    globalController->events.dequeue, trb->dataLow,
                    trb->dataHigh, trb->status, trb->control,
-                   trb->control >> 10 & 0x3F);
+                   trb->control >> 10 & 0x3F, eventId);
             if (eventId) {
                 fireEvent(eventId, U32(trb));
             }

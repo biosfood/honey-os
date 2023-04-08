@@ -1,5 +1,4 @@
 #include "commands.h"
-#include "../../hlib/include/syscalls.h"
 #include "trbRing.h"
 #include "xhci.h"
 #include <hlib.h>
@@ -14,8 +13,8 @@ CommandCompletionEvent *xhciCommand(XHCIController *controller,
     trb.status = status;
     trb.control = control;
     uint32_t commandAddress = U32(enqueueCommand(&controller->commands, &trb));
+    uint32_t eventId = createDirectEventSave(commandAddress);
     controller->doorbells[0] = 0;
-    uint32_t eventId = syscall(SYS_CREATE_EVENT, commandAddress, 0, 0, 0);
     return PTR(await(serviceId, eventId));
 }
 
@@ -77,7 +76,7 @@ void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
     enqueueCommand(slot->controlRing, (void *)&data);
     uint32_t commandAddress =
         U32(enqueueCommand(slot->controlRing, (void *)&status));
-    uint32_t eventId = syscall(SYS_CREATE_EVENT, commandAddress, 0, 0, 0);
+    uint32_t eventId = createDirectEventSave(commandAddress);
     slot->controller->doorbells[slot->slotIndex] = 1;
     CommandCompletionEvent *completionEvent = PTR(await(serviceId, eventId));
     return buffer;

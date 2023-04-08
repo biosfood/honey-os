@@ -28,6 +28,9 @@ extern void subscribeInterrupt(uint32_t intNo, void *handler);
 extern uint32_t loadFromInitrd(char *name);
 extern uint32_t loadFromInitrdUninitialized(char *name);
 extern uint32_t createEvent(char *name);
+extern uint32_t createDirectEvent(uint32_t id);
+extern uint32_t createDirectEventSave(uint32_t id);
+extern uint32_t getDirectEvent(uint32_t serviceId, uint32_t id);
 extern uint32_t syscall(uint32_t function, uint32_t parameter0,
                         uint32_t parameter1, uint32_t parameter2,
                         uint32_t parameter3);

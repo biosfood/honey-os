@@ -1,7 +1,6 @@
 #define ALLOC_MAIN
 #include <hlib.h>
 
-#include "../hlib/include/syscalls.h"
 #include <usb.h>
 
 uint32_t serviceId;

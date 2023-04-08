@@ -32,3 +32,19 @@ void subscribeEvent(uint32_t service, uint32_t event,
 uint32_t await(uint32_t service, uint32_t event) {
     return syscall(SYS_AWAIT, service, event, 0, 0);
 }
+
+uint32_t getDirectEvent(uint32_t serviceId, uint32_t id) {
+    return syscall(SYS_GET_EVENT, serviceId, id, 0, 0);
+}
+
+uint32_t createDirectEvent(uint32_t id) {
+    return syscall(SYS_CREATE_EVENT, id, 0, 0, 0);
+}
+
+uint32_t createDirectEventSave(uint32_t id) {
+    uint32_t existingEvent = getDirectEvent(getServiceId(), id);
+    if (existingEvent) {
+        return existingEvent;
+    }
+    return createDirectEvent(id);
+}
