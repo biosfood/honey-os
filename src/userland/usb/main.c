@@ -30,11 +30,9 @@ void resetPort(UsbSlot *slot) {
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
     slot->interface->getDeviceDescriptor(slot->data, 1 << 8, 0, buffer);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
-    printf("port %i: usb version %x.%x\n", slot->portIndex,
-           descriptor->usbVersion >> 8, descriptor->usbVersion & 0xFF);
-    printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
-           slot->portIndex, descriptor->deviceClass, descriptor->deviceSubclass,
-           descriptor->deviceProtocol, descriptor->maxPacketSize);
+    printf("port %i: usb version %x.%x, %i supported configuration(s)\n",
+           slot->portIndex, descriptor->usbVersion >> 8,
+           descriptor->usbVersion & 0xFF, descriptor->configurationCount);
     // slot->inputContext->deviceContext.endpoints[0].maxPacketSize =
     //    descriptor->maxPacketSize == 9 ? 512 : descriptor->maxPacketSize;
     slot->interface->getDeviceDescriptor(slot->data, 3 << 8, 0, buffer);
@@ -45,8 +43,29 @@ void resetPort(UsbSlot *slot) {
                                  descriptor->deviceStringDescriptor, buffer);
     char *serial = usbReadString(
         slot, language, descriptor->serialNumberStringDescriptor, buffer);
-    printf("port %i: manufacturer: %s, device: %s, serial: %s\n",
-           slot->portIndex, manufacturer, device, serial);
+    printf("port %i: manufacturer:%s, device:%s, serial:%s\n", slot->portIndex,
+           manufacturer, device, serial);
+
+    slot->interface->getDeviceDescriptor(slot->data, 2 << 8, 0, buffer);
+    UsbConfigurationDescriptor *configuration = malloc(((uint16_t *)buffer)[1]);
+    memcpy(buffer, configuration, ((uint16_t *)buffer)[1]);
+    char *configurationString = usbReadString(
+        slot, language, configuration->configurationString, buffer);
+    printf("port %i: %i interfaces, configuration %s, %i bytes\n",
+           slot->portIndex, configuration->interfaceCount, configurationString,
+           configuration->totalLength);
+
+    UsbInterfaceDescriptor *interface =
+        (void *)configuration + configuration->size;
+    // only doing blank interface descriptors for now, there are
+    // also interface assosciations...
+    while (interface->descriptorType == 4) {
+        printf("port %i: interface %i, %i endpoints, class %i, subclass %i\n",
+               slot->portIndex, interface->interfaceNumber,
+               interface->endpointCount, interface->interfaceClass,
+               interface->subClass);
+        interface = (void *)interface + interface->size;
+    }
 }
 
 extern UsbHostControllerInterface xhci;
