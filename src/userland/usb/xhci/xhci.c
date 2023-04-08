@@ -1,3 +1,4 @@
+#include "xhci.h"
 #include "../../hlib/include/syscalls.h"
 #include "commands.h"
 #include "controller.h"

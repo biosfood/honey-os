@@ -2,6 +2,7 @@
 #include "../../hlib/include/syscalls.h"
 #include "commands.h"
 #include "trbRing.h"
+#include "xhci.h"
 #include <hlib.h>
 #include <usb.h>
 

@@ -2,29 +2,9 @@
 #include <hlib.h>
 
 #include "../hlib/include/syscalls.h"
-#include "xhci/commands.h"
-#include "xhci/controller.h"
-#include "xhci/trbRing.h"
 #include <usb.h>
 
 uint32_t serviceId;
-
-#define REQUEST(functionName, service, function)                               \
-    uint32_t functionName(uint32_t data1, uint32_t data2) {                    \
-        static uint32_t serviceId, functionId, initialized = false;            \
-        if (!initialized) {                                                    \
-            while (!serviceId) {                                               \
-                serviceId = getService(service);                               \
-                serviceId = getService(service);                               \
-            }                                                                  \
-            while (!functionId) {                                              \
-                functionId = getFunction(serviceId, function);                 \
-                functionId = getFunction(serviceId, function);                 \
-            }                                                                  \
-            initialized = true;                                                \
-        }                                                                      \
-        return request(serviceId, functionId, data1, data2);                   \
-    }
 
 REQUEST(getBaseAddress, "lspci", "getBaseAddress");
 REQUEST(getDeviceClass, "lspci", "getDeviceClass");
@@ -51,7 +31,7 @@ void resetPort(UsbSlot *slot) {
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
     slot->interface->getDeviceDescriptor(slot->data, 1 << 8, 0, buffer);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
-    printf("slot %i: usb version %x.%x\n", slot->portIndex,
+    printf("port %i: usb version %x.%x\n", slot->portIndex,
            descriptor->usbVersion >> 8, descriptor->usbVersion & 0xFF);
     printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
            slot->portIndex, descriptor->deviceClass, descriptor->deviceSubclass,

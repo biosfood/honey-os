@@ -1,8 +1,8 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
+#include "xhci.h"
 #include <stdint.h>
-#include <usb.h>
 
 extern void addressDevice(SlotXHCI *slot, bool BSR);
 extern void configureEndpoint(XHCIController *controller, void *inputContext,

@@ -1,3 +1,4 @@
+#include "xhci.h"
 #include <usb.h>
 
 XHCITRB *enqueueCommand(TrbRing *ring, XHCITRB *trb) {

@@ -75,4 +75,21 @@ extern void sleep(uint32_t millis);
 extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
 #define listAdd(list, data) _listAdd(malloc, list, data)
 
+#define REQUEST(functionName, service, function)                               \
+    uint32_t functionName(uint32_t data1, uint32_t data2) {                    \
+        static uint32_t serviceId, functionId, initialized = false;            \
+        if (!initialized) {                                                    \
+            while (!serviceId) {                                               \
+                serviceId = getService(service);                               \
+                serviceId = getService(service);                               \
+            }                                                                  \
+            while (!functionId) {                                              \
+                functionId = getFunction(serviceId, function);                 \
+                functionId = getFunction(serviceId, function);                 \
+            }                                                                  \
+            initialized = true;                                                \
+        }                                                                      \
+        return request(serviceId, functionId, data1, data2);                   \
+    }
+
 #endif

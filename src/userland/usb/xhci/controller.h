@@ -1,6 +1,7 @@
 #ifndef XHCI_CONTROLLER_H
 #define XHCI_CONTROLLER_H
 
+#include "xhci.h"
 #include <usb.h>
 
 extern XHCIController *xhciSetup(uint32_t deviceId, uint32_t bar0,
