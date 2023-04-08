@@ -51,8 +51,8 @@ void resetPort(UsbSlot *slot) {
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
     slot->interface->getDeviceDescriptor(slot->data, 1 << 8, 0, buffer);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
-    printf("port %i: type: %i, version %x\n", slot->portIndex, descriptor->size,
-           descriptor->descriptorType, descriptor->usbVersion);
+    printf("slot %i: usb version %x.%x\n", slot->portIndex,
+           descriptor->usbVersion >> 8, descriptor->usbVersion & 0xFF);
     printf("port %i: class: %i, subclass: %i, protocol %i, maxPacketSize: %i\n",
            slot->portIndex, descriptor->deviceClass, descriptor->deviceSubclass,
            descriptor->deviceProtocol, descriptor->maxPacketSize);
