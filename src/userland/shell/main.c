@@ -10,6 +10,9 @@ int32_t main() {
     while (1) {
         printf("> ");
         gets(buffer);
+        if (!*buffer) {
+            continue;
+        }
         uint32_t service = loadFromInitrdUninitialized(buffer);
         if (service) {
             request(service, 0, 0, 0);
