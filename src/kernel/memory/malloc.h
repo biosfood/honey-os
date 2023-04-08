@@ -39,10 +39,6 @@ AllocationData allocationData;
 extern void *_malloc(void *, uintptr_t);
 void *malloc(uint32_t size) { _malloc(&allocationData, size); }
 
-extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
-
-#define listAdd(list, data) _listAdd(malloc, list, data)
-
 #else
 extern void *malloc(uint32_t size);
 

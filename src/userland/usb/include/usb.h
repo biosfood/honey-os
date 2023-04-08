@@ -5,7 +5,7 @@
 
 #define OFFSET(ptr, off) (((void *)(ptr)) + (off))
 
-extern uint32_t serviceId;
+extern uint32_t i;
 
 typedef volatile struct {
     uint8_t capabilitiesLength;
@@ -195,5 +195,24 @@ typedef struct {
     XHCIPort *port;
     TrbRing *controlRing;
 } SlotXHCI;
+
+typedef struct {
+    uint32_t pciClass;
+    void *(*initialize)(uint32_t, uint32_t, uint32_t);
+    void (*getDeviceDescriptor)(void *, uint32_t, uint32_t, void *);
+} UsbHostControllerInterface;
+
+typedef struct {
+    void *data;
+    ListElement *slots;
+} UsbHostController;
+
+typedef struct {
+    void *data;
+    UsbHostControllerInterface *interface;
+    uint32_t portIndex;
+} UsbSlot;
+
+extern uint32_t serviceId;
 
 #endif

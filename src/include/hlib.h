@@ -72,4 +72,7 @@ extern bool listRemoveValue(ListElement **list, void *value);
 extern void *getPhysicalAddress(void *address);
 extern void sleep(uint32_t millis);
 
+extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
+#define listAdd(list, data) _listAdd(malloc, list, data)
+
 #endif
