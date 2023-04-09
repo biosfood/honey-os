@@ -24,6 +24,30 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
     return string;
 }
 
+void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
+    UsbInterfaceDescriptor *interface = start;
+    // only doing blank interface descriptors for now, there are
+    // also interface assosciations...
+    ListElement *endpointConfigurations = NULL;
+    while (interface->descriptorType == 4) {
+        printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
+               interface->interfaceNumber, interface->endpointCount,
+               interface->interfaceClass, interface->subClass);
+        void *nextInterface = (void *)interface + interface->size;
+        for (uint32_t i = 0; i < interface->endpointCount; i++) {
+            UsbEndpointDescriptor *endpoint = nextInterface;
+            listAdd(&endpointConfigurations, endpoint);
+            nextInterface += endpoint->size;
+            printf("endpoint %i: address: %x, attributes: %x\n", i,
+                   endpoint->address, endpoint->attributes);
+        }
+        interface = nextInterface;
+    }
+    slot->interface->setupEndpoints(slot->data, endpointConfigurations,
+                                    configurationValue);
+    // clear list
+}
+
 void resetPort(UsbSlot *slot) {
     printf("--------\n");
     void *buffer = requestMemory(1, 0, 0);
@@ -55,17 +79,8 @@ void resetPort(UsbSlot *slot) {
            slot->portIndex, configuration->interfaceCount, configurationString,
            configuration->totalLength);
 
-    UsbInterfaceDescriptor *interface =
-        (void *)configuration + configuration->size;
-    // only doing blank interface descriptors for now, there are
-    // also interface assosciations...
-    while (interface->descriptorType == 4) {
-        printf("port %i: interface %i, %i endpoints, class %i, subclass %i\n",
-               slot->portIndex, interface->interfaceNumber,
-               interface->endpointCount, interface->interfaceClass,
-               interface->subClass);
-        interface = (void *)interface + interface->size;
-    }
+    setupInterfaces(slot, (void *)configuration + configuration->size,
+                    configuration->configurationValue);
 }
 
 extern UsbHostControllerInterface xhci;
@@ -83,7 +98,6 @@ void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
             continue;
         }
         enableBusMaster(pciDevice, 0);
-        printf("init: %x\n", interface->initialize);
         uint32_t interrupt = getPCIInterrupt(pciDevice, 0);
         // I don't know why
         void *(*initialize)(uint32_t, uint32_t, uint32_t) =

@@ -123,9 +123,9 @@ XHCIController *initializeController(uint32_t deviceId, uint32_t bar0) {
                                    controller->capabilities->doorbellOffset);
 
     uint32_t slotInfo = controller->capabilities->structuralParameters[0];
-    printf("%i available slots, %i available ports\n", slotInfo & 0xFF,
-           slotInfo >> 24);
     controller->portCount = slotInfo >> 24;
+    printf("%i available slots, %i available ports\n", slotInfo & 0xFF,
+           controller->portCount);
     return controller;
 }
 

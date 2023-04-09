@@ -164,6 +164,7 @@ typedef struct {
     XHCIEventRingSegmentTableEntry *eventRingSegmentTable,
         *eventRingSegmentTablePhysical;
     uint64_t *deviceContextBaseAddressArray;
+    XHCIDevice *deviceContexts[16];
     uint32_t portCount;
     XHCIInputContext *inputContexts[32];
 } XHCIController;
@@ -174,6 +175,7 @@ typedef struct {
     XHCIInputContext *inputContext;
     XHCIPort *port;
     TrbRing *controlRing;
+    TrbRing *endpointRings[32];
 } SlotXHCI;
 
 #endif

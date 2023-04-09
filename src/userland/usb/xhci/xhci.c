@@ -1,6 +1,7 @@
 #include "xhci.h"
 #include "commands.h"
 #include "controller.h"
+#include "trbRing.h"
 #include <hlib.h>
 #include <usb.h>
 
@@ -20,7 +21,7 @@ XHCIInputContext *createInputContext(SlotXHCI *slot) {
     inputContext->deviceContext.endpoints[0].maxPrimaryStreams = 0;
     inputContext->deviceContext.endpoints[0].multiplier = 0;
     inputContext->deviceContext.endpoints[0].errorCount = 3;
-    inputContext->deviceContext.endpoints[0].averageTRBLength = 8;
+    inputContext->deviceContext.endpoints[0].averageTRBLength = 1024;
     return inputContext;
 }
 
@@ -42,10 +43,13 @@ void *resetSlot(XHCIController *controller, uint32_t portIndex) {
     }
     slot->inputContext = createInputContext(slot);
     slot->controlRing = createSlotTRB(slot);
+    controller->deviceContexts[slot->slotIndex] = malloc(sizeof(XHCIDevice));
     slot->controller->deviceContextBaseAddressArray[slot->slotIndex] =
-        U32(getPhysicalAddress(malloc(sizeof(XHCIDevice))));
+        U32(getPhysicalAddress(
+            (void *)controller->deviceContexts[slot->slotIndex]));
     printf("port %i: addressing slot\n", portIndex);
     addressDevice(slot, true);
+    addressDevice(slot, false);
     UsbSlot *result = malloc(sizeof(UsbSlot));
     result->data = slot;
     result->interface = &xhci;
@@ -66,10 +70,74 @@ void *init(uint32_t deviceId, uint32_t bar0, uint32_t interrupt) {
     return host;
 }
 
-void *(*test)(uint32_t, uint32_t, uint32_t) = init;
+void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
+                        uint32_t configValue) {
+    XHCIController *controller = slot->controller;
+    XHCIInputContext *inputContext = slot->inputContext;
+    memcpy((void *)controller->deviceContexts[slot->slotIndex],
+           (void *)&inputContext->deviceContext, sizeof(XHCIDevice));
+    inputContext->inputControl.addContextFlags = 1;
+    printf("slot context state: %x, address: %x\n",
+           inputContext->deviceContext.slot.slotState,
+           inputContext->deviceContext.slot.deviceAddress);
+    foreach (endpoints, UsbEndpointDescriptor *, endpoint, {
+        uint8_t endpointNumber = endpoint->address & 0xF; // never 0
+        uint8_t direction = endpoint->address >> 7;
+        uint8_t endpointIndex = (endpointNumber + direction) * 2 - 1;
+        XHCIEndpointContext *endpointContext =
+            &inputContext->deviceContext.endpoints[endpointIndex];
+        endpointContext->endpointState = 0;
+        endpointContext->maxPrimaryStreams = 0;
+        endpointContext->interval = endpoint->interval;
+        endpointContext->errorCount = 3;
+        endpointContext->endpointType =
+            4 * direction + endpoint->attributes & 3;
+        endpointContext->maxPacketSize = endpoint->maxPacketSize;
+        slot->endpointRings[endpointIndex] = malloc(sizeof(TrbRing));
+        setupTrbRing(slot->endpointRings[endpointIndex], 256);
+        endpointContext->transferDequeuePointerLow =
+            U32(slot->endpointRings[endpointIndex]->physical) | 0;
+        endpointContext->transferDequeuePointerHigh = 0;
+        endpointContext->averageTRBLength = 2048;
+        inputContext->inputControl.addContextFlags |= 1 << (endpointIndex + 1);
+        inputContext->deviceContext.slot.contextEntryCount = MAX(
+            inputContext->deviceContext.slot.contextEntryCount, endpointIndex);
+    })
+        ;
+
+    XHCISetupStageTRB setup = {0};
+    setup.requestType = 0x00;
+    setup.request = 9;
+    setup.value = configValue;
+    setup.index = 0;
+    setup.length = 0;
+    setup.transferLength = 8;
+    setup.interruptOnCompletion = 0;
+    setup.interrupterTarget = 0;
+    setup.type = 2;
+    setup.transferType = 3;
+    setup.immediateData = 1;
+
+    XHCIStatusStageTRB status = {0};
+    status.inDirection = 0;
+    status.evaluateNext = 0;
+    status.interruptOnCompletion = 1;
+    status.type = 4;
+
+    uint32_t control = COMMAND_TYPE(12) | COMMAND_SLOT_ID(slot->slotIndex);
+    xhciCommand(controller, U32(getPhysicalAddress((void *)inputContext)), 0, 0,
+                control);
+    enqueueCommand(slot->controlRing, (void *)&setup);
+    uint32_t commandAddress =
+        U32(enqueueCommand(slot->controlRing, (void *)&status));
+    uint32_t eventId = createDirectEventSave(commandAddress);
+    slot->controller->doorbells[slot->slotIndex] = 1;
+    await(serviceId, eventId);
+}
 
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
+    .setupEndpoints = (void *)xhciSetupEndpoints,
     .pciClass = 0x0C0330,
 };

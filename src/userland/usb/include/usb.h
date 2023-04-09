@@ -48,9 +48,19 @@ typedef struct {
 } __attribute__((packed)) UsbInterfaceDescriptor;
 
 typedef struct {
+    uint8_t size;
+    uint8_t descriptorType;
+    uint8_t address;
+    uint8_t attributes;
+    uint16_t maxPacketSize;
+    uint8_t interval;
+} __attribute__((packed)) UsbEndpointDescriptor;
+
+typedef struct {
     uint32_t pciClass;
     void *(*initialize)(uint32_t, uint32_t, uint32_t);
     void (*getDeviceDescriptor)(void *, uint32_t, uint32_t, void *);
+    void (*setupEndpoints)(void *, ListElement *, uint32_t);
 } UsbHostControllerInterface;
 
 typedef struct {
