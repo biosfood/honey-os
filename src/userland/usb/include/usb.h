@@ -65,6 +65,11 @@ typedef struct {
 } UsbHostControllerInterface;
 
 typedef struct {
+    uint8_t buttons;
+    int8_t x, y;
+} __attribute__((packed)) MouseReport;
+
+typedef struct {
     void *data;
     ListElement *slots;
 } UsbHostController;

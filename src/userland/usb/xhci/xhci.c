@@ -191,21 +191,6 @@ void setIdle(SlotXHCI *slot) {
 void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     setProtocol(slot);
     setIdle(slot);
-    // XHCIDataStageTRB data = {0};
-    // data.dataBuffer[0] = U32(getPhysicalAddress(buffer));
-    // data.inDirection = 1;
-    // data.transferSize = 8;
-    // data.type = 3;
-    // data.interrupterTarget = 0;
-    // data.interruptOnShortPacket = 1;
-    // data.interruptOnCompletion = 1;
-
-    // XHCIStatusStageTRB status = {0};
-    // status.inDirection = 1;
-    // status.evaluateNext = 0;
-    // status.interruptOnCompletion = 1;
-    // status.inDirection = 0;
-    // status.type = 4;
 
     XHCINormalTRB normal = {0};
     normal.type = 1;
@@ -216,16 +201,29 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     normal.dataBuffer[0] = U32(getPhysicalAddress(buffer));
     normal.transferSize = 4;
 
-    void *trb = (void *)enqueueCommand(slot->endpointRings[endpointIndex],
-                                       (void *)&normal);
-    // enqueueCommand(slot->controlRing, (void *)&status);
-    printf("enqueueing normal stage: %x on endpoint %i\n", trb, endpointIndex);
-    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
-    sleep(1000);
-    for (uint32_t i = 0; i < 10; i++) {
-        printf("%x ", ((uint32_t *)buffer)[i]);
+    while (1) {
+        uint32_t commandAddress = U32(enqueueCommand(
+            slot->endpointRings[endpointIndex], (void *)&normal));
+        uint32_t eventId = createDirectEventSave(commandAddress);
+        slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+        await(serviceId, eventId);
+        MouseReport *report = buffer;
+        printf("event: buttons: %i, ", report->buttons);
+        // TODO add negative number printing support to printf
+        if (report->x < 0) {
+            printf("x: -%i, ", -report->x);
+        } else {
+            printf("x: %i, ", report->x);
+        }
+        if (report->y < 0) {
+            printf("y: -%i\n", -report->y);
+        } else {
+            printf("y: %i\n", report->y);
+        }
+        // todo: sleep for at least endpoint->interval?
+        // todo: start this loop in a fork?
+        sleep(100);
     }
-    printf("\n");
 }
 
 UsbHostControllerInterface xhci = {
