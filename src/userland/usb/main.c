@@ -29,22 +29,42 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
     ListElement *endpointConfigurations = NULL;
+    ListElement *hidInterfaces = NULL;
     while (interface->descriptorType == 4) {
         printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
                interface->interfaceNumber, interface->endpointCount,
                interface->interfaceClass, interface->subClass);
         void *nextInterface = (void *)interface + interface->size;
-        for (uint32_t i = 0; i < interface->endpointCount; i++) {
+        for (uint32_t i = 0; i < interface->endpointCount;) {
             UsbEndpointDescriptor *endpoint = nextInterface;
-            listAdd(&endpointConfigurations, endpoint);
+            if (endpoint->descriptorType == 5) {
+                listAdd(&endpointConfigurations, endpoint);
+                printf("endpoint %i (%i): address: %x, attributes: %x\n", i,
+                       endpoint->descriptorType, endpoint->address,
+                       endpoint->attributes);
+                i++;
+            }
             nextInterface += endpoint->size;
-            printf("endpoint %i: address: %x, attributes: %x\n", i,
-                   endpoint->address, endpoint->attributes);
+        }
+        if (interface->interfaceClass == 3) {
+            listAdd(&hidInterfaces, interface);
         }
         interface = nextInterface;
     }
     slot->interface->setupEndpoints(slot->data, endpointConfigurations,
                                     configurationValue);
+    foreach (hidInterfaces, UsbInterfaceDescriptor *, interface, {
+        UsbEndpointDescriptor *endpoint = (void *)interface + interface->size;
+        while (endpoint->descriptorType != 5) {
+            endpoint = (void *)endpoint + endpoint->size;
+        }
+        uint8_t endpointNumber = endpoint->address & 0xF; // never 0
+        uint8_t direction = endpoint->address >> 7;
+        uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
+        void *buffer = requestMemory(1, 0, 0);
+        void *bufferPhysical = getPhysicalAddress(buffer);
+        slot->interface->setupHID(slot->data, endpointIndex, buffer);
+    })
     // clear list
 }
 

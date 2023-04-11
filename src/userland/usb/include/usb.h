@@ -61,6 +61,7 @@ typedef struct {
     void *(*initialize)(uint32_t, uint32_t, uint32_t);
     void (*getDeviceDescriptor)(void *, uint32_t, uint32_t, void *);
     void (*setupEndpoints)(void *, ListElement *, uint32_t);
+    void (*setupHID)(void *, uint32_t, void *);
 } UsbHostControllerInterface;
 
 typedef struct {

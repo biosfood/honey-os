@@ -83,20 +83,19 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
     foreach (endpoints, UsbEndpointDescriptor *, endpoint, {
         uint8_t endpointNumber = endpoint->address & 0xF; // never 0
         uint8_t direction = endpoint->address >> 7;
-        uint8_t endpointIndex = (endpointNumber + direction) * 2 - 1;
+        uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
         XHCIEndpointContext *endpointContext =
             &inputContext->deviceContext.endpoints[endpointIndex];
-        endpointContext->endpointState = 0;
         endpointContext->maxPrimaryStreams = 0;
         endpointContext->interval = endpoint->interval;
         endpointContext->errorCount = 3;
         endpointContext->endpointType =
-            4 * direction + endpoint->attributes & 3;
+            direction << 2 | endpoint->attributes & 3;
         endpointContext->maxPacketSize = endpoint->maxPacketSize;
         slot->endpointRings[endpointIndex] = malloc(sizeof(TrbRing));
         setupTrbRing(slot->endpointRings[endpointIndex], 256);
         endpointContext->transferDequeuePointerLow =
-            U32(slot->endpointRings[endpointIndex]->physical) | 0;
+            U32(slot->endpointRings[endpointIndex]->physical) | 1;
         endpointContext->transferDequeuePointerHigh = 0;
         endpointContext->averageTRBLength = 2048;
         inputContext->inputControl.addContextFlags |= 1 << (endpointIndex + 1);
@@ -135,9 +134,104 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
     await(serviceId, eventId);
 }
 
+void setProtocol(SlotXHCI *slot) {
+    XHCISetupStageTRB setup = {0};
+    setup.requestType = 0x21;
+    setup.request = 0x0B;
+    setup.value = 0;
+    setup.index = 0;
+    setup.length = 0;
+    setup.transferLength = 8;
+    setup.interruptOnCompletion = 0;
+    setup.interrupterTarget = 0;
+    setup.type = 2;
+    setup.transferType = 3;
+    setup.immediateData = 1;
+    XHCIStatusStageTRB status = {0};
+    status.inDirection = 1;
+    status.evaluateNext = 0;
+    status.interruptOnCompletion = 1;
+    status.type = 4;
+
+    enqueueCommand(slot->controlRing, (void *)&setup);
+    uint32_t commandAddress =
+        U32(enqueueCommand(slot->controlRing, (void *)&status));
+    uint32_t eventId = createDirectEventSave(commandAddress);
+    slot->controller->doorbells[slot->slotIndex] = 1;
+    await(serviceId, eventId);
+}
+
+void setIdle(SlotXHCI *slot) {
+    XHCISetupStageTRB setup = {0};
+    setup.requestType = 0x21;
+    setup.request = 0x0A;
+    setup.value = 0;
+    setup.index = 0;
+    setup.length = 0;
+    setup.transferLength = 8;
+    setup.interruptOnCompletion = 0;
+    setup.interrupterTarget = 0;
+    setup.type = 2;
+    setup.transferType = 3;
+    setup.immediateData = 1;
+    XHCIStatusStageTRB status = {0};
+    status.inDirection = 1;
+    status.evaluateNext = 0;
+    status.interruptOnCompletion = 1;
+    status.type = 4;
+
+    enqueueCommand(slot->controlRing, (void *)&setup);
+    uint32_t commandAddress =
+        U32(enqueueCommand(slot->controlRing, (void *)&status));
+    uint32_t eventId = createDirectEventSave(commandAddress);
+    slot->controller->doorbells[slot->slotIndex] = 1;
+    await(serviceId, eventId);
+}
+
+void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
+    setProtocol(slot);
+    setIdle(slot);
+    // XHCIDataStageTRB data = {0};
+    // data.dataBuffer[0] = U32(getPhysicalAddress(buffer));
+    // data.inDirection = 1;
+    // data.transferSize = 8;
+    // data.type = 3;
+    // data.interrupterTarget = 0;
+    // data.interruptOnShortPacket = 1;
+    // data.interruptOnCompletion = 1;
+
+    // XHCIStatusStageTRB status = {0};
+    // status.inDirection = 1;
+    // status.evaluateNext = 0;
+    // status.interruptOnCompletion = 1;
+    // status.inDirection = 0;
+    // status.type = 4;
+
+    XHCINormalTRB normal = {0};
+    normal.type = 1;
+    normal.inDirection = 1;
+    normal.interrupterTarget = 0;
+    normal.interruptOnCompletion = 1;
+    normal.interruptOnShortPacket = 1;
+    normal.dataBuffer[0] = U32(getPhysicalAddress(buffer));
+    normal.transferSize = 4;
+
+    void *trb = (void *)enqueueCommand(slot->endpointRings[endpointIndex],
+                                       (void *)&normal);
+    // enqueueCommand(slot->controlRing, (void *)&status);
+    printf("enqueueing normal stage: %x on endpoint %i\n", trb, endpointIndex);
+    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+    sleep(1000);
+    for (uint32_t i = 0; i < 10; i++) {
+        printf("%x ", ((uint32_t *)buffer)[i]);
+    }
+    printf("\n");
+}
+
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
     .setupEndpoints = (void *)xhciSetupEndpoints,
+    .setupHID = (void *)setupHID,
     .pciClass = 0x0C0330,
 };
