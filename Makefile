@@ -17,9 +17,15 @@ USER_PROGRAMS := $(shell tree -d -L 1 -i --noreport src/userland/ | tail -n+2)
 USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=user/%)
 USER_PROGRAM_FILES := $(USER_PROGRAMS:%=initrd/%)
 
-run: $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
+run: build initrd user/hlib $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
 	@echo "starting qemu"
 	@$(EMU) $(EMUFLAGS)
+
+build:
+	@mkdir build
+
+initrd:
+	@mkdir initrd
 
 $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	@echo "creating the iso image"
