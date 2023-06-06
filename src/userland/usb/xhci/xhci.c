@@ -208,21 +208,10 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
         slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
         await(serviceId, eventId);
         MouseReport *report = buffer;
-        printf("event: buttons: %i, ", report->buttons);
-        // TODO add negative number printing support to printf
-        if (report->x < 0) {
-            printf("x: -%i, ", -report->x);
-        } else {
-            printf("x: %i, ", report->x);
-        }
-        if (report->y < 0) {
-            printf("y: -%i\n", -report->y);
-        } else {
-            printf("y: %i\n", report->y);
-        }
+        printf("event: buttons: %i, x: %i, y: %i\n", report->buttons, report->x, report->y);
         // todo: sleep for at least endpoint->interval?
         // todo: start this loop in a fork?
-        sleep(100);
+        sleep(10);
     }
 }
 

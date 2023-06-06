@@ -68,10 +68,14 @@ void addChar(char **write, char c) {
     (*write)++;
 }
 
-void putInt(char **write, uintptr_t x) {
+void putInt(char **write, intptr_t x) {
     if (x == 0) {
         addChar(write, '0');
         return;
+    }
+    if (x < 0) {
+        addChar(write, '-');
+        x *= -1;
     }
     for (intptr_t i = 10; i >= 0; i--) {
         uintptr_t n = x / power(10, i);
@@ -81,7 +85,7 @@ void putInt(char **write, uintptr_t x) {
     }
 }
 
-uint32_t getInsertLength(char insertType, uintptr_t x) {
+uint32_t getInsertLength(char insertType, intptr_t x) {
     switch (insertType) {
     case 's':
         return strlen((char *)x);
@@ -90,7 +94,7 @@ uint32_t getInsertLength(char insertType, uintptr_t x) {
     case 'c':
         return 1;
     case 'i':
-        return intLength(x);
+        return intLength(x) + (x < 0);
     }
     return 0;
 }
