@@ -200,6 +200,8 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     normal.interruptOnShortPacket = 1;
     normal.dataBuffer[0] = U32(getPhysicalAddress(buffer));
     normal.transferSize = 4;
+    
+    int32_t x = 0, y = 0;
 
     while (1) {
         uint32_t commandAddress = U32(enqueueCommand(
@@ -208,7 +210,9 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
         slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
         await(serviceId, eventId);
         MouseReport *report = buffer;
-        printf("event: buttons: %i, x: %i, y: %i\n", report->buttons, report->x, report->y);
+        x += report->x;
+        y += report->y;
+        printf("event: buttons: %i, x: %i, y: %i         \r", report->buttons, x, y);
         // todo: sleep for at least endpoint->interval?
         // todo: start this loop in a fork?
         sleep(10);
