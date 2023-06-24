@@ -142,14 +142,11 @@ void xhciInterrupt() {
                 U32(&globalController->events
                          .physical[globalController->events.dequeue]) |
                 (1 << 3);
-            uint32_t eventId = getDirectEvent(serviceId, trb->dataLow);
-            printf("event %i [%x %x %x %x]: %i -> %i\n",
+            printf("event %i [%x %x %x %x]: %i\n",
                    globalController->events.dequeue, trb->dataLow,
                    trb->dataHigh, trb->status, trb->control,
-                   trb->control >> 10 & 0x3F, eventId);
-            if (eventId) {
-                fireEvent(eventId, U32(trb));
-            }
+                   trb->control >> 10 & 0x3F);
+            fireEventCode(xhciEvent, U32(trb), trb->dataLow);
         }
     }
 }

@@ -36,7 +36,7 @@ void *resetSlot(XHCIController *controller, uint32_t portIndex) {
     printf("port %i: connecting to slot %i\n", portIndex, slot->slotIndex);
 
     slot->port->status |= 1 << 4;
-    await(serviceId, createDirectEventSave(slot->portIndex << 24));
+    awaitCode(serviceId, xhciEvent, slot->portIndex << 24);
     if (!(slot->port->status & 1 << 1)) {
         printf("port %i reset not succesful, aborting\n", portIndex);
         return NULL;
@@ -129,9 +129,8 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
     enqueueCommand(slot->controlRing, (void *)&setup);
     uint32_t commandAddress =
         U32(enqueueCommand(slot->controlRing, (void *)&status));
-    uint32_t eventId = createDirectEventSave(commandAddress);
     slot->controller->doorbells[slot->slotIndex] = 1;
-    await(serviceId, eventId);
+    awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
 void setProtocol(SlotXHCI *slot) {
@@ -156,9 +155,8 @@ void setProtocol(SlotXHCI *slot) {
     enqueueCommand(slot->controlRing, (void *)&setup);
     uint32_t commandAddress =
         U32(enqueueCommand(slot->controlRing, (void *)&status));
-    uint32_t eventId = createDirectEventSave(commandAddress);
     slot->controller->doorbells[slot->slotIndex] = 1;
-    await(serviceId, eventId);
+    awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
 void setIdle(SlotXHCI *slot) {
@@ -183,9 +181,8 @@ void setIdle(SlotXHCI *slot) {
     enqueueCommand(slot->controlRing, (void *)&setup);
     uint32_t commandAddress =
         U32(enqueueCommand(slot->controlRing, (void *)&status));
-    uint32_t eventId = createDirectEventSave(commandAddress);
     slot->controller->doorbells[slot->slotIndex] = 1;
-    await(serviceId, eventId);
+    awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
 void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
@@ -206,9 +203,8 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     while (1) {
         uint32_t commandAddress = U32(enqueueCommand(
             slot->endpointRings[endpointIndex], (void *)&normal));
-        uint32_t eventId = createDirectEventSave(commandAddress);
         slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
-        await(serviceId, eventId);
+        awaitCode(serviceId, xhciEvent, commandAddress);
         MouseReport *report = buffer;
         x += report->x;
         y += report->y;

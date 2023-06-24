@@ -35,7 +35,7 @@ Service *loadElf(void *elfStart, char *serviceName) {
     service->name = serviceName;
     service->nameHash = insertString(serviceName);
     service->id = listCount(services);
-    fireEvent(loadInitrdEvent, service->nameHash);
+    fireEvent(loadInitrdEvent, service->nameHash, 0);
     void *current = &functionsStart;
     if (hlib) {
         service->pagingInfo.pageDirectory[0x3FC].pageTableID =

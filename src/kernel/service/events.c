@@ -16,19 +16,25 @@ Event *createKernelEvent(char *name) {
 
 extern ListElement *callsToProcess;
 
-void fireEvent(Event *event, uint32_t data) {
+void fireEvent(Event *event, uint32_t data, uint32_t code) {
     foreach (event->subscriptions, ServiceFunction *, function,
              { scheduleFunction(function, NULL, data); })
         ;
+    ListElement *newWaiting = NULL;
     for (ListElement *current = event->waitingSyscalls; current;) {
         Syscall *call = current->data;
-        call->returnValue = data;
-        listAdd(&callsToProcess, call);
         ListElement *old = current;
         current = current->next;
         free(old);
+        if (call->parameters[2] && call->parameters[2] != code) {
+            // the call is waiting for a specific data value and currently isn't the right one
+            listAdd(&newWaiting, call);
+            continue;
+        }
+        call->returnValue = data;
+        listAdd(&callsToProcess, call);
     }
-    event->waitingSyscalls = NULL;
+    event->waitingSyscalls = newWaiting;
 }
 
 void installKernelEvents() {

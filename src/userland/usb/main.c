@@ -3,7 +3,7 @@
 
 #include <usb.h>
 
-uint32_t serviceId;
+uint32_t serviceId, xhciEvent;
 
 REQUEST(getBaseAddress, "lspci", "getBaseAddress");
 REQUEST(getDeviceClass, "lspci", "getDeviceClass");
@@ -131,10 +131,8 @@ void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
 
 int32_t main() {
     serviceId = getServiceId();
-    // this is needed so we can decide wether or not sys_get_event
-    // returns no event or an event TODO: start event indexing
-    // with index 1 or add a sensible default event
-    createEvent("unused");
+    // xhciEvent will carry data corresponding to the data in the xhci event
+    xhciEvent = createEvent("xhciEvent");
     for (uint32_t i = 0; i < 100; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {

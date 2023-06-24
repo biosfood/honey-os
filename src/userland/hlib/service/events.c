@@ -20,8 +20,12 @@ uint32_t getEvent(uint32_t service, char *name) {
     return syscall(SYS_GET_EVENT, service, id, 0, 0);
 }
 
+void fireEventCode(uint32_t eventNumber, uint32_t data, uint32_t code) {
+    syscall(SYS_FIRE_EVENT, eventNumber, data, code, 0);
+}
+
 void fireEvent(uint32_t eventNumber, uint32_t data) {
-    syscall(SYS_FIRE_EVENT, eventNumber, data, 0, 0);
+    fireEventCode(eventNumber, data, 0);
 }
 
 void subscribeEvent(uint32_t service, uint32_t event,
@@ -29,8 +33,12 @@ void subscribeEvent(uint32_t service, uint32_t event,
     syscall(SYS_SUBSCRIBE_EVENT, service, event, U32(handler), 0);
 }
 
+uint32_t awaitCode(uint32_t service, uint32_t event, uint32_t code) {
+    return syscall(SYS_AWAIT, service, event, code, 0);
+}
+
 uint32_t await(uint32_t service, uint32_t event) {
-    return syscall(SYS_AWAIT, service, event, 0, 0);
+    return awaitCode(service, event, 0);
 }
 
 uint32_t getDirectEvent(uint32_t serviceId, uint32_t id) {

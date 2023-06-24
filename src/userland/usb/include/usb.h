@@ -5,7 +5,7 @@
 
 #define OFFSET(ptr, off) (((void *)(ptr)) + (off))
 
-extern uint32_t serviceId;
+extern uint32_t serviceId, xhciEvent;
 
 typedef struct {
     uint8_t size;

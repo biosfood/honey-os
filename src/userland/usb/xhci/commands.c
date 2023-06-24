@@ -13,9 +13,8 @@ CommandCompletionEvent *xhciCommand(XHCIController *controller,
     trb.status = status;
     trb.control = control;
     uint32_t commandAddress = U32(enqueueCommand(&controller->commands, &trb));
-    uint32_t eventId = createDirectEventSave(commandAddress);
     controller->doorbells[0] = 0;
-    return PTR(await(serviceId, eventId));
+    return PTR(awaitCode(serviceId, xhciEvent, commandAddress));
 }
 
 void addressDevice(SlotXHCI *slot, bool BSR) {
@@ -76,8 +75,7 @@ void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
     enqueueCommand(slot->controlRing, (void *)&data);
     uint32_t commandAddress =
         U32(enqueueCommand(slot->controlRing, (void *)&status));
-    uint32_t eventId = createDirectEventSave(commandAddress);
     slot->controller->doorbells[slot->slotIndex] = 1;
-    CommandCompletionEvent *completionEvent = PTR(await(serviceId, eventId));
+    CommandCompletionEvent *completionEvent = PTR(awaitCode(serviceId, xhciEvent, commandAddress));
     return buffer;
 }
