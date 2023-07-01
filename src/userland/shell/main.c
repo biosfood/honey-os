@@ -13,7 +13,10 @@ int32_t main() {
         if (!*buffer) {
             continue;
         }
-        uint32_t service = loadFromInitrdUninitialized(buffer);
+        uint32_t service = getService(buffer);
+        if (!service) {
+            service = loadFromInitrdUninitialized(buffer);
+        }
         if (service) {
             request(service, 0, 0, 0);
         } else {
