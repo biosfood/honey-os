@@ -215,6 +215,7 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     }
 }
 
+
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,

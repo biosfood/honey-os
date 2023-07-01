@@ -32,3 +32,8 @@ void *getPhysicalAddress(void *source) {
     return PTR(syscall(SYS_GET_PHYSICAL, U32(source) & ~0xFFF, 0, 0, 0) |
                (U32(source) & 0xFFF));
 }
+
+uint32_t fork(void (f)(), void *a, void *b, void *c) {
+    return syscall(SYS_FORK, U32(f), U32(a), U32(b), U32(c));
+}
+

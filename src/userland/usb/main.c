@@ -63,7 +63,7 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
         void *buffer = requestMemory(1, 0, 0);
         void *bufferPhysical = getPhysicalAddress(buffer);
-        slot->interface->setupHID(slot->data, endpointIndex, buffer);
+        fork(slot->interface->setupHID, slot->data, endpointIndex, buffer);
     })
     // clear list
 }

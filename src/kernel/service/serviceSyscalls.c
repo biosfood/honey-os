@@ -110,3 +110,13 @@ void handleStackContainsSyscall(Syscall *call) {
     }
     call->returnValue = 0;
 }
+
+void handleForkSyscall(Syscall *call) {
+    Service *service = call->service;
+    ServiceFunction function = {
+        .service = service,
+        .address = call->parameters[0],
+        .name = "fork function",
+    };
+    scheduleFunction(&function, NULL, call->parameters[1], call->parameters[2], call->parameters[3]);
+}

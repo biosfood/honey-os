@@ -79,6 +79,7 @@ extern uintptr_t handleLookupSymbolSyscall;
 extern uintptr_t handleStackContainsSyscall;
 extern uintptr_t handleAwaitSyscall;
 extern uintptr_t handleGetPhysicalSyscall;
+extern uintptr_t handleForkSyscall;
 
 void (*syscallHandlers[])(Syscall *) = {
     0,
@@ -104,6 +105,7 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)&handleStackContainsSyscall,
     (void *)&handleAwaitSyscall,
     (void *)&handleGetPhysicalSyscall,
+    (void *)&handleForkSyscall,
 };
 
 void processSyscall(Syscall *call) {
