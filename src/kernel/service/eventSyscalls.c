@@ -7,7 +7,7 @@ void handleCreateEventSyscall(Syscall *call) {
     if (!name) {
         return;
     }
-    Event *event = malloc(sizeof(ServiceFunction));
+    Event *event = malloc(sizeof(Event));
     Service *service = call->service;
     event->subscriptions = NULL;
     event->name = name;

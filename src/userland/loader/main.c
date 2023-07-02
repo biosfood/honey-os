@@ -9,6 +9,8 @@ int32_t main() {
     printf("finished loading all the essential modules\n");
     loadFromInitrd("lspci");
     loadFromInitrd("pit");
+    loadFromInitrd("mouse");
+    loadFromInitrd("usb");
     uint32_t id = loadFromInitrdUninitialized("shell");
     requestName("ioManager", "setForeground", id, 0);
     request(id, 0, 0, 0);

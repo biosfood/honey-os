@@ -185,6 +185,9 @@ void setIdle(SlotXHCI *slot) {
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
+REQUEST(moveRelative, "mouse", "moveRelative");
+REQUEST(updateButtons, "mouse", "updateButtons");
+
 void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     setProtocol(slot);
     setIdle(slot);
@@ -198,17 +201,14 @@ void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
     normal.dataBuffer[0] = U32(getPhysicalAddress(buffer));
     normal.transferSize = 4;
     
-    int32_t x = 0, y = 0;
-
     while (1) {
         uint32_t commandAddress = U32(enqueueCommand(
             slot->endpointRings[endpointIndex], (void *)&normal));
         slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
         awaitCode(serviceId, xhciEvent, commandAddress);
         MouseReport *report = buffer;
-        x += report->x;
-        y += report->y;
-        printf("event: buttons: %i, x: %i, y: %i         \r", report->buttons, x, y);
+        moveRelative((int32_t) report->x, (int32_t)report->y);
+        updateButtons(report->buttons, 0);
         // todo: sleep for at least endpoint->interval?
         // todo: start this loop in a fork?
         sleep(10);
