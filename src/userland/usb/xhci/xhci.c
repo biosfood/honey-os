@@ -159,7 +159,7 @@ void setProtocol(SlotXHCI *slot) {
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
-void setIdle(SlotXHCI *slot) {
+void setIdle(SlotXHCI *slot, void *bufferPhysical) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x21;
     setup.request = 0x0A;
@@ -184,11 +184,28 @@ void setIdle(SlotXHCI *slot) {
     slot->controller->doorbells[slot->slotIndex] = 1;
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
+    
+void xhciNormal(SlotXHCI *slot, void *bufferPhysical) {
+    uint32_t endpointIndex = 2; // TODO
+    XHCINormalTRB normal = {0};
+    normal.type = 1;
+    normal.inDirection = 1;
+    normal.interrupterTarget = 0;
+    normal.interruptOnCompletion = 1;
+    normal.interruptOnShortPacket = 1;
+    normal.dataBuffer[0] = U32(bufferPhysical);
+    normal.dataBuffer[1] = 0;
+    normal.transferSize = 4;
+    uint32_t commandAddress = U32(enqueueCommand(
+        slot->endpointRings[endpointIndex], (void *)&normal));
+    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+    awaitCode(serviceId, xhciEvent, commandAddress);
+}
 
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
     .setupEndpoints = (void *)xhciSetupEndpoints,
-    //.setupHID = (void *)setupHID,
     .pciClass = 0x0C0330,
+    .doNormal = (void *)xhciNormal,
 };

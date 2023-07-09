@@ -140,24 +140,9 @@ void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
 
 bool initialized = false;
 
-void hid_normal(uint32_t slotId, void *bufferPhysical) {
+void hidNormal(uint32_t slotId, void *bufferPhysical) {
     UsbSlot *usbSlot = listGet(usbSlots, slotId);
-    SlotXHCI *slot = usbSlot->data;
-    uint32_t endpointIndex = 2; // TODO
-    XHCINormalTRB normal = {0};
-    normal.type = 1;
-    normal.inDirection = 1;
-    normal.interrupterTarget = 0;
-    normal.interruptOnCompletion = 1;
-    normal.interruptOnShortPacket = 1;
-    normal.dataBuffer[0] = U32(bufferPhysical);
-    normal.dataBuffer[1] = 0;
-    normal.transferSize = 4;
-    uint32_t commandAddress = U32(enqueueCommand(
-        slot->endpointRings[endpointIndex], (void *)&normal));
-    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
-    printf("xhci normal %i, %x, %x", slotId, bufferPhysical, commandAddress);
-    awaitCode(serviceId, xhciEvent, commandAddress);
+    usbSlot->interface->doNormal(usbSlot->data, bufferPhysical);
     // data is returned to buffer
 }
 
@@ -165,7 +150,7 @@ void initialize() {
     serviceId = getServiceId();
     xhciEvent = createEvent("xhciEvent");
     loadFromInitrd("hid");
-    createFunction("hid_normal", (void *)hid_normal);
+    createFunction("hid_normal", (void *)hidNormal);
     // xhciEvent will carry data corresponding to the data in the xhci event
     // code will be used to identify an event
     for (uint32_t i = 0; i < 100; i++) {
