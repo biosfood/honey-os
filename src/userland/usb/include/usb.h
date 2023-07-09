@@ -65,11 +65,6 @@ typedef struct {
 } UsbHostControllerInterface;
 
 typedef struct {
-    uint8_t buttons;
-    int8_t x, y;
-} __attribute__((packed)) MouseReport;
-
-typedef struct {
     void *data;
     ListElement *slots;
 } UsbHostController;
@@ -78,6 +73,7 @@ typedef struct {
     void *data;
     UsbHostControllerInterface *interface;
     uint32_t portIndex;
+    uint32_t id;
 } UsbSlot;
 
 extern uint32_t serviceId;

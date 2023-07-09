@@ -24,6 +24,11 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
     return string;
 }
 
+REQUEST(registerHID, "hid", "registerHID");
+#include "xhci/xhci.h"
+extern void setProtocol(SlotXHCI *slot);
+extern void setIdle(SlotXHCI *slot);
+
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
     UsbInterfaceDescriptor *interface = start;
     // only doing blank interface descriptors for now, there are
@@ -61,12 +66,15 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         uint8_t endpointNumber = endpoint->address & 0xF; // never 0
         uint8_t direction = endpoint->address >> 7;
         uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
-        void *buffer = requestMemory(1, 0, 0);
-        void *bufferPhysical = getPhysicalAddress(buffer);
-        fork(slot->interface->setupHID, slot->data, endpointIndex, buffer);
+        printf("endpoint index: %i\n", endpointIndex);
+        setProtocol(slot->data);
+        setIdle(slot->data);
+        registerHID(slot->id, 0);
     })
     // clear list
 }
+
+ListElement *usbSlots = NULL;
 
 void resetPort(UsbSlot *slot) {
     printf("--------\n");
@@ -98,7 +106,8 @@ void resetPort(UsbSlot *slot) {
     printf("port %i: %i interfaces, configuration %s, %i bytes\n",
            slot->portIndex, configuration->interfaceCount, configurationString,
            configuration->totalLength);
-
+    slot->id = listCount(usbSlots);
+    listAdd(&usbSlots, slot);
     setupInterfaces(slot, (void *)configuration + configuration->size,
                     configuration->configurationValue);
 }
@@ -129,15 +138,48 @@ void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
     }
 }
 
-int32_t main() {
+bool initialized = false;
+
+void hid_normal(uint32_t slotId, void *bufferPhysical) {
+    UsbSlot *usbSlot = listGet(usbSlots, slotId);
+    SlotXHCI *slot = usbSlot->data;
+    uint32_t endpointIndex = 2; // TODO
+    XHCINormalTRB normal = {0};
+    normal.type = 1;
+    normal.inDirection = 1;
+    normal.interrupterTarget = 0;
+    normal.interruptOnCompletion = 1;
+    normal.interruptOnShortPacket = 1;
+    normal.dataBuffer[0] = U32(bufferPhysical);
+    normal.dataBuffer[1] = 0;
+    normal.transferSize = 4;
+    uint32_t commandAddress = U32(enqueueCommand(
+        slot->endpointRings[endpointIndex], (void *)&normal));
+    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+    printf("xhci normal %i, %x, %x", slotId, bufferPhysical, commandAddress);
+    awaitCode(serviceId, xhciEvent, commandAddress);
+    // data is returned to buffer
+}
+
+void initialize() {
     serviceId = getServiceId();
-    // xhciEvent will carry data corresponding to the data in the xhci event
     xhciEvent = createEvent("xhciEvent");
+    loadFromInitrd("hid");
+    createFunction("hid_normal", (void *)hid_normal);
+    // xhciEvent will carry data corresponding to the data in the xhci event
+    // code will be used to identify an event
     for (uint32_t i = 0; i < 100; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {
             break;
         }
         checkDevice(i, class);
+    }
+}
+
+int32_t main() {
+    if (!initialized) {
+        initialize();
+        initialized = true;
     }
 }

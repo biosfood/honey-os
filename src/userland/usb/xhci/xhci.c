@@ -185,41 +185,10 @@ void setIdle(SlotXHCI *slot) {
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
-REQUEST(moveRelative, "mouse", "moveRelative");
-REQUEST(updateButtons, "mouse", "updateButtons");
-
-void setupHID(SlotXHCI *slot, uint32_t endpointIndex, void *buffer) {
-    setProtocol(slot);
-    setIdle(slot);
-
-    XHCINormalTRB normal = {0};
-    normal.type = 1;
-    normal.inDirection = 1;
-    normal.interrupterTarget = 0;
-    normal.interruptOnCompletion = 1;
-    normal.interruptOnShortPacket = 1;
-    normal.dataBuffer[0] = U32(getPhysicalAddress(buffer));
-    normal.transferSize = 4;
-    
-    while (1) {
-        uint32_t commandAddress = U32(enqueueCommand(
-            slot->endpointRings[endpointIndex], (void *)&normal));
-        slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
-        awaitCode(serviceId, xhciEvent, commandAddress);
-        MouseReport *report = buffer;
-        moveRelative((int32_t) report->x, (int32_t)report->y);
-        updateButtons(report->buttons, 0);
-        // todo: sleep for at least endpoint->interval?
-        // todo: start this loop in a fork?
-        sleep(10);
-    }
-}
-
-
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
     .setupEndpoints = (void *)xhciSetupEndpoints,
-    .setupHID = (void *)setupHID,
+    //.setupHID = (void *)setupHID,
     .pciClass = 0x0C0330,
 };
