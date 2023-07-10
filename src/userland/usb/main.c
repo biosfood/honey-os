@@ -25,9 +25,6 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
 }
 
 REQUEST(registerHID, "hid", "registerHID");
-#include "xhci/xhci.h"
-extern void setProtocol(SlotXHCI *slot);
-extern void setIdle(SlotXHCI *slot);
 
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
     UsbInterfaceDescriptor *interface = start;
@@ -67,8 +64,8 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         uint8_t direction = endpoint->address >> 7;
         uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
         printf("endpoint index: %i\n", endpointIndex);
-        setProtocol(slot->data);
-        setIdle(slot->data);
+        slot->interface->setProtocol(slot->data);
+        slot->interface->setIdle(slot->data);
         registerHID(slot->id, 0);
     })
     // clear list

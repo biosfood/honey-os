@@ -208,4 +208,6 @@ UsbHostControllerInterface xhci = {
     .setupEndpoints = (void *)xhciSetupEndpoints,
     .pciClass = 0x0C0330,
     .doNormal = (void *)xhciNormal,
+    .setProtocol = (void *)setProtocol,
+    .setIdle = (void *)setIdle,
 };
