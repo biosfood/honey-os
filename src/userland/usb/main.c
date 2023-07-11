@@ -150,9 +150,10 @@ void initialize() {
     createFunction("hid_normal", (void *)hidNormal);
     // xhciEvent will carry data corresponding to the data in the xhci event
     // code will be used to identify an event
-    for (uint32_t i = 0; i < 100; i++) {
+    for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {
+            // pci should assign device ids in order of valid devices to be enumerable
             break;
         }
         checkDevice(i, class);
