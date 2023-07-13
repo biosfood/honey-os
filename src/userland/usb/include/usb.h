@@ -63,8 +63,7 @@ typedef struct {
     void (*setupEndpoints)(void *, ListElement *, uint32_t);
     void (*setupHID)(void *, uint32_t, void *);
     void (*doNormal)(void *, void *);
-    void (*setProtocol)(void *);
-    void (*setIdle)(void *);
+    void (*command)(void *, uint8_t, uint8_t, uint16_t);
 } UsbHostControllerInterface;
 
 typedef struct {
