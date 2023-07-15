@@ -68,7 +68,8 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         slot->interface->command(slot->data, 0x21, 0x0B, 0);
         // set IDLE
         slot->interface->command(slot->data, 0x21, 0x0A, 0);
-        registerHID(slot->id, 0);
+        // HID id is 0xFFFF0000: endpoint, 0xFFFF: index in a list
+        registerHID(slot->id | (uint32_t)endpointIndex << 16, 0);
     })
     // clear list
 }
@@ -140,8 +141,8 @@ void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
 bool initialized = false;
 
 void hidNormal(uint32_t slotId, void *bufferPhysical) {
-    UsbSlot *usbSlot = listGet(usbSlots, slotId);
-    usbSlot->interface->doNormal(usbSlot->data, bufferPhysical);
+    UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
+    usbSlot->interface->doNormal(usbSlot->data, bufferPhysical, slotId >> 16);
     // data is returned to buffer
 }
 

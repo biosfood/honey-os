@@ -133,8 +133,7 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
-void xhciNormal(SlotXHCI *slot, void *bufferPhysical) {
-    uint32_t endpointIndex = 2; // TODO
+void xhciNormal(SlotXHCI *slot, void *bufferPhysical, uint32_t endpointIndex) {
     XHCINormalTRB normal = {0};
     normal.type = 1;
     normal.inDirection = 1;
