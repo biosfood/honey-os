@@ -70,6 +70,49 @@ void *init(uint32_t deviceId, uint32_t bar0, uint32_t interrupt) {
     return host;
 }
 
+void xhciNormal(SlotXHCI *slot, void *bufferPhysical, uint32_t endpointIndex) {
+    XHCINormalTRB normal = {0};
+    normal.type = 1;
+    normal.inDirection = 1;
+    normal.interrupterTarget = 0;
+    normal.interruptOnCompletion = 1;
+    normal.interruptOnShortPacket = 1;
+    normal.dataBuffer[0] = U32(bufferPhysical);
+    normal.dataBuffer[1] = 0;
+    normal.transferSize = 4;
+    uint32_t commandAddress = U32(enqueueCommand(
+        slot->endpointRings[endpointIndex], (void *)&normal));
+    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+    awaitCode(serviceId, xhciEvent, commandAddress);
+}
+
+void doXhciCommand(SlotXHCI *slot, uint8_t requestType, uint8_t request, uint16_t value, uint8_t direction) {
+    XHCISetupStageTRB setup = {0};
+    setup.requestType = requestType;
+    setup.request = request;
+    setup.value = value;
+    setup.index = 0;
+    setup.length = 0;
+    setup.transferLength = 8;
+    setup.interruptOnCompletion = 0;
+    setup.interrupterTarget = 0;
+    setup.type = 2;
+    setup.transferType = 3;
+    setup.immediateData = 1;
+    enqueueCommand(slot->controlRing, (void *)&setup);
+
+    XHCIStatusStageTRB status = {0};
+    status.inDirection = direction;
+    status.evaluateNext = 0;
+    status.interruptOnCompletion = 1;
+    status.type = 4;
+    uint32_t commandAddress =
+        U32(enqueueCommand(slot->controlRing, (void *)&status));
+
+    slot->controller->doorbells[slot->slotIndex] = 1;
+    awaitCode(serviceId, xhciEvent, commandAddress);
+}
+
 void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
                         uint32_t configValue) {
     XHCIController *controller = slot->controller;
@@ -103,77 +146,12 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
             inputContext->deviceContext.slot.contextEntryCount, endpointIndex);
     })
         ;
-
-    XHCISetupStageTRB setup = {0};
-    setup.requestType = 0x00;
-    setup.request = 9;
-    setup.value = configValue;
-    setup.index = 0;
-    setup.length = 0;
-    setup.transferLength = 8;
-    setup.interruptOnCompletion = 0;
-    setup.interrupterTarget = 0;
-    setup.type = 2;
-    setup.transferType = 3;
-    setup.immediateData = 1;
-
-    XHCIStatusStageTRB status = {0};
-    status.inDirection = 0;
-    status.evaluateNext = 0;
-    status.interruptOnCompletion = 1;
-    status.type = 4;
-
+    
     uint32_t control = COMMAND_TYPE(12) | COMMAND_SLOT_ID(slot->slotIndex);
     xhciCommand(controller, U32(getPhysicalAddress((void *)inputContext)), 0, 0,
                 control);
-    enqueueCommand(slot->controlRing, (void *)&setup);
-    uint32_t commandAddress =
-        U32(enqueueCommand(slot->controlRing, (void *)&status));
-    slot->controller->doorbells[slot->slotIndex] = 1;
-    awaitCode(serviceId, xhciEvent, commandAddress);
-}
 
-void xhciNormal(SlotXHCI *slot, void *bufferPhysical, uint32_t endpointIndex) {
-    XHCINormalTRB normal = {0};
-    normal.type = 1;
-    normal.inDirection = 1;
-    normal.interrupterTarget = 0;
-    normal.interruptOnCompletion = 1;
-    normal.interruptOnShortPacket = 1;
-    normal.dataBuffer[0] = U32(bufferPhysical);
-    normal.dataBuffer[1] = 0;
-    normal.transferSize = 4;
-    uint32_t commandAddress = U32(enqueueCommand(
-        slot->endpointRings[endpointIndex], (void *)&normal));
-    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
-    awaitCode(serviceId, xhciEvent, commandAddress);
-}
-
-void doXhciCommand(SlotXHCI *slot, uint8_t requestType, uint8_t request, uint16_t value) {
-    XHCISetupStageTRB setup = {0};
-    setup.requestType = requestType;
-    setup.request = request;
-    setup.value = value;
-    setup.index = 0;
-    setup.length = 0;
-    setup.transferLength = 8;
-    setup.interruptOnCompletion = 0;
-    setup.interrupterTarget = 0;
-    setup.type = 2;
-    setup.transferType = 3;
-    setup.immediateData = 1;
-    enqueueCommand(slot->controlRing, (void *)&setup);
-
-    XHCIStatusStageTRB status = {0};
-    status.inDirection = 1;
-    status.evaluateNext = 0;
-    status.interruptOnCompletion = 1;
-    status.type = 4;
-    uint32_t commandAddress =
-        U32(enqueueCommand(slot->controlRing, (void *)&status));
-
-    slot->controller->doorbells[slot->slotIndex] = 1;
-    awaitCode(serviceId, xhciEvent, commandAddress);
+    doXhciCommand(slot, 0x00, 9, configValue, 0);
 }
 
 UsbHostControllerInterface xhci = {

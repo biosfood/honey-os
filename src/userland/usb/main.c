@@ -65,9 +65,9 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
         printf("endpoint index: %i\n", endpointIndex);
         // set protocol
-        slot->interface->command(slot->data, 0x21, 0x0B, 0);
+        slot->interface->command(slot->data, 0x21, 0x0B, 0, 1);
         // set IDLE
-        slot->interface->command(slot->data, 0x21, 0x0A, 0);
+        slot->interface->command(slot->data, 0x21, 0x0A, 0, 1);
         // HID id is 0xFFFF0000: endpoint, 0xFFFF: index in a list
         registerHID(slot->id | (uint32_t)endpointIndex << 16, 0);
     })
