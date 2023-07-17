@@ -113,8 +113,7 @@ void doXhciCommand(SlotXHCI *slot, uint8_t requestType, uint8_t request, uint16_
     awaitCode(serviceId, xhciEvent, commandAddress);
 }
 
-void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
-                        uint32_t configValue) {
+void xhciSetupEndpointsStart(SlotXHCI *slot, uint32_t configValue) {
     XHCIController *controller = slot->controller;
     XHCIInputContext *inputContext = slot->inputContext;
     memcpy((void *)controller->deviceContexts[slot->slotIndex],
@@ -123,41 +122,47 @@ void xhciSetupEndpoints(SlotXHCI *slot, ListElement *endpoints,
     printf("slot context state: %x, address: %x\n",
            inputContext->deviceContext.slot.slotState,
            inputContext->deviceContext.slot.deviceAddress);
-    foreach (endpoints, UsbEndpointDescriptor *, endpoint, {
-        uint8_t endpointNumber = endpoint->address & 0xF; // never 0
-        uint8_t direction = endpoint->address >> 7;
-        uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
-        XHCIEndpointContext *endpointContext =
-            &inputContext->deviceContext.endpoints[endpointIndex];
-        endpointContext->maxPrimaryStreams = 0;
-        endpointContext->interval = endpoint->interval;
-        endpointContext->errorCount = 3;
-        endpointContext->endpointType =
-            direction << 2 | endpoint->attributes & 3;
-        endpointContext->maxPacketSize = endpoint->maxPacketSize;
-        slot->endpointRings[endpointIndex] = malloc(sizeof(TrbRing));
-        setupTrbRing(slot->endpointRings[endpointIndex], 256);
-        endpointContext->transferDequeuePointerLow =
-            U32(slot->endpointRings[endpointIndex]->physical) | 1;
-        endpointContext->transferDequeuePointerHigh = 0;
-        endpointContext->averageTRBLength = 2048;
-        inputContext->inputControl.addContextFlags |= 1 << (endpointIndex + 1);
-        inputContext->deviceContext.slot.contextEntryCount = MAX(
-            inputContext->deviceContext.slot.contextEntryCount, endpointIndex);
-    })
-        ;
-    
+}
+
+void xhciSetupEndpointsEnd(SlotXHCI *slot, uint32_t configValue) {
+    XHCIController *controller = slot->controller;
+    XHCIInputContext *inputContext = slot->inputContext;
     uint32_t control = COMMAND_TYPE(12) | COMMAND_SLOT_ID(slot->slotIndex);
     xhciCommand(controller, U32(getPhysicalAddress((void *)inputContext)), 0, 0,
                 control);
-
     doXhciCommand(slot, 0x00, 9, configValue, 0);
+}
+
+void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
+    uint8_t endpointNumber = endpoint->address & 0xF; // never 0
+    uint8_t direction = endpoint->address >> 7;
+    uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
+    XHCIInputContext *inputContext = slot->inputContext;
+    XHCIEndpointContext *endpointContext =
+        &inputContext->deviceContext.endpoints[endpointIndex];
+    endpointContext->maxPrimaryStreams = 0;
+    endpointContext->interval = endpoint->interval;
+    endpointContext->errorCount = 3;
+    endpointContext->endpointType =
+        direction << 2 | endpoint->attributes & 3;
+    endpointContext->maxPacketSize = endpoint->maxPacketSize;
+    slot->endpointRings[endpointIndex] = malloc(sizeof(TrbRing));
+    setupTrbRing(slot->endpointRings[endpointIndex], 256);
+    endpointContext->transferDequeuePointerLow =
+        U32(slot->endpointRings[endpointIndex]->physical) | 1;
+    endpointContext->transferDequeuePointerHigh = 0;
+    endpointContext->averageTRBLength = 2048;
+    inputContext->inputControl.addContextFlags |= 1 << (endpointIndex + 1);
+    inputContext->deviceContext.slot.contextEntryCount = MAX(
+        inputContext->deviceContext.slot.contextEntryCount, endpointIndex);
 }
 
 UsbHostControllerInterface xhci = {
     .initialize = init,
     .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
-    .setupEndpoints = (void *)xhciSetupEndpoints,
+    .setupEndpointsStart = (void *)xhciSetupEndpointsStart,
+    .setupEndpointsEnd = (void *)xhciSetupEndpointsEnd,
+    .configureEndpoint = (void *)xhciConfigureEndpoint,
     .pciClass = 0x0C0330,
     .doNormal = (void *)xhciNormal,
     .command = (void *)doXhciCommand,

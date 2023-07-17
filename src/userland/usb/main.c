@@ -30,8 +30,8 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
     UsbInterfaceDescriptor *interface = start;
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
-    ListElement *endpointConfigurations = NULL;
     ListElement *hidInterfaces = NULL;
+    slot->interface->setupEndpointsStart(slot->data, configurationValue);
     while (interface->descriptorType == 4) {
         printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
                interface->interfaceNumber, interface->endpointCount,
@@ -40,7 +40,7 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         for (uint32_t i = 0; i < interface->endpointCount;) {
             UsbEndpointDescriptor *endpoint = nextInterface;
             if (endpoint->descriptorType == 5) {
-                listAdd(&endpointConfigurations, endpoint);
+                slot->interface->configureEndpoint(slot->data, endpoint);
                 printf("endpoint %i (%i): address: %x, attributes: %x\n", i,
                        endpoint->descriptorType, endpoint->address,
                        endpoint->attributes);
@@ -53,8 +53,7 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         }
         interface = nextInterface;
     }
-    slot->interface->setupEndpoints(slot->data, endpointConfigurations,
-                                    configurationValue);
+    slot->interface->setupEndpointsEnd(slot->data, configurationValue);
     foreach (hidInterfaces, UsbInterfaceDescriptor *, interface, {
         UsbEndpointDescriptor *endpoint = (void *)interface + interface->size;
         while (endpoint->descriptorType != 5) {

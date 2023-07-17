@@ -60,10 +60,12 @@ typedef struct {
     uint32_t pciClass;
     void *(*initialize)(uint32_t, uint32_t, uint32_t);
     void (*getDeviceDescriptor)(void *, uint32_t, uint32_t, void *);
-    void (*setupEndpoints)(void *, ListElement *, uint32_t);
+    void (*setupEndpointsStart)(void *, uint32_t);
+    void (*setupEndpointsEnd)(void *, uint32_t);
     void (*setupHID)(void *, uint32_t, void *);
     void (*doNormal)(void *, void *, uint32_t);
     void (*command)(void *, uint8_t, uint8_t, uint16_t, uint8_t);
+    void (*configureEndpoint)(void *, UsbEndpointDescriptor *);
 } UsbHostControllerInterface;
 
 typedef struct {
