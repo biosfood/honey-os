@@ -26,11 +26,27 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
 
 REQUEST(registerHID, "hid", "registerHID");
 
+void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
+    UsbEndpointDescriptor *endpoint = (void *)interface + interface->size;
+    while (endpoint->descriptorType != 5) {
+        endpoint = (void *)endpoint + endpoint->size;
+    }
+    uint8_t endpointNumber = endpoint->address & 0xF; // never 0
+    uint8_t direction = endpoint->address >> 7;
+    uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
+    printf("endpoint index: %i\n", endpointIndex);
+    // set protocol
+    slot->interface->command(slot->data, 0x21, 0x0B, 0, 1);
+    // set IDLE
+    slot->interface->command(slot->data, 0x21, 0x0A, 0, 1);
+    // HID id is 0xFFFF0000: endpoint, 0xFFFF: index in a list
+    registerHID(slot->id | (uint32_t)endpointIndex << 16, 0);
+}
+
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
-    UsbInterfaceDescriptor *interface = start;
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
-    ListElement *hidInterfaces = NULL;
+    UsbInterfaceDescriptor *interface = start;
     slot->interface->setupEndpointsStart(slot->data, configurationValue);
     while (interface->descriptorType == 4) {
         printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
@@ -41,36 +57,16 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
             UsbEndpointDescriptor *endpoint = nextInterface;
             if (endpoint->descriptorType == 5) {
                 slot->interface->configureEndpoint(slot->data, endpoint);
-                printf("endpoint %i (%i): address: %x, attributes: %x\n", i,
-                       endpoint->descriptorType, endpoint->address,
-                       endpoint->attributes);
                 i++;
             }
             nextInterface += endpoint->size;
         }
         if (interface->interfaceClass == 3) {
-            listAdd(&hidInterfaces, interface);
+            setupHID(slot, interface);
         }
         interface = nextInterface;
     }
     slot->interface->setupEndpointsEnd(slot->data, configurationValue);
-    foreach (hidInterfaces, UsbInterfaceDescriptor *, interface, {
-        UsbEndpointDescriptor *endpoint = (void *)interface + interface->size;
-        while (endpoint->descriptorType != 5) {
-            endpoint = (void *)endpoint + endpoint->size;
-        }
-        uint8_t endpointNumber = endpoint->address & 0xF; // never 0
-        uint8_t direction = endpoint->address >> 7;
-        uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
-        printf("endpoint index: %i\n", endpointIndex);
-        // set protocol
-        slot->interface->command(slot->data, 0x21, 0x0B, 0, 1);
-        // set IDLE
-        slot->interface->command(slot->data, 0x21, 0x0A, 0, 1);
-        // HID id is 0xFFFF0000: endpoint, 0xFFFF: index in a list
-        registerHID(slot->id | (uint32_t)endpointIndex << 16, 0);
-    })
-    // clear list
 }
 
 ListElement *usbSlots = NULL;
