@@ -57,6 +57,11 @@ typedef struct {
 } __attribute__((packed)) UsbEndpointDescriptor;
 
 typedef struct {
+    uint8_t size;
+    uint8_t descriptorType;
+} __attribute__((packed)) UsbDescriptor;
+
+typedef struct {
     uint32_t pciClass;
     void *(*initialize)(uint32_t, uint32_t, uint32_t);
     void (*getDeviceDescriptor)(void *, uint32_t, uint32_t, void *);

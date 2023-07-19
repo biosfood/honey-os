@@ -26,15 +26,19 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
 
 REQUEST(registerHID, "hid", "registerHID");
 
-void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
-    UsbEndpointDescriptor *endpoint = (void *)interface + interface->size;
-    while (endpoint->descriptorType != 5) {
-        endpoint = (void *)endpoint + endpoint->size;
+UsbDescriptor *findDescriptor(UsbDescriptor *start, uint8_t descriptorType) {
+    UsbDescriptor *result = start;
+    while (result->descriptorType != descriptorType) {
+        result = (void *)result + result->size;
     }
+    return result;
+}
+
+void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
+    UsbEndpointDescriptor *endpoint = (void *) findDescriptor((void *) interface, 5);
     uint8_t endpointNumber = endpoint->address & 0xF; // never 0
     uint8_t direction = endpoint->address >> 7;
     uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
-    printf("endpoint index: %i\n", endpointIndex);
     // set protocol
     slot->interface->command(slot->data, 0x21, 0x0B, 0, 1);
     // set IDLE
@@ -80,8 +84,6 @@ void resetPort(UsbSlot *slot) {
     printf("port %i: usb version %x.%x, %i supported configuration(s)\n",
            slot->portIndex, descriptor->usbVersion >> 8,
            descriptor->usbVersion & 0xFF, descriptor->configurationCount);
-    // slot->inputContext->deviceContext.endpoints[0].maxPacketSize =
-    //    descriptor->maxPacketSize == 9 ? 512 : descriptor->maxPacketSize;
     slot->interface->getDeviceDescriptor(slot->data, 3 << 8, 0, buffer);
     uint32_t language = *((uint16_t *)(buffer + 2));
     char *manufacturer = usbReadString(
@@ -116,7 +118,7 @@ UsbHostControllerInterface *interfaces[] = {
 extern void *init(uint32_t deviceId, uint32_t bar0, uint32_t interrupt);
 
 void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
-    for (uint32_t i = 0; i < sizeof(interfaces) / sizeof(*interfaces); i++) {
+    for (uint32_t i = 0; i < sizeof(interfaces) / sizeof(interfaces[0]); i++) {
         UsbHostControllerInterface *interface = interfaces[i];
         if (deviceClass != interface->pciClass) {
             continue;
@@ -143,11 +145,11 @@ void hidNormal(uint32_t slotId, void *bufferPhysical) {
 
 void initialize() {
     serviceId = getServiceId();
+    // xhciEvent will carry data corresponding to the data in the xhci event
+    // code will be used to identify an event
     xhciEvent = createEvent("xhciEvent");
     loadFromInitrd("hid");
     createFunction("hid_normal", (void *)hidNormal);
-    // xhciEvent will carry data corresponding to the data in the xhci event
-    // code will be used to identify an event
     for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {
