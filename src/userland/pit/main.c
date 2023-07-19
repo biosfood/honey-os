@@ -26,35 +26,31 @@
 
 uint32_t systemTime = 0;
 ListElement *sleepNotifications = NULL;
-uint32_t serviceId;
+uint32_t serviceId, timeEvent;
 bool initialized = false;
 
 void interruptHandler() {
     systemTime++;
-    if (listRemoveValue(&sleepNotifications, PTR(systemTime))) {
-        fireEvent(syscall(SYS_GET_EVENT, serviceId, systemTime, 0, 0), 0);
-    }
+    fireEventCode(timeEvent, systemTime, systemTime);
 }
 
 void doSleep(uint32_t millis) {
-    uint32_t targetTime = systemTime + millis / 10;
-    listAdd(&sleepNotifications, PTR(targetTime));
-    uint32_t event = syscall(SYS_GET_EVENT, serviceId, targetTime, 0, 0);
-    if (!event) {
-        event = syscall(SYS_CREATE_EVENT, targetTime, 0, 0, 0);
-    }
-    await(serviceId, event);
-    // TODO: remove unused event
+    uint32_t targetTime = systemTime + (millis-1) / 10 + 1;
+    awaitCode(serviceId, timeEvent, targetTime);
 }
 
 int32_t main() {
     if (!initialized) {
         initialized = true;
         serviceId = getServiceId();
+        // time event will have code and data equal to the current system time
+        timeEvent = createEvent("time_update");
         createFunction("sleep", (void *)doSleep);
+
         uint32_t service = getService("pic");
         uint32_t event = getEvent(service, "irq0");
         subscribeEvent(service, event, interruptHandler);
+
         uint32_t hz = 100;
         int divisor = PIT_SCALE / hz;
         ioOut(PIT_CONTROL, CMD_BINARY | CMD_MODE3 | CMD_RW_BOTH | CMD_COUNTER0,
