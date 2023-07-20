@@ -159,7 +159,7 @@ void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
 
 UsbHostControllerInterface xhci = {
     .initialize = init,
-    .getDeviceDescriptor = (void *)usbGetDeviceDescriptor,
+    .getDescriptor = (void *)xhciGetDescriptor,
     .setupEndpointsStart = (void *)xhciSetupEndpointsStart,
     .setupEndpointsEnd = (void *)xhciSetupEndpointsEnd,
     .configureEndpoint = (void *)xhciConfigureEndpoint,

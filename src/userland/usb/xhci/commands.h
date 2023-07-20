@@ -15,7 +15,7 @@ extern void evaluateContext(XHCIController *controller, void *inputContext,
 
 extern uint32_t requestSlotIndex(XHCIController *controller);
 
-extern void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value,
+extern void *xhciGetDescriptor(SlotXHCI *slot, uint32_t value,
                                     uint32_t index, void *buffer);
 
 extern TrbRing *createSlotTRB(SlotXHCI *slot);

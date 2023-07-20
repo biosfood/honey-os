@@ -43,7 +43,7 @@ uint32_t requestSlotIndex(XHCIController *controller) {
     return xhciCommand(controller, 0, 0, 0, COMMAND_TYPE(9))->slotId;
 }
 
-void *usbGetDeviceDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
+void *xhciGetDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
                              void *buffer) {
     XHCISetupStageTRB setup = {0};
     setup.requestType = 0x80;

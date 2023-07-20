@@ -12,9 +12,7 @@ REQUEST(getPCIInterrupt, "lspci", "getInterrupt");
 
 char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
                     void *buffer) {
-    void (*usbGetDeviceDescriptor)(void *, uint32_t, uint32_t, void *) =
-        slot->interface->getDeviceDescriptor;
-    usbGetDeviceDescriptor(slot->data, 3 << 8 | stringDescriptor, language,
+    slot->interface->getDescriptor(slot->data, 3 << 8 | stringDescriptor, language,
                            buffer);
     uint32_t length = ((*(uint8_t *)buffer) - 2) / 2;
     char *string = malloc(length);
@@ -79,12 +77,12 @@ void resetPort(UsbSlot *slot) {
     printf("--------\n");
     void *buffer = requestMemory(1, 0, 0);
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
-    slot->interface->getDeviceDescriptor(slot->data, 1 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 1 << 8, 0, buffer);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
     printf("port %i: usb version %x.%x, %i supported configuration(s)\n",
            slot->portIndex, descriptor->usbVersion >> 8,
            descriptor->usbVersion & 0xFF, descriptor->configurationCount);
-    slot->interface->getDeviceDescriptor(slot->data, 3 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 3 << 8, 0, buffer);
     uint32_t language = *((uint16_t *)(buffer + 2));
     char *manufacturer = usbReadString(
         slot, language, descriptor->manufacturerStringDescriptor, buffer);
@@ -95,7 +93,7 @@ void resetPort(UsbSlot *slot) {
     printf("port %i: manufacturer:%s, device:%s, serial:%s\n", slot->portIndex,
            manufacturer, device, serial);
 
-    slot->interface->getDeviceDescriptor(slot->data, 2 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 2 << 8, 0, buffer);
     UsbConfigurationDescriptor *configuration = malloc(((uint16_t *)buffer)[1]);
     memcpy(buffer, configuration, ((uint16_t *)buffer)[1]);
     char *configurationString = usbReadString(
@@ -114,8 +112,6 @@ extern UsbHostControllerInterface xhci;
 UsbHostControllerInterface *interfaces[] = {
     &xhci,
 };
-
-extern void *init(uint32_t deviceId, uint32_t bar0, uint32_t interrupt);
 
 void checkDevice(uint32_t pciDevice, uint32_t deviceClass) {
     for (uint32_t i = 0; i < sizeof(interfaces) / sizeof(interfaces[0]); i++) {
