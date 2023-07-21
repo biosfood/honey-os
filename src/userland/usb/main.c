@@ -13,7 +13,7 @@ REQUEST(getPCIInterrupt, "lspci", "getInterrupt");
 char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
                     void *buffer) {
     slot->interface->getDescriptor(slot->data, 3 << 8 | stringDescriptor, language,
-                           buffer);
+                           buffer, 0);
     uint32_t length = ((*(uint8_t *)buffer) - 2) / 2;
     char *string = malloc(length);
     for (uint32_t i = 0; i < length; i++) {
@@ -77,12 +77,12 @@ void resetPort(UsbSlot *slot) {
     printf("--------\n");
     void *buffer = requestMemory(1, 0, 0);
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
-    slot->interface->getDescriptor(slot->data, 1 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 1 << 8, 0, buffer, 0);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
     printf("port %i: usb version %x.%x, %i supported configuration(s)\n",
            slot->portIndex, descriptor->usbVersion >> 8,
            descriptor->usbVersion & 0xFF, descriptor->configurationCount);
-    slot->interface->getDescriptor(slot->data, 3 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 3 << 8, 0, buffer, 0);
     uint32_t language = *((uint16_t *)(buffer + 2));
     char *manufacturer = usbReadString(
         slot, language, descriptor->manufacturerStringDescriptor, buffer);
@@ -93,7 +93,7 @@ void resetPort(UsbSlot *slot) {
     printf("port %i: manufacturer:%s, device:%s, serial:%s\n", slot->portIndex,
            manufacturer, device, serial);
 
-    slot->interface->getDescriptor(slot->data, 2 << 8, 0, buffer);
+    slot->interface->getDescriptor(slot->data, 2 << 8, 0, buffer, 0);
     UsbConfigurationDescriptor *configuration = malloc(((uint16_t *)buffer)[1]);
     memcpy(buffer, configuration, ((uint16_t *)buffer)[1]);
     char *configurationString = usbReadString(

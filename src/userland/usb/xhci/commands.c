@@ -44,9 +44,9 @@ uint32_t requestSlotIndex(XHCIController *controller) {
 }
 
 void *xhciGetDescriptor(SlotXHCI *slot, uint32_t value, uint32_t index,
-                             void *buffer) {
+                             void *buffer, uint8_t recepient) {
     XHCISetupStageTRB setup = {0};
-    setup.requestType = 0x80;
+    setup.requestType = 0x80 | recepient;
     setup.request = 6;
     setup.value = value;
     setup.index = index;

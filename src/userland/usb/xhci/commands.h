@@ -16,7 +16,7 @@ extern void evaluateContext(XHCIController *controller, void *inputContext,
 extern uint32_t requestSlotIndex(XHCIController *controller);
 
 extern void *xhciGetDescriptor(SlotXHCI *slot, uint32_t value,
-                                    uint32_t index, void *buffer);
+                                    uint32_t index, void *buffer, uint8_t recepient);
 
 extern TrbRing *createSlotTRB(SlotXHCI *slot);
 

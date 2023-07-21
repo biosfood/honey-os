@@ -64,7 +64,7 @@ typedef struct {
 typedef struct {
     uint32_t pciClass;
     void *(*initialize)(uint32_t, uint32_t, uint32_t);
-    void (*getDescriptor)(void *, uint32_t, uint32_t, void *);
+    void (*getDescriptor)(void *, uint32_t, uint32_t, void *, uint8_t);
     void (*setupEndpointsStart)(void *, uint32_t);
     void (*setupEndpointsEnd)(void *, uint32_t);
     void (*setupHID)(void *, uint32_t, void *);

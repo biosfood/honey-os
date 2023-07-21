@@ -21,12 +21,11 @@ typedef struct {
 
 void hidListening(HIDDevice *device) {
     while (1) {
-        request(device->serviceId, device->normalFunction, device->deviceId, getPhysicalAddress(device->buffer));
+        request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
         MouseReport *report = device->buffer;
         moveRelative((int32_t) report->x, (int32_t)report->y);
         updateButtons(report->buttons, 0);
         // todo: sleep for at least endpoint->interval?
-        // todo: start this loop in a fork?
         sleep(10);
     }
 }
@@ -38,6 +37,7 @@ uint32_t registerHID(uint32_t usbDevice, uint32_t _, uint32_t serviceName, uint3
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
     fork(hidListening, device, 0, 0);
+    return 0;
 }
 
 void initialize() {
