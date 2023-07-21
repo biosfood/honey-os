@@ -34,6 +34,11 @@ UsbDescriptor *findDescriptor(UsbDescriptor *start, uint8_t descriptorType) {
 
 void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     UsbEndpointDescriptor *endpoint = (void *) findDescriptor((void *) interface, 5);
+    UsbDescriptor *report = requestMemory(1, 0, 0);
+    slot->interface->getDescriptor(slot->data, 0x22 << 8, 0, report, 1);
+    uint8_t *data = (void *)report;
+    printf("report descriptor: %x / %x, %x %x %x %x %x %x\n", report, endpoint, data[0], data[1], data[2], data[3], data[4], data[5]);
+    
     uint8_t endpointNumber = endpoint->address & 0xF; // never 0
     uint8_t direction = endpoint->address >> 7;
     uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
