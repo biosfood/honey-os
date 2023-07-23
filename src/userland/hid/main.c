@@ -72,9 +72,39 @@ char *usagePage(uint32_t data) {
     return "Unknown";
 }
 
+char *usage(uint32_t usagePage, uint32_t data) {
+    if (usagePage != 1) { // Generic Desktop Page
+        return "Unknown";
+    }
+    switch (data) {
+    case 0: return "Undefined";
+    case 1: return "Pointer";
+    case 2: return "Mouse";
+    case 3: return "Reserved";
+    case 4: return "Joystick";
+    case 5: return "Game Pad";
+    case 6: return "Keyboard";
+    case 7: return "Keypad";
+    case 8: return "Multi-axis Controller";
+    case 9: return "Tablet PC System Controls";
+    case 0x30: return "X";
+    case 0x31: return "Y";
+    case 0x32: return "Z";
+    case 0x33: return "Rx";
+    case 0x34: return "Ry";
+    case 0x35: return "Rz";
+    case 0x36: return "Slider";
+    case 0x37: return "Dial";
+    case 0x38: return "Wheel";
+    case 0x39: return "Hat switch";
+    }
+    return "Unknown";
+}
+
 void parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
+    uint32_t currentUsagePage = 0;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -87,6 +117,10 @@ void parseReportDescriptor(uint8_t *descriptor) {
             return;
         case 1:
             printf("%pUsagePage(%x: %s)\n", padding, data, usagePage(data));
+            currentUsagePage = data;
+            break;
+        case 2:
+            printf("%pUsage(%x: %s)\n", padding, data, usage(currentUsagePage, data));
             break;
         case 0x05:
             printf("%pLogicalMinimum(%x)\n", padding, data);
@@ -116,6 +150,9 @@ void parseReportDescriptor(uint8_t *descriptor) {
         case 0x30:
             padding -= 2;
             printf("%pEnd collection\n", padding);
+            break;
+        default:
+            printf("%pUnknown Item %x with data %x\n", padding, item >> 2, data);
             break;
         }
     }
