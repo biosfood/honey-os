@@ -7,16 +7,6 @@ REQUEST(updateButtons, "mouse", "updateButtons");
 
 ListElement *hidDevices = NULL;
 
-char *collectionTypes[] = {
-    "Physical",
-    "Application",
-    "Logical",
-    "Report",
-    "Named array",
-    "Usage switch",
-    "Usage modifier"
-};
-
 typedef struct {
     uint32_t serviceId;
     uint32_t deviceId;
@@ -40,6 +30,16 @@ void hidListening(HIDDevice *device) {
     }
 }
 
+char *collectionTypes[] = {
+    "Physical",
+    "Application",
+    "Logical",
+    "Report",
+    "Named array",
+    "Usage switch",
+    "Usage modifier"
+};
+
 void startCollection(uint32_t data, uint32_t padding) {
     char *collectionType = "Vendor defined";
     if (data < sizeof(collectionTypes) / sizeof(collectionTypes[0])) {
@@ -47,7 +47,29 @@ void startCollection(uint32_t data, uint32_t padding) {
     } else if (data < 0x80) {
         collectionType = "Reserved";
     }
-    printf("%pcollection(%s)\n", padding, collectionType);
+    printf("%pCollection(%s)\n", padding, collectionType);
+}
+
+char *usagePage(uint32_t data) {
+    // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
+    // page 14, section 3, table 1: Usage Page Summary
+    switch (data) {
+    case 1: return "Generic Desktop Controls";
+    case 2: return "Simulation Controls";
+    case 3: return "VR Controls";
+    case 4: return "Sport Controls";
+    case 5: return "Game Controls";
+    case 6: return "Generic Device Controls";
+    case 7: return "Keyboard/Keypad";
+    case 8: return "LEDs";
+    case 9: return "Button";
+    case 10: return "Ordinal";
+    case 11: return "Telephony";
+    case 12: return "Consumer";
+    case 13: return "Digitizer";
+    case 15: return "PID Page";
+    }
+    return "Unknown";
 }
 
 void parseReportDescriptor(uint8_t *descriptor) {
@@ -64,13 +86,28 @@ void parseReportDescriptor(uint8_t *descriptor) {
         case 0:
             return;
         case 1:
-            printf("%pUsage page: %x\n", padding, data);
+            printf("%pUsagePage(%x: %s)\n", padding, data, usagePage(data));
             break;
-        case 5:
-            printf("%pLogical minimum: %x\n", padding, data);
+        case 0x05:
+            printf("%pLogicalMinimum(%x)\n", padding, data);
             break;
-        case 9:
-            printf("%pLogical maximum: %x\n", padding, data);
+        case 0x09:
+            printf("%pLogicalMaximum(%x)\n", padding, data);
+            break;
+        case 0x06:
+            printf("%pUsageMinimum(%x)\n", padding, data);
+            break;
+        case 0x0A:
+            printf("%pUsageMaximum(%x)\n", padding, data);
+            break;
+        case 0x1D:
+            printf("%pReportSize(%x)\n", padding, data);
+            break;
+        case 0x21:
+            printf("%pReportId(%x)\n", padding, data);
+            break;
+        case 0x25:
+            printf("%pReportCount(%x)\n", padding, data);
             break;
         case 0x28:
             startCollection(data, padding);
