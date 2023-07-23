@@ -30,7 +30,9 @@ void hidListening(HIDDevice *device) {
     }
 }
 
-uint32_t registerHID(uint32_t usbDevice, uint32_t _, uint32_t serviceName, uint32_t serviceId) {
+uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t serviceName, uint32_t serviceId) {
+    uint8_t *report = requestMemory(1, 0, reportDescriptor);
+    printf("hid registered: %x %x %x %x %x %x %x %x\n", report[0], report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
     HIDDevice *device = malloc(sizeof(HIDDevice));
     device->serviceId = serviceId;
     device->deviceId = usbDevice; // USB calls this a interface, others may differ

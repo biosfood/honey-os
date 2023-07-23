@@ -36,8 +36,6 @@ void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     UsbEndpointDescriptor *endpoint = (void *) findDescriptor((void *) interface, 5);
     UsbDescriptor *report = requestMemory(1, 0, 0);
     slot->interface->getDescriptor(slot->data, 0x22 << 8, 0, report, 1);
-    uint8_t *data = (void *)report;
-    printf("report descriptor: %x / %x, %x %x %x %x %x %x\n", report, endpoint, data[0], data[1], data[2], data[3], data[4], data[5]);
     
     uint8_t endpointNumber = endpoint->address & 0xF; // never 0
     uint8_t direction = endpoint->address >> 7;
@@ -47,7 +45,8 @@ void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     // set IDLE
     slot->interface->command(slot->data, 0x21, 0x0A, 0, 1);
     // HID id is 0xFFFF0000: endpoint, 0xFFFF: index in a list
-    registerHID(slot->id | (uint32_t)endpointIndex << 16, 0);
+    registerHID(slot->id | (uint32_t)endpointIndex << 16, U32(getPhysicalAddress(report)));
+    free(report);
 }
 
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
