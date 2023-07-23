@@ -18,6 +18,9 @@ typedef struct ListElement {
 #define PAGE_ID(address) (U32(address) >> 12)
 #define PAGE_OFFSET(address) (U32(address) & 0xFFF)
 
+#define MIN(x, y) (x < y ? (x) : (y))
+#define MAX(x, y) (x < y ? (y) : (x))
+
 #define NULL PTR(0)
 
 extern uint32_t createFunction(char *name, int32_t(handler)(void *, uint32_t));
@@ -61,8 +64,6 @@ extern uint32_t await(uint32_t service, uint32_t event);
 extern uint32_t awaitCode(uint32_t service, uint32_t event, uint32_t code);
 extern void gets(char *buffer);
 extern void memcpy(void *from, void *to, uint32_t size);
-
-#define MAX(x, y) (x > y ? (x) : (y))
 
 #define foreach(list, type, varname, ...)                                      \
     for (ListElement *current = list; current; current = current->next) {      \

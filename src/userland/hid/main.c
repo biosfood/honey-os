@@ -40,18 +40,19 @@ void hidListening(HIDDevice *device) {
     }
 }
 
-void startCollection(uint32_t data) {
+void startCollection(uint32_t data, uint32_t padding) {
     char *collectionType = "Vendor defined";
     if (data < sizeof(collectionTypes) / sizeof(collectionTypes[0])) {
         collectionType = collectionTypes[data];
     } else if (data < 0x80) {
         collectionType = "Reserved";
     }
-    printf("collection(%s)\n", collectionType);
+    printf("%pcollection(%s)\n", padding, collectionType);
 }
 
 void parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
+    uint32_t padding = 0;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -63,19 +64,21 @@ void parseReportDescriptor(uint8_t *descriptor) {
         case 0:
             return;
         case 1:
-            printf("Usage page: %x\n", data);
+            printf("%pUsage page: %x\n", padding, data);
             break;
         case 5:
-            printf("Logical minimum: %x\n", data);
+            printf("%pLogical minimum: %x\n", padding, data);
             break;
         case 9:
-            printf("Logical maximum: %x\n", data);
+            printf("%pLogical maximum: %x\n", padding, data);
             break;
         case 0x28:
-            startCollection(data);
+            startCollection(data, padding);
+            padding += 2;
             break;
         case 0x30:
-            printf("End collection\n");
+            padding -= 2;
+            printf("%pEnd collection\n", padding);
             break;
         }
     }

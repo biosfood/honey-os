@@ -85,6 +85,13 @@ void putInt(char **write, intptr_t x) {
     }
 }
 
+void putPadding(char **write, uintptr_t x) {
+    x = MIN(x, 10); // max 10 wide padding
+    for (intptr_t i = 0; i < x; i++) {
+        addChar(write, ' ');
+    }
+}
+
 uint32_t getInsertLength(char insertType, intptr_t x) {
     switch (insertType) {
     case 's':
@@ -95,6 +102,8 @@ uint32_t getInsertLength(char insertType, intptr_t x) {
         return 1;
     case 'i':
         return intLength(x) + (x < 0);
+    case 'p':
+        return x;
     }
     return 0;
 }
@@ -122,6 +131,8 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
         return;
     case 'i':
         putInt(write, x);
+    case 'p':
+        putPadding(write, x);
     }
 }
 uint32_t ioManager, logFunction, keyCallback;
