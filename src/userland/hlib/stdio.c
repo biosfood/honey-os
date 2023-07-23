@@ -131,8 +131,10 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
         return;
     case 'i':
         putInt(write, x);
+        return;
     case 'p':
         putPadding(write, x);
+        return;
     }
 }
 uint32_t ioManager, logFunction, keyCallback;
