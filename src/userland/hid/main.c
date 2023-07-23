@@ -7,6 +7,16 @@ REQUEST(updateButtons, "mouse", "updateButtons");
 
 ListElement *hidDevices = NULL;
 
+char *collectionTypes[] = {
+    "Physical",
+    "Application",
+    "Logical",
+    "Report",
+    "Named array",
+    "Usage switch",
+    "Usage modifier"
+};
+
 typedef struct {
     uint32_t serviceId;
     uint32_t deviceId;
@@ -30,14 +40,56 @@ void hidListening(HIDDevice *device) {
     }
 }
 
+void startCollection(uint32_t data) {
+    char *collectionType = "Vendor defined";
+    if (data < sizeof(collectionTypes) / sizeof(collectionTypes[0])) {
+        collectionType = collectionTypes[data];
+    } else if (data < 0x80) {
+        collectionType = "Reserved";
+    }
+    printf("collection(%s)\n", collectionType);
+}
+
+void parseReportDescriptor(uint8_t *descriptor) {
+    uint8_t *read = descriptor;
+    while (1) {
+        uint8_t item = *read;
+        uint8_t dataSize = item & 0x3;
+        read++;
+        uint32_t data = *((uint32_t *)read);
+        data &= 0xFFFFFFFF >> ((4 - dataSize) * 8);
+        read += dataSize;
+        switch (item >> 2) {
+        case 0:
+            return;
+        case 1:
+            printf("Usage page: %x\n", data);
+            break;
+        case 5:
+            printf("Logical minimum: %x\n", data);
+            break;
+        case 9:
+            printf("Logical maximum: %x\n", data);
+            break;
+        case 0x28:
+            startCollection(data);
+            break;
+        case 0x30:
+            printf("End collection\n");
+            break;
+        }
+    }
+}
+
 uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t serviceName, uint32_t serviceId) {
     uint8_t *report = requestMemory(1, 0, reportDescriptor);
-    printf("hid registered: %x %x %x %x %x %x %x %x\n", report[0], report[1], report[2], report[3], report[4], report[5], report[6], report[7]);
     HIDDevice *device = malloc(sizeof(HIDDevice));
     device->serviceId = serviceId;
     device->deviceId = usbDevice; // USB calls this a interface, others may differ
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
+    printf("registered a new HID device, dumping report descriptor:\n");
+    parseReportDescriptor(report);
     fork(hidListening, device, 0, 0);
     return 0;
 }
