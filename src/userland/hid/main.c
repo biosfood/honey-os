@@ -101,6 +101,21 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
+void input(uint32_t padding, uint32_t data) {
+    // https://www.usb.org/sites/default/files/hid1_11.pdf
+    // page 38, section 6.2.2.4, Main items table
+    char *constant =    data >> 0 & 1 ? "Constant" : "Data";
+    char *array =       data >> 1 & 1 ? "Variable" : "Array";
+    char *absolute =    data >> 2 & 1 ? "Relative" : "Absolute";
+    char *wrap =        data >> 3 & 1 ? "Wrap" : "NoWrap";
+    char *linear =      data >> 4 & 1 ? "NonLinear" : "Linear";
+    char *prefered =    data >> 5 & 1 ? "NoPreferredState" : "PreferredState";
+    char *null =        data >> 6 & 1 ? "NullState" : "NoNullState";
+    char *bitField =    data >> 8 & 1 ? "BufferedBytes" : "BitField";
+
+    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
+}
+
 void parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
@@ -136,6 +151,9 @@ void parseReportDescriptor(uint8_t *descriptor) {
             break;
         case 0x1D:
             printf("%pReportSize(%x)\n", padding, data);
+            break;
+        case 0x20:
+            input(padding, data);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
