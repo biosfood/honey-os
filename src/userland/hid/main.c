@@ -101,7 +101,7 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-void input(uint32_t padding, uint32_t data) {
+void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -114,12 +114,13 @@ void input(uint32_t padding, uint32_t data) {
     char *bitField =    data >> 8 & 1 ? "BufferedBytes" : "BitField";
 
     printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
+    printf("%pAdding new input parser, reading %i groups of %i bits resulting in %i bits read", padding, reportCount, reportSize, reportCount * reportSize);
 }
 
 void parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
-    uint32_t currentUsagePage = 0;
+    uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -151,15 +152,17 @@ void parseReportDescriptor(uint8_t *descriptor) {
             break;
         case 0x1D:
             printf("%pReportSize(%x)\n", padding, data);
+            reportSize = data;
             break;
         case 0x20:
-            input(padding, data);
+            input(padding, data, reportCount, reportSize);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
             break;
         case 0x25:
             printf("%pReportCount(%x)\n", padding, data);
+            reportCount = data;
             break;
         case 0x28:
             startCollection(data, padding);
