@@ -101,7 +101,12 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize) {
+void listClear(ListElement **list) {
+    // TODO
+    *list = NULL;
+}
+
+void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -113,14 +118,28 @@ void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t repor
     char *null =        data >> 6 & 1 ? "NullState" : "NoNullState";
     char *bitField =    data >> 8 & 1 ? "BufferedBytes" : "BitField";
 
-    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
-    printf("%pAdding new input parser, reading %i groups of %i bits resulting in %i bits read", padding, reportCount, reportSize, reportCount * reportSize);
+    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)\n", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
+    printf("%p  Adding new input parser, reading %i groups of %i bits resulting in %i bits read\n", padding, reportCount, reportSize, reportCount * reportSize);
+    uint32_t usageCount = listCount(*usages);
+    if (usageCount == 1) {
+        printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, U32(listGet(*usages, 0))));
+    } else if (usageCount == reportCount) {
+        printf("%p  New input has the following usages:\n", padding);
+        uint32_t i;
+        foreach (*usages, void *, currentUsage, {
+            printf("%p    Interpreting report %i as %s\n", padding, i, usage(currentUsagePage, U32(currentUsage)));
+        });
+    } else {
+        printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
+    }
+    listClear(usages);
 }
 
 void parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
     uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
+    ListElement *usages = NULL;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -137,6 +156,7 @@ void parseReportDescriptor(uint8_t *descriptor) {
             break;
         case 2:
             printf("%pUsage(%x: %s)\n", padding, data, usage(currentUsagePage, data));
+            listAdd(&usages, PTR(data));
             break;
         case 0x05:
             printf("%pLogicalMinimum(%x)\n", padding, data);
@@ -155,7 +175,7 @@ void parseReportDescriptor(uint8_t *descriptor) {
             reportSize = data;
             break;
         case 0x20:
-            input(padding, data, reportCount, reportSize);
+            input(padding, data, reportCount, reportSize, currentUsagePage, &usages);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
@@ -167,10 +187,12 @@ void parseReportDescriptor(uint8_t *descriptor) {
         case 0x28:
             startCollection(data, padding);
             padding += 2;
+            listClear(&usages);
             break;
         case 0x30:
             padding -= 2;
             printf("%pEnd collection\n", padding);
+            listClear(&usages);
             break;
         default:
             printf("%pUnknown Item %x with data %x\n", padding, item >> 2, data);
