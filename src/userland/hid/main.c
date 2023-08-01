@@ -121,13 +121,17 @@ void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t repor
     printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)\n", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
     printf("%p  Adding new input parser, reading %i groups of %i bits resulting in %i bits read\n", padding, reportCount, reportSize, reportCount * reportSize);
     uint32_t usageCount = listCount(*usages);
-    if (usageCount == 1) {
+    if (data >> 0 & 1) {
+        // data is constant, no need to keep track of it
+    } else if (currentUsagePage == 0x09) {
+        printf("%p  New input parser has BUTTON usage for all entries\n", padding);
+    } else if (usageCount == 1) {
         printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, U32(listGet(*usages, 0))));
     } else if (usageCount == reportCount) {
         printf("%p  New input has the following usages:\n", padding);
-        uint32_t i;
+        uint32_t i = 0;
         foreach (*usages, void *, currentUsage, {
-            printf("%p    Interpreting report %i as %s\n", padding, i, usage(currentUsagePage, U32(currentUsage)));
+            printf("%p    Interpreting report %i as %s\n", padding, i++, usage(currentUsagePage, U32(currentUsage)));
         });
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
