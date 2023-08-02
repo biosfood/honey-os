@@ -1,23 +1,13 @@
 #define ALLOC_MAIN
 #include <hlib.h>
 
+#include "hid.h"
+
 REQUEST(checkFocus, "ioManager", "checkFocus");
 REQUEST(moveRelative, "mouse", "moveRelative");
 REQUEST(updateButtons, "mouse", "updateButtons");
 
 ListElement *hidDevices = NULL;
-
-typedef struct {
-    uint32_t serviceId;
-    uint32_t deviceId;
-    uint32_t normalFunction;
-    void *buffer;
-} HIDDevice;
-
-typedef struct {
-    uint8_t buttons;
-    int8_t x, y;
-} __attribute__((packed)) MouseReport;
 
 void hidListening(HIDDevice *device) {
     while (1) {
