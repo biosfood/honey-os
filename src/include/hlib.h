@@ -81,6 +81,7 @@ extern uint32_t fork(void (f)(), void *, void *, void *);
 
 extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
 #define listAdd(list, data) _listAdd(malloc, list, data)
+extern void listClear(ListElement **list, bool freeData);
 
 #define REQUEST(functionName, service, function)                               \
     uint32_t functionName(uint32_t data1, uint32_t data2) {                    \

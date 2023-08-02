@@ -60,3 +60,19 @@ bool listRemoveValue(ListElement **list, void *value) {
     }
     return false;
 }
+
+void listClear(ListElement **list, bool freeData) {
+    ListElement *current = *list;
+    if (!current) {
+        return;
+    }
+    while (current->next) {
+        if (freeData) {
+            free(current->data);
+        }
+        ListElement *next = current->next;
+        free(current);
+        current = next;
+    }
+    *list = NULL;
+}

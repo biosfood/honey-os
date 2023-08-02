@@ -91,11 +91,6 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-void listClear(ListElement **list) {
-    // TODO
-    *list = NULL;
-}
-
 void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
@@ -126,7 +121,7 @@ void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t repor
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
     }
-    listClear(usages);
+    listClear(usages, false);
 }
 
 void parseReportDescriptor(uint8_t *descriptor) {
@@ -181,12 +176,12 @@ void parseReportDescriptor(uint8_t *descriptor) {
         case 0x28:
             startCollection(data, padding);
             padding += 2;
-            listClear(&usages);
+            listClear(&usages, false);
             break;
         case 0x30:
             padding -= 2;
             printf("%pEnd collection\n", padding);
-            listClear(&usages);
+            listClear(&usages, false);
             break;
         default:
             printf("%pUnknown Item %x with data %x\n", padding, item >> 2, data);
