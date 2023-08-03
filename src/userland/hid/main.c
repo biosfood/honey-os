@@ -110,6 +110,9 @@ void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t repor
         // data is constant, no need to keep track of it
     } else if (currentUsagePage == 0x09) {
         printf("%p  New input parser has BUTTON usage for all entries\n", padding);
+        for (uint32_t i = 0; i < reportCount; i++) {
+            printf("%p    Interpreting report %i as button %i\n", padding, i, i + 1);
+        }
     } else if (usageCount == 1) {
         printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, U32(listGet(*usages, 0))));
     } else if (usageCount == reportCount) {
