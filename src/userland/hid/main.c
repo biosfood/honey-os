@@ -91,7 +91,7 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages) {
+uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -125,12 +125,14 @@ void input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t repor
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
     }
     listClear(usages, false);
+    return reportCount * reportSize;
 }
 
-void parseReportDescriptor(uint8_t *descriptor) {
+uint32_t parseReportDescriptor(uint8_t *descriptor) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
     uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
+    uint32_t totalBits = 0;
     ListElement *usages = NULL;
     while (1) {
         uint8_t item = *read;
@@ -141,7 +143,7 @@ void parseReportDescriptor(uint8_t *descriptor) {
         read += dataSize;
         switch (item >> 2) {
         case 0:
-            return;
+            return totalBits;
         case 1:
             printf("%pUsagePage(%x: %s)\n", padding, data, usagePage(data));
             currentUsagePage = data;
@@ -167,7 +169,7 @@ void parseReportDescriptor(uint8_t *descriptor) {
             reportSize = data;
             break;
         case 0x20:
-            input(padding, data, reportCount, reportSize, currentUsagePage, &usages);
+            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
@@ -191,6 +193,7 @@ void parseReportDescriptor(uint8_t *descriptor) {
             break;
         }
     }
+    return totalBits;
 }
 
 uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t serviceName, uint32_t serviceId) {
@@ -201,7 +204,11 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
     printf("registered a new HID device, dumping report descriptor:\n");
-    parseReportDescriptor(report);
+    uint32_t totalBits = parseReportDescriptor(report);
+    printf("The report descriptor consumes a total of %i bits.\n", totalBits);
+    if (totalBits <= 64) {
+        printf("The report descripor can be read directly from the data field in the normal function\n");
+    }
     fork(hidListening, device, 0, 0);
     return 0;
 }
