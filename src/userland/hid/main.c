@@ -9,17 +9,6 @@ REQUEST(updateButtons, "mouse", "updateButtons");
 
 ListElement *hidDevices = NULL;
 
-void hidListening(HIDDevice *device) {
-    while (1) {
-        request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
-        MouseReport *report = device->buffer;
-        moveRelative((int32_t) report->x, (int32_t)report->y);
-        updateButtons(report->buttons, 0);
-        // todo: sleep for at least endpoint->interval?
-        sleep(10);
-    }
-}
-
 char *collectionTypes[] = {
     "Physical",
     "Application",
@@ -91,7 +80,15 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages) {
+void insertInputReader(uint32_t reportSize, uint32_t usagePage, uint32_t usage, uint32_t data, ListElement **inputReaders) {
+    InputReader *reader = malloc(sizeof(InputReader));
+    reader->size = reportSize;
+    reader->usagePage = usagePage;
+    reader->usage = usage;
+    listAdd(inputReaders, reader);
+}
+
+uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages, ListElement **inputReaders) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -108,18 +105,28 @@ uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t r
     uint32_t usageCount = listCount(*usages);
     if (data >> 0 & 1) {
         // data is constant, no need to keep track of it
+        for (uint32_t i = 0; i < reportCount; i++) {
+            insertInputReader(reportSize, currentUsagePage, i, data, inputReaders);
+        }
     } else if (currentUsagePage == 0x09) {
         printf("%p  New input parser has BUTTON usage for all entries\n", padding);
+        // TODO: research exact implementation for this
         for (uint32_t i = 0; i < reportCount; i++) {
             printf("%p    Interpreting report %i as button %i\n", padding, i, i + 1);
+            insertInputReader(reportSize, currentUsagePage, i, data, inputReaders);
         }
     } else if (usageCount == 1) {
-        printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, U32(listGet(*usages, 0))));
+        uint8_t currentUsage = U32(listGet(*usages, 0));
+        printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, currentUsage));
+        for (uint32_t i = 0; i < reportCount; i++) {
+            insertInputReader(reportSize, currentUsagePage, currentUsage, data, inputReaders);
+        }
     } else if (usageCount == reportCount) {
         printf("%p  New input has the following usages:\n", padding);
         uint32_t i = 0;
         foreach (*usages, void *, currentUsage, {
             printf("%p    Interpreting report %i as %s\n", padding, i++, usage(currentUsagePage, U32(currentUsage)));
+            insertInputReader(reportSize, currentUsagePage, U32(currentUsage), data, inputReaders);
         });
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
@@ -128,7 +135,7 @@ uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t r
     return reportCount * reportSize;
 }
 
-uint32_t parseReportDescriptor(uint8_t *descriptor) {
+uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) {
     uint8_t *read = descriptor;
     uint32_t padding = 0;
     uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
@@ -169,7 +176,7 @@ uint32_t parseReportDescriptor(uint8_t *descriptor) {
             reportSize = data;
             break;
         case 0x20:
-            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages);
+            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages, inputReaders);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
@@ -196,6 +203,29 @@ uint32_t parseReportDescriptor(uint8_t *descriptor) {
     return totalBits;
 }
 
+uint32_t consumeBits(uint32_t **data, uint8_t *bit, uint8_t count) {
+    // TODO: improve this implementation
+    uint32_t result = 0;
+    uint32_t mask = ((1 << count) - 1) << *bit;
+    result = (**data & mask) >> *bit;
+    *bit += count;
+    return result;
+}
+
+void hidListening(HIDDevice *device) {
+    while (1) {
+        request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
+        uint32_t *report = device->buffer;
+        uint8_t bit = 0;
+        foreach (device->inputReaders, InputReader *, reader, {
+            uint32_t data = consumeBits(&report, &bit, reader->size);
+            printf("consumed: %i (%i bits)\n", data, reader->size);
+        });
+        // TODO: sleep for at least endpoint->interval?
+        sleep(10);
+    }
+}
+
 uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t serviceName, uint32_t serviceId) {
     uint8_t *report = requestMemory(1, 0, reportDescriptor);
     HIDDevice *device = malloc(sizeof(HIDDevice));
@@ -203,8 +233,9 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     device->deviceId = usbDevice; // USB calls this a interface, others may differ
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
+    device->inputReaders = NULL;
     printf("registered a new HID device, dumping report descriptor:\n");
-    uint32_t totalBits = parseReportDescriptor(report);
+    uint32_t totalBits = parseReportDescriptor(report, &device->inputReaders);
     printf("The report descriptor consumes a total of %i bits.\n", totalBits);
     if (totalBits <= 64) {
         printf("The report descripor can be read directly from the data field in the normal function\n");
