@@ -219,7 +219,11 @@ void hidListening(HIDDevice *device) {
         uint8_t bit = 0;
         foreach (device->inputReaders, InputReader *, reader, {
             uint32_t data = consumeBits(&report, &bit, reader->size);
-            printf("consumed: %i (%i bits)\n", data, reader->size);
+            // printf("consumed: %i (%i bits)\n", data, reader->size);
+            if (reader->usagePage == 1 && reader->usage == 0x30) {
+                // mouse X axis
+                moveRelative((int8_t) data, 0);
+            }
         });
         // TODO: sleep for at least endpoint->interval?
         sleep(10);
