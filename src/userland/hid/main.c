@@ -80,19 +80,19 @@ char *usage(uint32_t usagePage, uint32_t data) {
     return "Unknown";
 }
 
-void insertInputReader(uint32_t reportSize, uint32_t usagePage, uint32_t usage, uint32_t data, ListElement **inputReaders, uint32_t logicalMin, uint32_t logicalMax) {
+void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
     InputReader *reader = malloc(sizeof(InputReader));
-    reader->size = reportSize;
-    reader->usagePage = usagePage;
+    reader->size = state->reportSize;
+    reader->usagePage = state->currentUsagePage;
     reader->usage = usage;
     // signed integers are represented as 2s-complement
-    reader->isSigned = logicalMin > logicalMax;
-    reader->min = logicalMin;
-    reader->max = logicalMax;
+    reader->isSigned = state->logicalMin > state->logicalMax;
+    reader->min = state->logicalMin;
+    reader->max = state->logicalMax;
     listAdd(inputReaders, reader);
 }
 
-uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages, ListElement **inputReaders, uint32_t usageMinimum, uint32_t usageMaximum, uint32_t logicalMin, uint32_t logicalMax) {
+uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReaders) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -104,49 +104,70 @@ uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t r
     char *null =        data >> 6 & 1 ? "NullState" : "NoNullState";
     char *bitField =    data >> 8 & 1 ? "BufferedBytes" : "BitField";
 
-    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)\n", padding, data, constant, array, absolute, wrap, linear, prefered, null, bitField);
-    printf("%p  Adding new input parser, reading %i groups of %i bits resulting in %i bits read\n", padding, reportCount, reportSize, reportCount * reportSize);
-    uint32_t usageCount = listCount(*usages);
+    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)\n",
+            state->padding,
+            data,
+            constant,
+            array,
+            absolute,
+            wrap,
+            linear,
+            prefered,
+            null,
+            bitField
+    );
+    printf("%p  Adding new input parser, reading %i groups of %i bits resulting in %i bits read\n",
+            state->padding,
+            state->reportCount,
+            state->reportSize,
+            state->reportCount * state->reportSize
+    );
+    uint32_t usageCount = listCount(state->usages);
     if (data >> 0 & 1) {
         // data is constant, no need to keep track of it
-        for (uint32_t i = 0; i < reportCount; i++) {
-            insertInputReader(reportSize, currentUsagePage, i, data, inputReaders, logicalMin, logicalMax);
+        for (uint32_t i = 0; i < state->reportCount; i++) {
+            insertInputReader(state, i, data, inputReaders);
         }
-    } else if (currentUsagePage == 0x09) {
-        printf("%p  New input parser has BUTTON usage for all entries\n", padding);
+    } else if (state->currentUsagePage == 0x09) {
+        printf("%p  New input parser has BUTTON usage for all entries\n", state->padding);
         // TODO: research exact implementation for this
-        for (uint32_t i = 0; i < reportCount; i++) {
-            printf("%p    Interpreting report %i as button %i\n", padding, i, i + 1);
-            insertInputReader(reportSize, currentUsagePage, i, data, inputReaders, logicalMin, logicalMax);
+        for (uint32_t i = 0; i < state->reportCount; i++) {
+            printf("%p    Interpreting report %i as button %i\n", state->padding, i, i + 1);
+            insertInputReader(state, i, data, inputReaders);
         }
     } else if (usageCount == 1) {
-        uint8_t currentUsage = U32(listGet(*usages, 0));
-        printf("%p  New input parser has usage %s for all entries\n", padding, usage(currentUsagePage, currentUsage));
-        for (uint32_t i = 0; i < reportCount; i++) {
-            insertInputReader(reportSize, currentUsagePage, currentUsage, data, inputReaders, logicalMin, logicalMax);
+        uint8_t currentUsage = U32(listGet(state->usages, 0));
+        printf("%p  New input parser has usage %s for all entries\n",
+                state->padding,
+                usage(state->currentUsagePage, currentUsage)
+        );
+        for (uint32_t i = 0; i < state->reportCount; i++) {
+            insertInputReader(state, currentUsage, data, inputReaders);
         }
-    } else if (usageCount == reportCount) {
-        printf("%p  New input has the following usages:\n", padding);
+    } else if (usageCount == state->reportCount) {
+        printf("%p  New input has the following usages:\n", state->padding);
         uint32_t i = 0;
-        foreach (*usages, void *, currentUsage, {
-            printf("%p    Interpreting report %i as %s\n", padding, i++, usage(currentUsagePage, U32(currentUsage)));
-            insertInputReader(reportSize, currentUsagePage, U32(currentUsage), data, inputReaders, logicalMin, logicalMax);
+        foreach (state->usages, void *, currentUsage, {
+            printf("%p    Interpreting report %i as %s\n",
+                    state->padding,
+                    i++,
+                    usage(state->currentUsagePage, U32(currentUsage))
+            );
+            insertInputReader(state, U32(currentUsage), data, inputReaders);
         });
     } else {
-        printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n", padding, reportCount, usageCount);
+        printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n",
+                state->padding,
+                state->reportCount,
+                usageCount);
     }
-    listClear(usages, false);
-    return reportCount * reportSize;
+    listClear(&state->usages, false);
+    return state->reportCount * state->reportSize;
 }
 
 uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) {
+    ReportParserState state = {0};
     uint8_t *read = descriptor;
-    uint32_t padding = 0;
-    uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
-    uint32_t totalBits = 0;
-    uint32_t usageMinimum = 0, usageMaximum = 0;
-    uint32_t logicalMin = 0, logicalMax = 0;
-    ListElement *usages = NULL;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -156,61 +177,61 @@ uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) 
         read += dataSize;
         switch (item >> 2) {
         case 0:
-            return totalBits;
+            return state.totalBits;
         case 1:
-            printf("%pUsagePage(%x: %s)\n", padding, data, usagePage(data));
-            currentUsagePage = data;
+            printf("%pUsagePage(%x: %s)\n", state.padding, data, usagePage(data));
+            state.currentUsagePage = data;
             break;
         case 2:
-            printf("%pUsage(%x: %s)\n", padding, data, usage(currentUsagePage, data));
-            listAdd(&usages, PTR(data));
+            printf("%pUsage(%x: %s)\n", state.padding, data, usage(state.currentUsagePage, data));
+            listAdd(&state.usages, PTR(data));
             break;
         case 0x05:
-            printf("%pLogicalMinimum(%x)\n", padding, data);
-            logicalMin = data;
+            printf("%pLogicalMinimum(%x)\n", state.padding, data);
+            state.logicalMin = data;
             break;
         case 0x09:
-            printf("%pLogicalMaximum(%x)\n", padding, data);
-            logicalMax = data;
+            printf("%pLogicalMaximum(%x)\n", state.padding, data);
+            state.logicalMax = data;
             break;
         case 0x06:
-            printf("%pUsageMinimum(%x)\n", padding, data);
-            usageMinimum = data;
+            printf("%pUsageMinimum(%x)\n", state.padding, data);
+            state.usageMinimum = data;
             break;
         case 0x0A:
-            printf("%pUsageMaximum(%x)\n", padding, data);
-            usageMaximum = data;
+            printf("%pUsageMaximum(%x)\n", state.padding, data);
+            state.usageMaximum = data;
             break;
         case 0x1D:
-            printf("%pReportSize(%x)\n", padding, data);
-            reportSize = data;
+            printf("%pReportSize(%x)\n", state.padding, data);
+            state.reportSize = data;
             break;
         case 0x20:
-            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages, inputReaders, usageMinimum, usageMaximum, logicalMin, logicalMax);
+            state.totalBits += input(&state, data, inputReaders);
             break;
         case 0x21:
-            printf("%pReportId(%x)\n", padding, data);
+            printf("%pReportId(%x)\n", state.padding, data);
             break;
         case 0x25:
-            printf("%pReportCount(%x)\n", padding, data);
-            reportCount = data;
+            printf("%pReportCount(%x)\n", state.padding, data);
+            state.reportCount = data;
             break;
         case 0x28:
-            startCollection(data, padding);
-            padding += 2;
-            listClear(&usages, false);
+            startCollection(data, state.padding);
+            state.padding += 2;
+            listClear(&state.usages, false);
             break;
         case 0x30:
-            padding -= 2;
-            printf("%pEnd collection\n", padding);
-            listClear(&usages, false);
+            state.padding -= 2;
+            printf("%pEnd collection\n", state.padding);
+            listClear(&state.usages, false);
             break;
         default:
-            printf("%pUnknown Item %x with data %x\n", padding, item >> 2, data);
+            printf("%pUnknown Item %x with data %x\n", state.padding, item >> 2, data);
             break;
         }
     }
-    return totalBits;
+    return state.totalBits;
 }
 
 uint32_t consumeBits(uint32_t **data, uint8_t *bit, uint8_t count) {

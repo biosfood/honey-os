@@ -23,4 +23,13 @@ typedef struct {
     bool discard, relative, isSigned;
 } InputReader;
 
+typedef struct {
+    uint32_t padding;
+    uint32_t currentUsagePage, reportSize, reportCount;
+    uint32_t totalBits;
+    uint32_t usageMinimum, usageMaximum;
+    uint32_t logicalMin, logicalMax;
+    ListElement *usages;
+} ReportParserState;
+
 #endif
