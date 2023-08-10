@@ -19,7 +19,8 @@ typedef struct {
 typedef struct {
     uint8_t usagePage, usage;
     uint8_t size;
-    bool discard, relative;
+    int32_t min, max;
+    bool discard, relative, isSigned;
 } InputReader;
 
 #endif

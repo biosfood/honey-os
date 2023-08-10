@@ -85,10 +85,11 @@ void insertInputReader(uint32_t reportSize, uint32_t usagePage, uint32_t usage, 
     reader->size = reportSize;
     reader->usagePage = usagePage;
     reader->usage = usage;
+    // signed integers are represented as 2s-complement
     listAdd(inputReaders, reader);
 }
 
-uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages, ListElement **inputReaders) {
+uint32_t input(uint32_t padding, uint32_t data, uint32_t reportCount, uint32_t reportSize, uint32_t currentUsagePage, ListElement **usages, ListElement **inputReaders, uint32_t usageMinimum, uint32_t usageMaximum) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -140,6 +141,7 @@ uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) 
     uint32_t padding = 0;
     uint32_t currentUsagePage = 0, reportSize = 0, reportCount = 0;
     uint32_t totalBits = 0;
+    uint32_t usageMinimum = 0, usageMaximum = 0;
     ListElement *usages = NULL;
     while (1) {
         uint8_t item = *read;
@@ -167,16 +169,18 @@ uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) 
             break;
         case 0x06:
             printf("%pUsageMinimum(%x)\n", padding, data);
+            usageMinimum = data;
             break;
         case 0x0A:
             printf("%pUsageMaximum(%x)\n", padding, data);
+            usageMaximum = data;
             break;
         case 0x1D:
             printf("%pReportSize(%x)\n", padding, data);
             reportSize = data;
             break;
         case 0x20:
-            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages, inputReaders);
+            totalBits += input(padding, data, reportCount, reportSize, currentUsagePage, &usages, inputReaders, usageMinimum, usageMaximum);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", padding, data);
@@ -219,10 +223,18 @@ void hidListening(HIDDevice *device) {
         uint8_t bit = 0;
         foreach (device->inputReaders, InputReader *, reader, {
             uint32_t data = consumeBits(&report, &bit, reader->size);
-            // printf("consumed: %i (%i bits)\n", data, reader->size);
+            int32_t processedData = data;
+            if (reader->isSigned) {
+                // if signed, data might need to be padded with ones
+                if (reader->size == 8) {
+                    processedData = (int32_t)(int8_t) data;
+                } else if (reader->size == 16)  {
+                    processedData = (int32_t)(int16_t) data;
+                }
+            }
             if (reader->usagePage == 1 && reader->usage == 0x30) {
                 // mouse X axis
-                moveRelative((int8_t) data, 0);
+                moveRelative(processedData, 0);
             }
         });
         // TODO: sleep for at least endpoint->interval?
