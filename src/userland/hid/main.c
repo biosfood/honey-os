@@ -128,13 +128,6 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
         for (uint32_t i = 0; i < state->reportCount; i++) {
             insertInputReader(state, i, data, inputReaders);
         }
-    } else if (state->currentUsagePage == 0x09) {
-        printf("%p  New input parser has BUTTON usage for all entries\n", state->padding);
-        // TODO: research exact implementation for this
-        for (uint32_t i = 0; i < state->reportCount; i++) {
-            printf("%p    Interpreting report %i as button %i\n", state->padding, i, i + 1);
-            insertInputReader(state, i, data, inputReaders);
-        }
     } else if (usageCount == 1) {
         uint8_t currentUsage = U32(listGet(state->usages, 0));
         printf("%p  New input parser has usage %s for all entries\n",
@@ -155,6 +148,10 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
             );
             insertInputReader(state, U32(currentUsage), data, inputReaders);
         });
+    } else if (usageCount == 0 && (state->usageMax - state->usageMin + 1 == state->reportCount)) {
+        for (uint32_t currentUsage = state->usageMin; currentUsage <= state->usageMax; currentUsage++) {
+            insertInputReader(state, currentUsage, data, inputReaders);
+        }
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n",
                 state->padding,
@@ -196,11 +193,11 @@ uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) 
             break;
         case 0x06:
             printf("%pUsageMinimum(%x)\n", state.padding, data);
-            state.usageMinimum = data;
+            state.usageMin = data;
             break;
         case 0x0A:
             printf("%pUsageMaximum(%x)\n", state.padding, data);
-            state.usageMaximum = data;
+            state.usageMax = data;
             break;
         case 0x1D:
             printf("%pReportSize(%x)\n", state.padding, data);
