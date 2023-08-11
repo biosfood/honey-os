@@ -4,9 +4,6 @@
 #include <hid.h>
 
 REQUEST(checkFocus, "ioManager", "checkFocus");
-REQUEST(moveRelative, "mouse", "moveRelative");
-REQUEST(updateButtons, "mouse", "updateButtons");
-
 ListElement *hidDevices = NULL;
 
 char *collectionTypes[] = {
@@ -29,39 +26,9 @@ void startCollection(uint32_t data, uint32_t padding) {
     printf("%pCollection(%s)\n", padding, collectionType);
 }
 
-char *usage(UsagePage *usagePage, uint32_t data) {
-    if (usagePage->id != 1) { // Generic Desktop Page
-        return "Unknown: unimplemented usage page";
-    }
-    switch (data) {
-    case 0: return "Undefined";
-    case 1: return "Pointer";
-    case 2: return "Mouse";
-    case 3: return "Reserved";
-    case 4: return "Joystick";
-    case 5: return "Game Pad";
-    case 6: return "Keyboard";
-    case 7: return "Keypad";
-    case 8: return "Multi-axis Controller";
-    case 9: return "Tablet PC System Controls";
-    case 0x30: return "X";
-    case 0x31: return "Y";
-    case 0x32: return "Z";
-    case 0x33: return "Rx";
-    case 0x34: return "Ry";
-    case 0x35: return "Rz";
-    case 0x36: return "Slider";
-    case 0x37: return "Dial";
-    case 0x38: return "Wheel";
-    case 0x39: return "Hat switch";
-    }
-    return "Unknown";
-}
-
-void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
+void insertInputReader(ReportParserState *state, Usage *usage, uint32_t data, ListElement **inputReaders) {
     InputReader *reader = malloc(sizeof(InputReader));
     reader->size = state->reportSize;
-    reader->usagePage = state->usagePage;
     reader->usage = usage;
     // signed integers are represented as 2s-complement
     reader->isSigned = state->logicalMin > state->logicalMax;
@@ -104,31 +71,31 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
     if (data >> 0 & 1) {
         // data is constant, no need to keep track of it
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, i, data, inputReaders);
+            insertInputReader(state, getUsage(state->usagePage, i), data, inputReaders);
         }
     } else if (usageCount == 1) {
-        uint8_t currentUsage = U32(listGet(state->usages, 0));
+        Usage *usage = listGet(state->usages, 0);
         printf("%p  New input parser has usage %s for all entries\n",
                 state->padding,
-                usage(state->usagePage, currentUsage)
+                usage ? usage->name : "Unknown"
         );
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, currentUsage, data, inputReaders);
+            insertInputReader(state, usage, data, inputReaders);
         }
     } else if (usageCount == state->reportCount) {
         printf("%p  New input has the following usages:\n", state->padding);
         uint32_t i = 0;
-        foreach (state->usages, void *, currentUsage, {
+        foreach (state->usages, Usage *, usage, {
             printf("%p    Interpreting report %i as %s\n",
                     state->padding,
                     i++,
-                    usage(state->usagePage, U32(currentUsage))
+                    usage ? usage->name : "Unknown"
             );
-            insertInputReader(state, U32(currentUsage), data, inputReaders);
+            insertInputReader(state, usage, data, inputReaders);
         });
     } else if (usageCount == 0 && (state->usageMax - state->usageMin + 1 == state->reportCount)) {
-        for (uint32_t currentUsage = state->usageMin; currentUsage <= state->usageMax; currentUsage++) {
-            insertInputReader(state, currentUsage, data, inputReaders);
+        for (uint32_t usage = state->usageMin; usage <= state->usageMax; usage++) {
+            insertInputReader(state, getUsage(state->usagePage, usage), data, inputReaders);
         }
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n",
@@ -149,6 +116,7 @@ uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
         uint32_t data = *((uint32_t *)read);
         data &= 0xFFFFFFFF >> ((4 - dataSize) * 8);
         read += dataSize;
+        Usage *usage;
         switch (item >> 2) {
         case 0:
             return state.totalBits;
@@ -157,8 +125,9 @@ uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
             printf("%pUsagePage(%x: %s)\n", state.padding, data, state.usagePage->name);
             break;
         case 2:
-            printf("%pUsage(%x: %s)\n", state.padding, data, usage(state.usagePage, data));
-            listAdd(&state.usages, PTR(data));
+            usage = getUsage(state.usagePage, data);
+            printf("%pUsage(%x: %s)\n", state.padding, data, usage ? usage->name : "Unknown");
+            listAdd(&state.usages, usage);
             break;
         case 0x05:
             printf("%pLogicalMinimum(%x)\n", state.padding, data);
@@ -233,9 +202,8 @@ void hidListening(HIDDevice *device) {
                     processedData = (int32_t)(int16_t) data;
                 }
             }
-            if (reader->usagePage->id == 1 && reader->usage == 0x30) {
-                // mouse X axis
-                moveRelative(processedData, 0);
+            if (reader->usage) {
+                reader->usage->handle(processedData);
             }
         });
         // TODO: sleep for at least endpoint->interval?
