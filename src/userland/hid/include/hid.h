@@ -22,6 +22,7 @@ typedef struct {
 } UsagePage;
 
 extern UsagePage *getUsagePage(uint32_t id);
+extern void initializeUsagePages();
 
 typedef struct {
     uint32_t padding;

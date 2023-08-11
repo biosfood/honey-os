@@ -1,0 +1,6 @@
+-I./include
+-I../../include
+clang
+-fms-extensions
+-Wno-microsoft-anon-tag
+-Wno-incompatible-library-redeclaration

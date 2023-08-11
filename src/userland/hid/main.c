@@ -1,7 +1,7 @@
 #define ALLOC_MAIN
 #include <hlib.h>
 
-#include "hid.h"
+#include <hid.h>
 
 REQUEST(checkFocus, "ioManager", "checkFocus");
 REQUEST(moveRelative, "mouse", "moveRelative");
@@ -31,7 +31,7 @@ void startCollection(uint32_t data, uint32_t padding) {
 
 char *usage(UsagePage *usagePage, uint32_t data) {
     if (usagePage->id != 1) { // Generic Desktop Page
-        return "Unknown";
+        return "Unknown: unimplemented usage page";
     }
     switch (data) {
     case 0: return "Undefined";
@@ -263,6 +263,7 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
 
 void initialize() {
     createFunction("registerHID", (void *)registerHID);
+    initializeUsagePages();
 }
 
 int32_t main() {

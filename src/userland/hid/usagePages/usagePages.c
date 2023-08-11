@@ -1,4 +1,4 @@
-#include "hid.h"
+#include <hid.h>
 
 // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
 // page 14, section 3, table 1: Usage Page Summary
@@ -35,6 +35,12 @@ UsagePage usagePages[] = {
         .name = "PID Page",
     },
 };
+
+void initializeUsagePages() {
+    for (uint32_t i = 0; i < sizeof(usagePages) / sizeof(usagePages[0]); i++) {
+        usagePages[i].id = i;
+    }
+}
 
 UsagePage *getUsagePage(uint32_t id) {
     if (id >= sizeof(usagePages) / sizeof(usagePages[0])) {
