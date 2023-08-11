@@ -17,19 +17,28 @@ typedef struct {
 } __attribute__((packed)) MouseReport;
 
 typedef struct {
-    uint8_t usagePage, usage;
-    uint8_t size;
-    int32_t min, max;
-    bool discard, relative, isSigned;
-} InputReader;
+    char *name;
+    uint32_t id;
+} UsagePage;
+
+extern UsagePage *getUsagePage(uint32_t id);
 
 typedef struct {
     uint32_t padding;
-    uint32_t currentUsagePage, reportSize, reportCount;
+    uint32_t reportSize, reportCount;
     uint32_t totalBits;
     uint32_t usageMin, usageMax;
     uint32_t logicalMin, logicalMax;
+    UsagePage *usagePage;
     ListElement *usages;
 } ReportParserState;
+
+typedef struct {
+    uint8_t usage;
+    uint8_t size;
+    int32_t min, max;
+    UsagePage *usagePage;
+    bool discard, relative, isSigned;
+} InputReader;
 
 #endif

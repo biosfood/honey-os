@@ -29,30 +29,8 @@ void startCollection(uint32_t data, uint32_t padding) {
     printf("%pCollection(%s)\n", padding, collectionType);
 }
 
-char *usagePage(uint32_t data) {
-    // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
-    // page 14, section 3, table 1: Usage Page Summary
-    switch (data) {
-    case 1: return "Generic Desktop Controls";
-    case 2: return "Simulation Controls";
-    case 3: return "VR Controls";
-    case 4: return "Sport Controls";
-    case 5: return "Game Controls";
-    case 6: return "Generic Device Controls";
-    case 7: return "Keyboard/Keypad";
-    case 8: return "LEDs";
-    case 9: return "Button";
-    case 10: return "Ordinal";
-    case 11: return "Telephony";
-    case 12: return "Consumer";
-    case 13: return "Digitizer";
-    case 15: return "PID Page";
-    }
-    return "Unknown";
-}
-
-char *usage(uint32_t usagePage, uint32_t data) {
-    if (usagePage != 1) { // Generic Desktop Page
+char *usage(UsagePage *usagePage, uint32_t data) {
+    if (usagePage->id != 1) { // Generic Desktop Page
         return "Unknown";
     }
     switch (data) {
@@ -83,7 +61,7 @@ char *usage(uint32_t usagePage, uint32_t data) {
 void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
     InputReader *reader = malloc(sizeof(InputReader));
     reader->size = state->reportSize;
-    reader->usagePage = state->currentUsagePage;
+    reader->usagePage = state->usagePage;
     reader->usage = usage;
     // signed integers are represented as 2s-complement
     reader->isSigned = state->logicalMin > state->logicalMax;
@@ -132,7 +110,7 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
         uint8_t currentUsage = U32(listGet(state->usages, 0));
         printf("%p  New input parser has usage %s for all entries\n",
                 state->padding,
-                usage(state->currentUsagePage, currentUsage)
+                usage(state->usagePage, currentUsage)
         );
         for (uint32_t i = 0; i < state->reportCount; i++) {
             insertInputReader(state, currentUsage, data, inputReaders);
@@ -144,7 +122,7 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
             printf("%p    Interpreting report %i as %s\n",
                     state->padding,
                     i++,
-                    usage(state->currentUsagePage, U32(currentUsage))
+                    usage(state->usagePage, U32(currentUsage))
             );
             insertInputReader(state, U32(currentUsage), data, inputReaders);
         });
@@ -162,9 +140,8 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
     return state->reportCount * state->reportSize;
 }
 
-uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) {
+uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
     ReportParserState state = {0};
-    uint8_t *read = descriptor;
     while (1) {
         uint8_t item = *read;
         uint8_t dataSize = item & 0x3;
@@ -176,11 +153,11 @@ uint32_t parseReportDescriptor(uint8_t *descriptor, ListElement **inputReaders) 
         case 0:
             return state.totalBits;
         case 1:
-            printf("%pUsagePage(%x: %s)\n", state.padding, data, usagePage(data));
-            state.currentUsagePage = data;
+            state.usagePage = getUsagePage(data);
+            printf("%pUsagePage(%x: %s)\n", state.padding, data, state.usagePage->name);
             break;
         case 2:
-            printf("%pUsage(%x: %s)\n", state.padding, data, usage(state.currentUsagePage, data));
+            printf("%pUsage(%x: %s)\n", state.padding, data, usage(state.usagePage, data));
             listAdd(&state.usages, PTR(data));
             break;
         case 0x05:
@@ -256,7 +233,7 @@ void hidListening(HIDDevice *device) {
                     processedData = (int32_t)(int16_t) data;
                 }
             }
-            if (reader->usagePage == 1 && reader->usage == 0x30) {
+            if (reader->usagePage->id == 1 && reader->usage == 0x30) {
                 // mouse X axis
                 moveRelative(processedData, 0);
             }
