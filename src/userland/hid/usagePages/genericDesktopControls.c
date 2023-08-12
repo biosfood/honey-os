@@ -4,7 +4,6 @@
 // section 4, table 6, page 26
 
 REQUEST(moveRelative, "mouse", "moveRelative");
-REQUEST(updateButtons, "mouse", "updateButtons");
 
 void handleX(int32_t dx) {
     moveRelative(dx, 0);

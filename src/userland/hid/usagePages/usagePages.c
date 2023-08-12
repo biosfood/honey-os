@@ -1,6 +1,7 @@
 #include <hid.h>
 
 extern Usage genericDesktopControlsUsages[];
+extern Usage buttonUsages[];
 
 // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
 // page 14, section 3, table 1: Usage Page Summary
@@ -34,7 +35,7 @@ UsagePage usagePages[] = {
         .usages = NULL,
     }, {
         .name = "Button",
-        .usages = NULL,
+        .usages = buttonUsages,
     }, {
         .name = "Ordinal",
         .usages = NULL,
