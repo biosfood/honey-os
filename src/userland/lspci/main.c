@@ -84,15 +84,14 @@ void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
         pciConfigRead(bus, device, function, 0x09) & 0xFF;
     pciDevice->configuration =
         pciConfigRead(bus, device, function, 0x04) & 0xFFFF;
-    pciDevice->bar[0] = pciConfigRead(bus, device, function, 0x10);
-    pciDevice->bar[1] = pciConfigRead(bus, device, function, 0x14);
-    pciDevice->bar[2] = pciConfigRead(bus, device, function, 0x18);
-    pciDevice->bar[3] = pciConfigRead(bus, device, function, 0x1C);
-    pciDevice->bar[4] = pciConfigRead(bus, device, function, 0x20);
-    pciDevice->bar[5] = pciConfigRead(bus, device, function, 0x24);
+    for (uint8_t i = 0; i < 6; i++) {
+        // unknown issue: direct assignment doesn't work
+        uint32_t bar = pciConfigRead(bus, device, function, 0x10 + 4 * i);
+        pciDevice->bar[i] = bar;
+    }
     listAdd(&pciDevices, pciDevice);
-    printf("device at %i/%i/%i: %s/%i bar0: %x\n", bus, device, function,
-           classNames[class], subclass, pciDevice->bar[0]);
+    printf("device at [%i:%i:%i]: %s (subclass %i)\n", bus, device, function,
+           classNames[class], subclass);
     if (class == 6 && subclass == 4) {
         checkBus(pciConfigRead(bus, device, function, 0x19) & 0xFF);
     }
