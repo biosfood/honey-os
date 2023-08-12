@@ -30,6 +30,7 @@ void insertInputReader(ReportParserState *state, Usage *usage, uint32_t data, Li
     InputReader *reader = malloc(sizeof(InputReader));
     reader->size = state->reportSize;
     reader->usage = usage;
+    reader->discard = (data >> 0) & 1;
     // signed integers are represented as 2s-complement
     reader->isSigned = state->logicalMin > state->logicalMax;
     reader->min = state->logicalMin;
@@ -193,6 +194,9 @@ void hidListening(HIDDevice *device) {
         uint8_t bit = 0;
         foreach (device->inputReaders, InputReader *, reader, {
             uint32_t data = consumeBits(&report, &bit, reader->size);
+            if (reader->discard) {
+                continue;
+            }
             int32_t processedData = data;
             if (reader->isSigned) {
                 // if signed, data might need to be padded with ones
