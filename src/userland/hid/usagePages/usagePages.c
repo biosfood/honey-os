@@ -2,6 +2,7 @@
 
 extern Usage genericDesktopControlsUsages[];
 extern void handleButton(uint32_t usage, int32_t data);
+extern void handleKeyboard(uint32_t usage, int32_t data);
 
 // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
 // page 14, section 3, table 1: Usage Page Summary
@@ -29,7 +30,7 @@ UsagePage usagePages[] = {
         .usages = NULL,
     }, {
         .name = "Keyboard/Keypad",
-        .usages = NULL,
+        .handle = handleKeyboard,
     }, {
         .name = "LEDs",
         .usages = NULL,

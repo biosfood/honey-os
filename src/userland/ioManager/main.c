@@ -122,7 +122,7 @@ uint32_t getsImplementation() {
 int32_t main() {
     ioManager = getServiceId();
     logFunction = createFunction("", (void *)handleLog);
-    keyCallback = createFunction("", (void *)handleKey);
+    keyCallback = createFunction("keyCallback", (void *)handleKey);
     createFunction("checkFocus", (void *)checkFocus);
     mainService = loadFromInitrd("vga");
     mainOut = getFunction(mainService, "writeChar");

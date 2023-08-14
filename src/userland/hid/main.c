@@ -26,7 +26,7 @@ void startCollection(uint32_t data, uint32_t padding) {
     printf("%pCollection(%s)\n", padding, collectionType);
 }
 
-void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
+void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders, bool reportsUsage) {
     InputReader *reader = malloc(sizeof(InputReader));
     reader->size = state->reportSize;
     reader->usagePage = state->usagePage;
@@ -36,6 +36,7 @@ void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, 
     reader->isSigned = state->logicalMin > state->logicalMax;
     reader->min = state->logicalMin;
     reader->max = state->logicalMax;
+    reader->reportsUsage = reportsUsage;
     listAdd(inputReaders, reader);
 }
 
@@ -73,22 +74,26 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
     if (data >> 0 & 1) {
         // data is constant, no need to keep track of it
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, i, data, inputReaders);
+            insertInputReader(state, i, data, inputReaders, false);
         }
     } else if (usageCount == 1) {
         uint32_t usage = U32(listGet(state->usages, 0));
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, usage, data, inputReaders);
+            insertInputReader(state, usage, data, inputReaders, false);
         }
     } else if (usageCount == state->reportCount) {
-        printf("%p  New input has the following usages:\n", state->padding);
         uint32_t i = 0;
         foreach (state->usages, void *, usage, {
-            insertInputReader(state, U32(usage), data, inputReaders);
+            insertInputReader(state, U32(usage), data, inputReaders, false);
         });
     } else if (usageCount == 0 && (state->usageMax - state->usageMin + 1 == state->reportCount)) {
         for (uint32_t usage = state->usageMin; usage <= state->usageMax; usage++) {
-            insertInputReader(state, usage, data, inputReaders);
+            insertInputReader(state, usage, data, inputReaders, false);
+        }
+    } else if (usageCount == 0 && (state->logicalMin == state->usageMin && state->logicalMax == state->usageMax)) {
+        // TODO: figure out exact condition for this
+        for (uint32_t i = 0; i < state->reportCount; i++) {
+            insertInputReader(state, 0, data, inputReaders, true);
         }
     } else {
         printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n",
@@ -183,9 +188,10 @@ void hidListening(HIDDevice *device) {
         request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
         uint32_t *report = device->buffer;
         uint8_t bit = 0;
+        printf("keyboard test: %x\n", *report);
         foreach (device->inputReaders, InputReader *, reader, {
             uint32_t data = consumeBits(&report, &bit, reader->size);
-            if (reader->discard) {
+            if (reader->discard || bit >= 32) {
                 continue;
             }
             int32_t processedData = data;
@@ -197,7 +203,12 @@ void hidListening(HIDDevice *device) {
                     processedData = (int32_t)(int16_t) data;
                 }
             }
-            handleUsage(reader->usagePage, reader->usage, processedData);
+            if (reader->reportsUsage) {
+                handleUsage(reader->usagePage, processedData, 1);
+                printf("keyboard test: %i\n", processedData);
+            } else {
+                handleUsage(reader->usagePage, reader->usage, processedData);
+            }
         });
         // TODO: sleep for at least endpoint->interval?
         sleep(10);
