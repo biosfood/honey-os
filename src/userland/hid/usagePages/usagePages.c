@@ -1,7 +1,7 @@
 #include <hid.h>
 
 extern Usage genericDesktopControlsUsages[];
-extern Usage buttonUsages[];
+extern void handleButton(uint32_t usage, int32_t data);
 
 // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
 // page 14, section 3, table 1: Usage Page Summary
@@ -35,7 +35,7 @@ UsagePage usagePages[] = {
         .usages = NULL,
     }, {
         .name = "Button",
-        .usages = buttonUsages,
+        .handle = handleButton,
     }, {
         .name = "Ordinal",
         .usages = NULL,
@@ -79,14 +79,13 @@ UsagePage *getUsagePage(uint32_t id) {
     return &usagePages[id];
 }
 
-Usage *getUsage(UsagePage *usagePage, uint32_t id) {
-    if (!usagePage || !usagePage->usages) {
-        return NULL;
+void handleUsage(UsagePage *usagePage, uint32_t usage, int32_t data) {
+    if (usagePage->handle) {
+        return usagePage->handle(usage, data);
     }
     for (uint32_t i = 0; i < usagePage->usageCount; i++) {
-        if (usagePage->usages[i].id == id) {
-            return &usagePage->usages[i];
+        if (usagePage->usages[i].id == usage) {
+            return usagePage->usages[i].handle(data);
         }
     }
-    return NULL;
 }

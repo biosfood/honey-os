@@ -22,6 +22,7 @@ typedef struct {
     uint32_t id;
     uint32_t usageCount;
     Usage *usages;
+    void (*handle)(uint32_t, int32_t);
 } UsagePage;
 
 extern UsagePage *getUsagePage(uint32_t id);
@@ -34,7 +35,7 @@ typedef struct Usage {
     void (*handle)(int32_t);
 } Usage;
 
-extern Usage *getUsage(UsagePage *usagePage, uint32_t id);
+extern void handleUsage(UsagePage *usagePage, uint32_t usage, int32_t data);
 
 typedef struct {
     uint32_t padding;
@@ -47,10 +48,11 @@ typedef struct {
 } ReportParserState;
 
 typedef struct {
-    Usage *usage;
+    uint32_t usage;
     uint8_t size;
     int32_t min, max;
     bool discard, relative, isSigned;
+    UsagePage *usagePage;
 } InputReader;
 
 #endif
