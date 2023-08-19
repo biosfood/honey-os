@@ -176,6 +176,10 @@ uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
 
 uint32_t consumeBits(uint32_t **data, uint8_t *bit, uint8_t count) {
     // TODO: improve this implementation
+    if (*bit >= 32) {
+        *bit -= 32;
+        (*data)++;
+    }
     uint32_t result = 0;
     uint32_t mask = ((1 << count) - 1) << *bit;
     result = (**data & mask) >> *bit;
@@ -188,10 +192,9 @@ void hidListening(HIDDevice *device) {
         request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
         uint32_t *report = device->buffer;
         uint8_t bit = 0;
-        printf("keyboard test: %x\n", *report);
         foreach (device->inputReaders, InputReader *, reader, {
             uint32_t data = consumeBits(&report, &bit, reader->size);
-            if (reader->discard || bit >= 32) {
+            if (reader->discard) {
                 continue;
             }
             int32_t processedData = data;
@@ -203,12 +206,17 @@ void hidListening(HIDDevice *device) {
                     processedData = (int32_t)(int16_t) data;
                 }
             }
+            if (reader->previousState == processedData) {
+                goto end;
+            }
             if (reader->reportsUsage) {
                 handleUsage(reader->usagePage, processedData, 1);
-                printf("keyboard test: %i\n", processedData);
             } else {
                 handleUsage(reader->usagePage, reader->usage, processedData);
             }
+            reader->previousState = processedData;
+        end:
+            asm("nop");
         });
         // TODO: sleep for at least endpoint->interval?
         sleep(10);
