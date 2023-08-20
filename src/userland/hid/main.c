@@ -33,6 +33,7 @@ void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, 
     reader->usage = usage;
     reader->discard = (data >> 0) & 1;
     reader->array = !((data >> 1) & 1);
+    reader->relative = data >> 2 & 1;
     // signed integers are represented as 2s-complement
     reader->isSigned = state->logicalMin > state->logicalMax;
     reader->min = state->logicalMin;
@@ -189,7 +190,7 @@ void hidListening(HIDDevice *device) {
                     processedData = (int32_t)(int16_t) data;
                 }
             }
-            if (reader->previousState == processedData) {
+            if (reader->previousState == processedData && !reader->relative) {
                 goto end;
             }
             if (reader->array) {
