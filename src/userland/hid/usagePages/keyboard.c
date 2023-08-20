@@ -6,7 +6,8 @@
 char keycodes[] = {
     0, 0, 0, 0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
     'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '\n'
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '\n', /* escape*/0, '\b', '\t', ' ',
+    '-', '=', '[', ']', '\\', '#', ';', '\'', /* grave accent */ 0, ',', '.', '/', /* caps lock */ 0
 };
 
 REQUEST(doKeyCallback, "ioManager", "keyCallback");
@@ -16,8 +17,8 @@ void handleKeyboard(uint32_t usage, int32_t data) {
         return;
     }
     if (usage >= sizeof(keycodes) / sizeof(char)) {
-        // doKeyCallback('E', 0);
-    } else {
+        printf("keyboard: unknown keycode %i\n", usage);
+    } else if (keycodes[usage]) {
         doKeyCallback(keycodes[usage], 0);
     }
 }
