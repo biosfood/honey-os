@@ -26,21 +26,22 @@ void startCollection(uint32_t data, uint32_t padding) {
     printf("%pCollection(%s)\n", padding, collectionType);
 }
 
-void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders, bool reportsUsage) {
+void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
     InputReader *reader = malloc(sizeof(InputReader));
     reader->size = state->reportSize;
     reader->usagePage = state->usagePage;
     reader->usage = usage;
     reader->discard = (data >> 0) & 1;
+    reader->array = !((data >> 1) & 1);
     // signed integers are represented as 2s-complement
     reader->isSigned = state->logicalMin > state->logicalMax;
     reader->min = state->logicalMin;
     reader->max = state->logicalMax;
-    reader->reportsUsage = reportsUsage;
     listAdd(inputReaders, reader);
+    state->totalBits += state->reportSize;
 }
 
-uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReaders) {
+void input(ReportParserState *state, uint32_t data, ListElement **inputReaders) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -64,45 +65,27 @@ uint32_t input(ReportParserState *state, uint32_t data, ListElement **inputReade
             null,
             bitField
     );
-    printf("%p  Adding new input parser, reading %i groups of %i bits resulting in %i bits read\n",
-            state->padding,
-            state->reportCount,
-            state->reportSize,
-            state->reportCount * state->reportSize
-    );
     uint32_t usageCount = listCount(state->usages);
-    if (data >> 0 & 1) {
-        // data is constant, no need to keep track of it
-        for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, i, data, inputReaders, false);
-        }
-    } else if (usageCount == 1) {
+    if (usageCount == 1) {
         uint32_t usage = U32(listGet(state->usages, 0));
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, usage, data, inputReaders, false);
+            insertInputReader(state, usage, data, inputReaders);
         }
     } else if (usageCount == state->reportCount) {
         uint32_t i = 0;
         foreach (state->usages, void *, usage, {
-            insertInputReader(state, U32(usage), data, inputReaders, false);
+            insertInputReader(state, U32(usage), data, inputReaders);
         });
     } else if (usageCount == 0 && (state->usageMax - state->usageMin + 1 == state->reportCount)) {
         for (uint32_t usage = state->usageMin; usage <= state->usageMax; usage++) {
-            insertInputReader(state, usage, data, inputReaders, false);
-        }
-    } else if (usageCount == 0 && (state->logicalMin == state->usageMin && state->logicalMax == state->usageMax)) {
-        // TODO: figure out exact condition for this
-        for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, 0, data, inputReaders, true);
+            insertInputReader(state, usage, data, inputReaders);
         }
     } else {
-        printf("%p  Input parser cannot deduce the usage of the reports, having %i reports and %i usages\n",
-                state->padding,
-                state->reportCount,
-                usageCount);
+        for (uint32_t i = 0; i < state->reportCount; i++) {
+            insertInputReader(state, i, data, inputReaders);
+        }
     }
     listClear(&state->usages, false);
-    return state->reportCount * state->reportSize;
 }
 
 uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
@@ -147,7 +130,7 @@ uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
             state.reportSize = data;
             break;
         case 0x20:
-            state.totalBits += input(&state, data, inputReaders);
+            input(&state, data, inputReaders);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", state.padding, data);
@@ -209,7 +192,7 @@ void hidListening(HIDDevice *device) {
             if (reader->previousState == processedData) {
                 goto end;
             }
-            if (reader->reportsUsage) {
+            if (reader->array) {
                 handleUsage(reader->usagePage, processedData, 1);
             } else {
                 handleUsage(reader->usagePage, reader->usage, processedData);
@@ -234,9 +217,6 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     printf("registered a new HID device, dumping report descriptor:\n");
     uint32_t totalBits = parseReportDescriptor(report, &device->inputReaders);
     printf("The report descriptor consumes a total of %i bits.\n", totalBits);
-    if (totalBits <= 64) {
-        printf("The report descripor can be read directly from the data field in the normal function\n");
-    }
     fork(hidListening, device, 0, 0);
     return 0;
 }

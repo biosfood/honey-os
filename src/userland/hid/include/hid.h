@@ -51,7 +51,7 @@ typedef struct {
     uint32_t usage;
     uint8_t size;
     int32_t min, max;
-    bool discard, relative, isSigned, reportsUsage;
+    bool discard, relative, isSigned, array;
     UsagePage *usagePage;
     int32_t previousState;
 } InputReader;
