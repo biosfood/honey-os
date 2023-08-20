@@ -29,7 +29,11 @@ void updateButton(uint8_t button, bool newState) {
     fireEvent(updateEvent, 0);
 }
 
-bool initialized = false;
+
+bool initialized = false, updated = true;
+
+void onUpdate() { updated = true; }
+
 void initialize() {
     initialized = true;
     createFunction("moveAbsolute", (void *)moveAbsolute);
@@ -45,8 +49,12 @@ int32_t main() {
     }
     uint32_t serviceId = getServiceId();
     printf("service: %i, event: %i\n", serviceId, updateEvent);
+    subscribeEvent(serviceId, updateEvent, (void *)onUpdate);
     while (1) {
-        await(serviceId, updateEvent);
-        printf("mouse info: x: %i, y: %i, buttons: %i %i %i         \r", x, y, buttons[0], buttons[1], buttons[2]);
+        if (updated) {
+            printf("mouse info: x: %i, y: %i, buttons: %i %i %i         \r", x, y, buttons[0], buttons[1], buttons[2]);
+            updated = false;
+        }
+        sleep(200);
     }
 }
