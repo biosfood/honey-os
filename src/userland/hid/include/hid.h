@@ -8,7 +8,7 @@ typedef struct {
     uint32_t deviceId;
     uint32_t normalFunction;
     void *buffer;
-    ListElement *inputReaders;
+    ListElement *inputGroups;
 } HIDDevice;
 
 typedef struct {
@@ -48,11 +48,16 @@ typedef struct {
 } ReportParserState;
 
 typedef struct {
-    uint32_t usage;
-    uint8_t size;
+    int32_t *oldStates; // only for arrays?
+    uint8_t size, count;
     int32_t min, max;
     bool discard, relative, isSigned, array;
     UsagePage *usagePage;
+    ListElement *readers;
+} InputGroup;
+
+typedef struct {
+    uint32_t usage;
     int32_t previousState;
 } InputReader;
 

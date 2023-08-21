@@ -13,7 +13,8 @@ char keycodes[] = {
 REQUEST(doKeyCallback, "ioManager", "keyCallback");
 
 void handleKeyboard(uint32_t usage, int32_t data) {
-    if (usage == 0) {
+    if (!usage || !data) {
+        // todo: handle letting go of keys
         return;
     }
     if (usage >= sizeof(keycodes) / sizeof(char)) {

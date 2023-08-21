@@ -26,23 +26,14 @@ void startCollection(uint32_t data, uint32_t padding) {
     printf("%pCollection(%s)\n", padding, collectionType);
 }
 
-void insertInputReader(ReportParserState *state, uint32_t usage, uint32_t data, ListElement **inputReaders) {
+void insertInputReader(ReportParserState *state, uint32_t usage, ListElement **inputReaders) {
     InputReader *reader = malloc(sizeof(InputReader));
-    reader->size = state->reportSize;
-    reader->usagePage = state->usagePage;
     reader->usage = usage;
-    reader->discard = (data >> 0) & 1;
-    reader->array = !((data >> 1) & 1);
-    reader->relative = data >> 2 & 1;
-    // signed integers are represented as 2s-complement
-    reader->isSigned = state->logicalMin > state->logicalMax;
-    reader->min = state->logicalMin;
-    reader->max = state->logicalMax;
     listAdd(inputReaders, reader);
     state->totalBits += state->reportSize;
 }
 
-void input(ReportParserState *state, uint32_t data, ListElement **inputReaders) {
+void input(ReportParserState *state, uint32_t data, ListElement **inputGroups) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -66,30 +57,48 @@ void input(ReportParserState *state, uint32_t data, ListElement **inputReaders) 
             null,
             bitField
     );
+
+    InputGroup *group = malloc(sizeof(InputGroup));
+    // signed integers are represented as 2s-complement
+    group->isSigned = state->logicalMin > state->logicalMax;
+    group->size = state->reportSize;
+    group->usagePage = state->usagePage;
+    group->count = state->reportCount;
+    group->discard = (data >> 0) & 1;
+    group->array = !((data >> 1) & 1);
+    group->relative = data >> 2 & 1;
+    group->min = state->logicalMin;
+    group->max = state->logicalMax;
+    group->readers = NULL;
+    if (group->array) {
+        group->oldStates = malloc(sizeof(int32_t) * group->count);
+    }
+    listAdd(inputGroups, group);
+
     uint32_t usageCount = listCount(state->usages);
     if (usageCount == 1) {
         uint32_t usage = U32(listGet(state->usages, 0));
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, usage, data, inputReaders);
+            insertInputReader(state, usage, &group->readers);
         }
     } else if (usageCount == state->reportCount) {
         uint32_t i = 0;
         foreach (state->usages, void *, usage, {
-            insertInputReader(state, U32(usage), data, inputReaders);
+            insertInputReader(state, U32(usage), &group->readers);
         });
     } else if (usageCount == 0 && (state->usageMax - state->usageMin + 1 == state->reportCount)) {
         for (uint32_t usage = state->usageMin; usage <= state->usageMax; usage++) {
-            insertInputReader(state, usage, data, inputReaders);
+            insertInputReader(state, usage, &group->readers);
         }
     } else {
         for (uint32_t i = 0; i < state->reportCount; i++) {
-            insertInputReader(state, i, data, inputReaders);
+            insertInputReader(state, i, &group->readers);
         }
     }
     listClear(&state->usages, false);
 }
 
-uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
+uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputGroups) {
     ReportParserState state = {0};
     while (1) {
         uint8_t item = *read;
@@ -131,7 +140,7 @@ uint32_t parseReportDescriptor(uint8_t *read, ListElement **inputReaders) {
             state.reportSize = data;
             break;
         case 0x20:
-            input(&state, data, inputReaders);
+            input(&state, data, inputGroups);
             break;
         case 0x21:
             printf("%pReportId(%x)\n", state.padding, data);
@@ -171,36 +180,93 @@ uint32_t consumeBits(uint32_t **data, uint8_t *bit, uint8_t count) {
     return result;
 }
 
+int32_t getValue(InputGroup *group, uint32_t **report, uint8_t *bit) {
+    uint32_t raw = consumeBits(report, bit, group->size);
+    int32_t processed = raw;
+    if (group->isSigned) {
+        // if signed, data might need to be padded with ones
+        if (group->size == 8) {
+            processed = (int32_t)(int8_t) raw;
+        } else if (group->size == 16)  {
+            processed = (int32_t)(int16_t) raw;
+        }
+    }
+    return processed;
+}
+
+void handleArrayGroup(InputGroup *group, uint32_t **report, uint8_t *bit) {
+    // fetch new values
+    foreach (group->readers, InputReader *, reader, {
+        reader->previousState = getValue(group, report, bit);
+    });
+
+    // check for newly activated usages
+    foreach (group->readers, InputReader *, reader, {
+        if (!reader->previousState) {
+            continue;
+        }
+        bool alreadyPresent = false;
+        for (uint32_t i = 0; i < group->count; i++) {
+            if (group->oldStates[i] == reader->previousState) {
+                alreadyPresent = true;
+                break;
+            }
+        }
+        if (!alreadyPresent) {
+            handleUsage(group->usagePage, reader->previousState, 1);
+        }
+    });
+
+    // check for newly inactivated usages
+    for (uint32_t i = 0; i < group->count; i++) {
+        if (!group->oldStates[i]) {
+            continue;
+        }
+
+        bool alreadyPresent = false;
+        foreach (group->readers, InputReader *, reader, {
+            if (group->oldStates[i] == reader->previousState) {
+                alreadyPresent = true;
+                break;
+            }
+        });
+        if (!alreadyPresent) {
+            handleUsage(group->usagePage, group->oldStates[i], 0);
+        }
+    }
+
+    // copy new values into group->oldStates
+    uint32_t i = 0;
+    foreach (group->readers, InputReader *, reader, {
+        group->oldStates[i++] = reader->previousState;
+    });
+}
+
+void handleGroup(InputGroup *group, uint32_t **report, uint8_t *bit) {
+    if (group->discard) { return; }
+    if (group->array) {
+        handleArrayGroup(group, report, bit);
+    } else {
+        foreach (group->readers, InputReader *, reader, {
+            int32_t data = getValue(group, report, bit);
+            if (reader->previousState == data && !group->relative) {
+                goto end;
+            }
+            handleUsage(group->usagePage, reader->usage, data);
+            reader->previousState = data;
+        end:
+            ;
+        });
+    }
+}
+
 void hidListening(HIDDevice *device) {
     while (1) {
         request(device->serviceId, device->normalFunction, device->deviceId, U32(getPhysicalAddress(device->buffer)));
         uint32_t *report = device->buffer;
         uint8_t bit = 0;
-        foreach (device->inputReaders, InputReader *, reader, {
-            uint32_t data = consumeBits(&report, &bit, reader->size);
-            if (reader->discard) {
-                continue;
-            }
-            int32_t processedData = data;
-            if (reader->isSigned) {
-                // if signed, data might need to be padded with ones
-                if (reader->size == 8) {
-                    processedData = (int32_t)(int8_t) data;
-                } else if (reader->size == 16)  {
-                    processedData = (int32_t)(int16_t) data;
-                }
-            }
-            if (reader->previousState == processedData && !reader->relative) {
-                goto end;
-            }
-            if (reader->array) {
-                handleUsage(reader->usagePage, processedData, 1);
-            } else {
-                handleUsage(reader->usagePage, reader->usage, processedData);
-            }
-            reader->previousState = processedData;
-        end:
-            asm("nop");
+        foreach (device->inputGroups, InputGroup *, group, {
+            handleGroup(group, &report, &bit);
         });
         // TODO: sleep for at least endpoint->interval?
         sleep(10);
@@ -214,10 +280,9 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     device->deviceId = usbDevice; // USB calls this a interface, others may differ
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
-    device->inputReaders = NULL;
+    device->inputGroups = NULL;
     printf("registered a new HID device, dumping report descriptor:\n");
-    uint32_t totalBits = parseReportDescriptor(report, &device->inputReaders);
-    printf("The report descriptor consumes a total of %i bits.\n", totalBits);
+    uint32_t totalBits = parseReportDescriptor(report, &device->inputGroups);
     fork(hidListening, device, 0, 0);
     return 0;
 }
