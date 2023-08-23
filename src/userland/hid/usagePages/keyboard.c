@@ -11,16 +11,16 @@ char keycodes[] = {
 };
 
 REQUEST(keyDown, "keyboard", "keyDown");
-REQUEST(keyUp, "keyboard", "keyDown");
+REQUEST(keyUp, "keyboard", "keyUp");
 
 void handleKeyboard(uint32_t usage, int32_t data) {
-    if (!usage || !data) {
-        // todo: handle letting go of keys
-        return;
-    }
     if (usage >= sizeof(keycodes) / sizeof(char)) {
         printf("keyboard: unknown keycode %i\n", usage);
     } else if (keycodes[usage]) {
-        keyDown(keycodes[usage], 0);
+        if (data) {
+            keyDown(keycodes[usage], 0);
+        } else {
+            keyUp(keycodes[usage], 0);
+        }
     }
 }

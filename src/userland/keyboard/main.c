@@ -18,6 +18,7 @@ uint32_t modifiers = 0;
 
 // will be incremented every time a key is pressed.
 volatile uint32_t repeatingThreadId = 0;
+char repeatingKey = 0;
 
 char pressedKeys[] = { 0 };
 
@@ -30,10 +31,24 @@ void modifierDown(uint8_t modifier) {
 }
 
 void keyUp(char keycode) {
+    // 'normal' keyboards additionaly restart the key repeat for the key that was pressed before a key was let go of
+    if (keycode == repeatingKey) {
+        repeatingThreadId++;
+    }
+}
+
+void keyRepeat(char keycode, uint32_t threadId) {
+    sleep(500);
+    while (threadId == repeatingThreadId) {
+        doKeyCallback(keycode, 0);
+        sleep(50);
+    }
 }
 
 void keyDown(char keycode) {
     doKeyCallback(keycode, 0);
+    repeatingKey = keycode;
+    fork((void *)keyRepeat, PTR(keycode), PTR(++repeatingThreadId), 0);
 }
 
 void initialize() {
