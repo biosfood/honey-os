@@ -23,15 +23,6 @@ const char *altKeycodes[128] = {
     0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
     0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0};
 
-const char capitalKeycodes[128] = {
-    0,   27,   '!',  '@', '#', '$', '%', '^', '&', '*', '(', ')', '_',
-    '+', '\b', '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P',
-    '{', '}',  '\n', 0,   'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L',
-    ':', '\"', '~',  0,   '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<',
-    '>', '?',  0,    '*', 0,   ' ', 0,   0,   0,   0,   0,   0,   0,
-    0,   0,    0,    0,   0,   0,   0,   0,   0,   '-', 0,   0,   0,
-    '+', 0,    0,    0,   0,   0,   0,   0,   0,   0,   0,   0};
-
 uint8_t getScancode() {
     int_fast16_t scancode = -1;
     for (uint16_t i = 0; i < 1000; i++) {
@@ -51,7 +42,7 @@ void onKey() {
         if (scancode & 0x80) {
             return;
         }
-        request(ioManager, keyCallback, 0, U32(altKeycodes[scancode]));
+        // request(ioManager, keyCallback, 0, U32(altKeycodes[scancode]));
         return;
     }
     if (scancode & 0x80) {
@@ -59,24 +50,19 @@ void onKey() {
         scancode = scancode & 0x7F;
         for (uint8_t i = 0; i < sizeof(modifierScancodes); i++) {
             if (scancode == modifierScancodes[i]) {
-                modifiers = modifiers & (0xFF ^ 0x01 << i);
+                // modifiers = modifiers & (0xFF ^ 0x01 << i);
             }
         }
         return;
     }
     for (uint8_t i = 0; i < sizeof(modifierScancodes); i++) {
         if (scancode == modifierScancodes[i]) {
-            modifiers = modifiers | 0x01 << i;
+            // modifiers = modifiers | 0x01 << i;
             return;
         }
     }
-    char data = 0;
-    if (modifiers & MODIFIER_LEFT_SHIFT || modifiers & MODIFIER_RIGHT_SHIFT) {
-        data = capitalKeycodes[scancode];
-    } else {
-        data = keycodes[scancode];
-    }
-    request(ioManager, keyCallback, data, 0);
+    char data = keycodes[scancode];
+    // request(ioManager, keyCallback, data, 0);
 }
 
 int32_t main() {

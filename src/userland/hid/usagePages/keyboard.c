@@ -10,7 +10,8 @@ char keycodes[] = {
     '-', '=', '[', ']', '\\', '#', ';', '\'', /* grave accent */ 0, ',', '.', '/', /* caps lock */ 0
 };
 
-REQUEST(doKeyCallback, "ioManager", "keyCallback");
+REQUEST(keyDown, "keyboard", "keyDown");
+REQUEST(keyUp, "keyboard", "keyDown");
 
 void handleKeyboard(uint32_t usage, int32_t data) {
     if (!usage || !data) {
@@ -20,6 +21,6 @@ void handleKeyboard(uint32_t usage, int32_t data) {
     if (usage >= sizeof(keycodes) / sizeof(char)) {
         printf("keyboard: unknown keycode %i\n", usage);
     } else if (keycodes[usage]) {
-        doKeyCallback(keycodes[usage], 0);
+        keyDown(keycodes[usage], 0);
     }
 }
