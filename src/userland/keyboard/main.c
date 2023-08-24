@@ -33,6 +33,7 @@ void modifierDown(uint8_t modifier) {
 void keyUp(char keycode) {
     // 'normal' keyboards additionaly restart the key repeat for the key that was pressed before a key was let go of
     if (keycode == repeatingKey) {
+        // only cancel current repeating key if it was the key that was released
         repeatingThreadId++;
     }
 }
