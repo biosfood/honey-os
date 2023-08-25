@@ -16,11 +16,11 @@ REQUEST(doKeyCallback, "ioManager", "keyCallback");
 
 // will be incremented every time a key is pressed.
 volatile uint32_t repeatingThreadId = 0;
-char repeatingKey = 0;
+uint32_t repeatingKey = 0;
 
-char pressedKeys[] = { 0 };
+uint32_t pressedKeys[] = { 0 };
 
-void keyUp(char keycode) {
+void keyUp(uint32_t keycode) {
     // 'normal' keyboards additionaly restart the key repeat for the key that was pressed before a key was let go of
     if (keycode == repeatingKey) {
         // only cancel current repeating key if it was the key that was released
@@ -39,8 +39,24 @@ void sendPress(uint32_t keycode) {
         return;
     }
     KeyInfo *info = &keyInfos[keycode];
-    for (uint32_t i = 0; info->normal[i]; i++) {
-        doKeyCallback(info->normal[i], 0);
+    char *data = info->normal;
+    for (uint32_t i = 0; i < MAX_PRESSED; i++) {
+        if (!pressedKeys[i]) {
+            continue;
+        }
+        printf("pressed: %i\n", pressedKeys[i]);
+        for (uint32_t j = 0; info->modifierKeys[j]; j++) {
+            if (pressedKeys[i] == info->modifierKeys[j]) {
+                data = info->modified;
+                break;
+            }
+        }
+        if (data == info->modified) {
+            break;
+        }
+    }
+    for (uint32_t i = 0; data[i]; i++) {
+        doKeyCallback(data[i], 0);
     }
 }
 
@@ -60,6 +76,9 @@ void keyDown(uint32_t keycode) {
             pressedKeys[i] = keycode;
             break;
         }
+    }
+    if (keycode >= sizeof(keyInfos) / sizeof(KeyInfo)) {
+        return;
     }
     fork((void *)keyRepeat, PTR(keycode), PTR(++repeatingThreadId), 0);
 }
