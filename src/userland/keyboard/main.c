@@ -7,6 +7,7 @@
 
 
 uint32_t MODIFIERS_SHIFT[] = { 225, 229, 0 };
+uint32_t MODIFIERS_NONE[] = { 0 };
 
 KeyInfo keyInfos[] = { KEYS(KEY_STRUCT) };
 
@@ -67,6 +68,7 @@ void keyRepeat(uint32_t keycode, uint32_t threadId) {
         sleep(50);
     }
 }
+
 
 void keyDown(uint32_t keycode) {
     sendPress(keycode);
