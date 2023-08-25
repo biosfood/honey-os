@@ -44,7 +44,6 @@ void sendPress(uint32_t keycode) {
         if (!pressedKeys[i]) {
             continue;
         }
-        printf("pressed: %i\n", pressedKeys[i]);
         for (uint32_t j = 0; info->modifierKeys[j]; j++) {
             if (pressedKeys[i] == info->modifierKeys[j]) {
                 data = info->modified;
