@@ -6,7 +6,7 @@
 // modeled after
 // https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf,
 // page 53, section 10, Table 12: Keyboard / Keypad page
-
+// made to densely fill an array
 #define KEYS(f)                           \
     f(KEY_NONE,            0, "",  "", MODIFIERS_SHIFT) \
     f(KEY_ERROR,           1, "",  "", MODIFIERS_SHIFT) \
@@ -59,7 +59,7 @@ typedef struct {
     Key key;
     char *normal;
     char *modified;
-    uint32_t modifierKeys[2];
+    uint32_t *modifierKeys;
 } KeyInfo;
 
 #endif

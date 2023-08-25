@@ -1,6 +1,13 @@
 #define ALLOC_MAIN
-
 #include <hlib.h>
+#include <keycodes.h>
+
+#define KEY_STRUCT(_name, _id, _normal, _modified, _modifiers) \
+    { .key = _name, .normal = _normal, .modified = _modified, .modifierKeys = _modifiers },
+
+uint32_t MODIFIERS_SHIFT[] = { 225, 229, 0 };
+
+KeyInfo keyInfos[] = { KEYS(KEY_STRUCT) };
 
 // maximum number of simultaniously pressed keys
 #define MAX_PRESSED 10
@@ -22,7 +29,13 @@ void keyUp(char keycode) {
 }
 
 void sendPress(uint32_t keycode) {
-    doKeyCallback(keycode, 0);
+    if (keycode >= sizeof(keyInfos) / sizeof(KeyInfo)) {
+        return;
+    }
+    KeyInfo *info = &keyInfos[keycode];
+    for (uint32_t i = 0; info->normal[i]; i++) {
+        doKeyCallback(info->normal[i], 0);
+    }
 }
 
 void keyRepeat(uint32_t keycode, uint32_t threadId) {
