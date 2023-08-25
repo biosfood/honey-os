@@ -26,6 +26,12 @@ void keyUp(char keycode) {
         // only cancel current repeating key if it was the key that was released
         repeatingThreadId++;
     }
+    for (uint32_t i = 0; i < MAX_PRESSED; i++) {
+        if (pressedKeys[i] == keycode) {
+            pressedKeys[i] = 0;
+            break;
+        }
+    }
 }
 
 void sendPress(uint32_t keycode) {
@@ -49,6 +55,12 @@ void keyRepeat(uint32_t keycode, uint32_t threadId) {
 void keyDown(uint32_t keycode) {
     sendPress(keycode);
     repeatingKey = keycode;
+    for (uint32_t i = 0; i < MAX_PRESSED; i++) {
+        if (!pressedKeys[i]) {
+            pressedKeys[i] = keycode;
+            break;
+        }
+    }
     fork((void *)keyRepeat, PTR(keycode), PTR(++repeatingThreadId), 0);
 }
 
