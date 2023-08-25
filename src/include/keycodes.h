@@ -47,7 +47,24 @@
     f(KEY_7         ,  36, "7", "&", MODIFIERS_SHIFT) \
     f(KEY_8         ,  37, "8", "*", MODIFIERS_SHIFT) \
     f(KEY_9         ,  38, "9", "(", MODIFIERS_SHIFT) \
-    f(KEY_0         ,  39, "0", ")", MODIFIERS_SHIFT)
+    f(KEY_0         ,  39, "0", ")", MODIFIERS_SHIFT) \
+    f(KEY_RETURN    ,  40, "\n",  "", MODIFIERS_SHIFT) \
+    f(KEY_ESCAPE    ,  41, "",  "", MODIFIERS_SHIFT) \
+    f(KEY_DELETE    ,  42, "\b",  "", MODIFIERS_SHIFT) \
+    f(KEY_TAB       ,  43, "\t",  "", MODIFIERS_SHIFT) \
+    f(KEY_SPACEBAR  ,  44, " ",  "", MODIFIERS_SHIFT) \
+    f(KEY_MINUS     ,  45, "-", "_", MODIFIERS_SHIFT) \
+    f(KEY_EQUALS    ,  46, "=", "+", MODIFIERS_SHIFT) \
+    f(KEY_BRACEOPEN ,  47, "[", "{", MODIFIERS_SHIFT) \
+    f(KEY_BRACECLOSE,  48, "]", "}", MODIFIERS_SHIFT) \
+    f(KEY_BACKSLASH ,  49, "\\", "|", MODIFIERS_SHIFT) \
+    f(KEY_NON_US    ,  50, "",  "", MODIFIERS_SHIFT) \
+    f(KEY_SEMICOLON ,  51, ";", ":", MODIFIERS_SHIFT) \
+    f(KEY_APOSTROPHE,  52, "‘", "“", MODIFIERS_SHIFT) \
+    f(KEY_GRAVE     ,  53, "",  "", MODIFIERS_SHIFT) \
+    f(KEY_DOT       ,  55, ".", ">", MODIFIERS_SHIFT) \
+    f(KEY_SLASH     ,  56, "/", "?", MODIFIERS_SHIFT) \
+    f(KEY_CAPS      ,  57, "",  "", MODIFIERS_SHIFT)
 
 #define KEY_ENUM(name, id, normal, modified, modifiers) name = id,
 

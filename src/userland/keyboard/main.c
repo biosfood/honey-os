@@ -5,6 +5,7 @@
 #define KEY_STRUCT(_name, _id, _normal, _modified, _modifiers) \
     { .key = _name, .normal = _normal, .modified = _modified, .modifierKeys = _modifiers },
 
+
 uint32_t MODIFIERS_SHIFT[] = { 225, 229, 0 };
 
 KeyInfo keyInfos[] = { KEYS(KEY_STRUCT) };
