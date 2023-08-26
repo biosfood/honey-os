@@ -142,6 +142,7 @@ void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
         &inputContext->deviceContext.endpoints[endpointIndex];
     endpointContext->maxPrimaryStreams = 0;
     endpointContext->interval = endpoint->interval;
+    printf("interval: %i\n", endpointContext->interval);
     endpointContext->errorCount = 3;
     endpointContext->endpointType =
         direction << 2 | endpoint->attributes & 3;
