@@ -62,7 +62,7 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         for (uint32_t i = 0; i < interface->endpointCount;) {
             UsbEndpointDescriptor *endpoint = nextInterface;
             if (endpoint->descriptorType == 5) {
-                slot->interface->configureEndpoint(slot->data, endpoint);
+                slot->interval = slot->interface->configureEndpoint(slot->data, endpoint);
                 i++;
             }
             nextInterface += endpoint->size;
@@ -143,6 +143,11 @@ void hidNormal(uint32_t slotId, void *bufferPhysical) {
     // data is returned to buffer
 }
 
+uint32_t hidInterval(uint32_t slotId) {
+    UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
+    return usbSlot->interval;
+}
+
 void initialize() {
     serviceId = getServiceId();
     // xhciEvent will carry data corresponding to the data in the xhci event
@@ -150,6 +155,7 @@ void initialize() {
     xhciEvent = createEvent("xhciEvent");
     loadFromInitrd("hid");
     createFunction("hid_normal", (void *)hidNormal);
+    createFunction("hid_interval", (void *)hidInterval);
     for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {

@@ -70,7 +70,7 @@ typedef struct {
     void (*setupHID)(void *, uint32_t, void *);
     void (*doNormal)(void *, void *, uint32_t);
     void (*command)(void *, uint8_t, uint8_t, uint16_t, uint8_t);
-    void (*configureEndpoint)(void *, UsbEndpointDescriptor *);
+    uint32_t (*configureEndpoint)(void *, UsbEndpointDescriptor *);
 } UsbHostControllerInterface;
 
 typedef struct {
@@ -82,7 +82,7 @@ typedef struct {
     void *data;
     UsbHostControllerInterface *interface;
     uint32_t portIndex;
-    uint32_t id;
+    uint32_t id, interval;
 } UsbSlot;
 
 extern uint32_t serviceId;

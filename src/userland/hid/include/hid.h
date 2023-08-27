@@ -7,6 +7,7 @@ typedef struct {
     uint32_t serviceId;
     uint32_t deviceId;
     uint32_t normalFunction;
+    uint32_t interval;
     void *buffer;
     ListElement *inputGroups;
 } HIDDevice;

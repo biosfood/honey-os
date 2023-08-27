@@ -133,7 +133,7 @@ void xhciSetupEndpointsEnd(SlotXHCI *slot, uint32_t configValue) {
     doXhciCommand(slot, 0x00, 9, configValue, 0);
 }
 
-void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
+uint32_t xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
     uint8_t endpointNumber = endpoint->address & 0xF; // never 0
     uint8_t direction = endpoint->address >> 7;
     uint8_t endpointIndex = (endpointNumber)*2 - 1 + direction;
@@ -142,7 +142,6 @@ void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
         &inputContext->deviceContext.endpoints[endpointIndex];
     endpointContext->maxPrimaryStreams = 0;
     endpointContext->interval = endpoint->interval;
-    printf("interval: %i\n", endpointContext->interval);
     endpointContext->errorCount = 3;
     endpointContext->endpointType =
         direction << 2 | endpoint->attributes & 3;
@@ -156,6 +155,7 @@ void xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) {
     inputContext->inputControl.addContextFlags |= 1 << (endpointIndex + 1);
     inputContext->deviceContext.slot.contextEntryCount = MAX(
         inputContext->deviceContext.slot.contextEntryCount, endpointIndex);
+    return (1 << endpointContext->interval) / 8;
 }
 
 UsbHostControllerInterface xhci = {

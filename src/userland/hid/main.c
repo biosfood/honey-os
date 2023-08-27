@@ -268,8 +268,7 @@ void hidListening(HIDDevice *device) {
         foreach (device->inputGroups, InputGroup *, group, {
             handleGroup(group, &report, &bit);
         });
-        // TODO: sleep for at least endpoint->interval?
-        sleep(10);
+        sleep(device->interval);
     }
 }
 
@@ -283,6 +282,8 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     device->inputGroups = NULL;
     printf("registered a new HID device, dumping report descriptor:\n");
     uint32_t totalBits = parseReportDescriptor(report, &device->inputGroups);
+    uint32_t getIntervalFunction = getFunction(serviceId, "hid_interval");
+    device->interval = request(serviceId, getIntervalFunction, usbDevice, 0);
     fork(hidListening, device, 0, 0);
     return 0;
 }
