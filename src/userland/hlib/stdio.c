@@ -137,7 +137,7 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
         return;
     }
 }
-uint32_t ioManager, logFunction, keyCallback;
+uint32_t ioManager, logFunction;
 
 void _printf(void *(malloc)(uint32_t), const char *format, ...) {
     // I have absolutely no idea why this line fixes an issue where the first
