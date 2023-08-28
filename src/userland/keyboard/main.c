@@ -88,6 +88,7 @@ void keyDown(uint32_t keycode) {
 void initialize() {
     createFunction("keyDown", (void *)keyDown);
     createFunction("keyUp", (void *)keyUp);
+    loadFromInitrd("ps2");
 }
 
 int32_t main() {

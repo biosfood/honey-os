@@ -1,17 +1,17 @@
 #define ALLOC_MAIN
-
 #include <hlib.h>
+#include <keycodes.h>
 
 const char modifierScancodes[] = {0x2A, 0x36, 0x1D, 0x9D};
 
-unsigned char keycodes[128] = {
-    0,   27,   '1',  '2', '3',  '4', '5', '6', '7', '8', '9', '0', '-',
-    '=', '\b', '\t', 'q', 'w',  'e', 'r', 't', 'y', 'u', 'i', 'o', 'p',
-    '[', ']',  '\n', 0,   'a',  's', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
-    ';', '\'', '`',  0,   '\\', 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',',
-    '.', '/',  0,    '*', 0,    ' ', 0,   0,   0,   0,   0,   0,   0,
-    0,   0,    0,    0,   0,    0,   0,   0,   0,   '-', 0,   0,   0,
-    '+', 0,    0,    0,   0,    0,   0,   0,   0,   0,   0,   0};
+uint32_t keycodes[128] = { 
+    0,   27,   KEY_1,  KEY_2, KEY_3,  KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_MINUS,
+    KEY_EQUALS, KEY_DELETE, KEY_TAB, KEY_Q, KEY_W,  KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
+    KEY_BRACEOPEN, KEY_BRACECLOSE,  KEY_RETURN, 0,  KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
+    KEY_SEMICOLON, KEY_APOSTROPHE, /*backtick*/0,  0, KEY_BACKSLASH, KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, /*comma*/ 0,
+    KEY_DOT, KEY_SLASH,  0, /* asterisk */0, 0, KEY_SPACEBAR, 0,   0,   0,   0,   0,   0,   0,
+    0,   0,    0,    0,   0,    0,   0,   0,   0,   KEY_MINUS, 0,   0,   0,
+    /*KEY_PLUS*/0, 0,    0,    0,   0,    0,   0,   0,   0,   0,   0,   0};
 
 const char *altKeycodes[128] = {
     0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
@@ -35,6 +35,9 @@ uint8_t getScancode() {
     return scancode;
 }
 
+REQUEST(keyDown, "keyboard", "keyDown");
+REQUEST(keyUp, "keyboard", "keyUp");
+
 void onKey() {
     uint8_t scancode = getScancode();
     if (scancode == 0xE0) {
@@ -42,27 +45,19 @@ void onKey() {
         if (scancode & 0x80) {
             return;
         }
-        // request(ioManager, keyCallback, 0, U32(altKeycodes[scancode]));
+        // TODO: send alternate keycodes
+        return;
+    }
+    if (!keycodes[scancode]) {
         return;
     }
     if (scancode & 0x80) {
-        // key release
         scancode = scancode & 0x7F;
-        for (uint8_t i = 0; i < sizeof(modifierScancodes); i++) {
-            if (scancode == modifierScancodes[i]) {
-                // modifiers = modifiers & (0xFF ^ 0x01 << i);
-            }
-        }
+        keyUp(keycodes[scancode], 0);
         return;
+    } else {
+        keyDown(keycodes[scancode], 0);
     }
-    for (uint8_t i = 0; i < sizeof(modifierScancodes); i++) {
-        if (scancode == modifierScancodes[i]) {
-            // modifiers = modifiers | 0x01 << i;
-            return;
-        }
-    }
-    char data = keycodes[scancode];
-    // request(ioManager, keyCallback, data, 0);
 }
 
 int32_t main() {
