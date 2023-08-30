@@ -1,7 +1,5 @@
 #define ALLOC_MAIN
-
 #include <hlib.h>
-#include <stdint.h>
 
 void testFunction() { printf("0/0 = %i\n", 0 / 0); }
 
