@@ -139,39 +139,59 @@ void handleInsert(char **write, char insertType, uintptr_t x) {
 }
 uint32_t ioManager, logFunction;
 
-void _printf(void *(malloc)(uint32_t), const char *format, ...) {
-    // I have absolutely no idea why this line fixes an issue where the first
-    // printf operation consistently doesn't correctly insert its string
-    free(malloc(1));
-    uintptr_t size = 0;
-    va_list valist;
-    va_start(valist, format);
-    for (int i = 0; format[i] != 0; i++) {
-        if (format[i] == '%') {
-            size += getInsertLength(format[++i], va_arg(valist, uintptr_t));
+uint32_t printfSize(const char *format, va_list *valist) {
+    uint32_t size = 0;
+    for (; format[size] != 0; size++) {
+        if (format[size] == '%') {
+            char insertType = format[++size];
+            size += getInsertLength(insertType, va_arg(*valist, uintptr_t));
             continue;
         }
-        size++;
     }
-    va_start(valist, format);
+    return size;
+}
 
-    char *data = malloc(size);
+void _sprintf(char *data, const char *format, va_list *valist) {
     char *write = data;
     for (int i = 0; format[i] != 0; i++) {
         if (format[i] == '%') {
-            handleInsert(&write, format[++i], va_arg(valist, uintptr_t));
+            handleInsert(&write, format[++i], va_arg(*valist, uintptr_t));
             continue;
         }
         *write = format[i];
         write++;
     }
-    va_end(valist);
+}
 
+void sprintf(char *data, const char *format, ...) {
+    va_list valist;
+    va_start(valist, format);
+    _sprintf(data, format, &valist);
+    va_end(valist);
+}
+
+char *_asprintf(void *(malloc)(uint32_t), const char *format, ...) {
+    va_list valist;
+    va_start(valist, format);
+    uint32_t size = printfSize(format, &valist);
+    char *data = malloc(size);
+    va_start(valist, format);
+    _sprintf(data, format, &valist);
+    va_end(valist);
+    return data;
+}
+
+void _printf(void *(malloc)(uint32_t), const char *format, ...) {
+    // I have absolutely no idea why this line fixes an issue where the first
+    // printf operation consistently doesn't correctly insert its string
+    free(malloc(1));
+    va_list valist;
+    va_start(valist, format);
+    char *data = malloc(printfSize(format, &valist));
+    va_start(valist, format);
+    _sprintf(data, format, &valist);
+    va_end(valist);
     uintptr_t id = insertString(data);
-    if (!id) {
-        insertString(data);
-        id = hashString(data);
-    }
     request(ioManager, logFunction, id, 0);
     discardString(id);
     free(data);
