@@ -19,6 +19,9 @@ SECTIONS {
 
     .bss : {
         *(.bss)
+        . = ALIGN(4);
+        allocationData = .;
+        . += 0x1000 * 12;
     }
 
     . = 0xFF000000;

@@ -39,7 +39,7 @@ extern char *_asprintf(void *(malloc)(uint32_t), const char *format, ...);
 AllocationData allocationData;
 
 extern void *_malloc(void *, uintptr_t);
-void *malloc(uint32_t size) { _malloc(&allocationData, size); }
+void *malloc(uint32_t size) { return _malloc(&allocationData, size); }
 
 #else
 extern void *malloc(uint32_t size);

@@ -1,5 +1,9 @@
-#define ALLOC_MAIN
 #include <hlib.h>
+
+extern AllocationData allocationData[];
+
+extern void *_malloc(void *, uintptr_t);
+void *malloc(uint32_t size) { return _malloc(&allocationData, size); }
 
 void testFunction() { printf("0/0 = %i\n", 0 / 0); }
 
