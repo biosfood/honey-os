@@ -33,7 +33,7 @@ void insertInputReader(ReportParserState *state, uint32_t usage, ListElement **i
     state->totalBits += state->reportSize;
 }
 
-void input(ReportParserState *state, uint32_t data, ListElement **inputGroups) {
+char *ioParameter(uint32_t data) {
     // https://www.usb.org/sites/default/files/hid1_11.pdf
     // page 38, section 6.2.2.4, Main items table
     char *constant =    data >> 0 & 1 ? "Constant" : "Data";
@@ -44,9 +44,7 @@ void input(ReportParserState *state, uint32_t data, ListElement **inputGroups) {
     char *prefered =    data >> 5 & 1 ? "NoPreferredState" : "PreferredState";
     char *null =        data >> 6 & 1 ? "NullState" : "NoNullState";
     char *bitField =    data >> 8 & 1 ? "BufferedBytes" : "BitField";
-
-    printf("%pInput(%x => %s, %s, %s, %s, %s, %s, %s, %s)\n",
-            state->padding,
+    return asprintf("%x => %s, %s, %s, %s, %s, %s, %s, %s",
             data,
             constant,
             array,
@@ -56,7 +54,13 @@ void input(ReportParserState *state, uint32_t data, ListElement **inputGroups) {
             prefered,
             null,
             bitField
-    );
+            );
+}
+
+void input(ReportParserState *state, uint32_t data, ListElement **inputGroups) {
+    char *parameters = ioParameter(data);
+    printf("%pInput(%s)\n", state->padding, parameters);
+    free(parameters);
 
     InputGroup *group = malloc(sizeof(InputGroup));
     // signed integers are represented as 2s-complement

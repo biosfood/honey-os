@@ -28,8 +28,10 @@ typedef AllocationBlock *AllocationData[12];
 extern void free(void *);
 
 extern void _printf(void *(malloc)(uint32_t), const char *format, ...);
+extern char *_asprintf(void *(malloc)(uint32_t), const char *format, ...);
 
 #define printf(...) _printf(malloc, __VA_ARGS__)
+#define asprintf(...) _asprintf(malloc, __VA_ARGS__)
 
 #ifdef ALLOC_MAIN
 #undef ALLOC_MAIN
