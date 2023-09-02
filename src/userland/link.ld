@@ -1,7 +1,7 @@
 OUTPUT_ARCH(i386)
 ENTRY(main)
 
-INPUT( ../../../build/hlib.o)
+INPUT( ../../build/hlib.o)
 
 SECTIONS {
     . = 0x80000000;

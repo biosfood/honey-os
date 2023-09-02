@@ -13,11 +13,8 @@ BUILD_FOLDER = build
 
 SOURCE_FILES := $(shell find src/kernel -name *.c -or -name *.asm -or -name *.s)
 OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
-USER_PROGRAMS := $(shell tree -d -L 1 -i --noreport src/userland/ | tail -n+2)
-USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=user/%)
-USER_PROGRAM_FILES := $(USER_PROGRAMS:%=initrd/%)
 
-run: build initrd hlib $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
+run: build initrd hlib userPrograms $(IMAGE_FILE)
 	@echo "starting qemu"
 	@$(EMU) $(EMUFLAGS)
 
@@ -67,14 +64,12 @@ $(BUILD_FOLDER)/%.s.o: %.s
 	@mkdir -p $(dir $@)
 	@$(CC) $(CCFLAGS) -r $< -o $@
 
-user/%: src/userland/%
-	@echo "compiling userspace program $<"
-	@make -C $<
+userPrograms:
+	@make --silent -C src/userland
 
 hlib:
-	@echo "compiling userspace honey-os library"
-	@make -C src/hlib
+	@make --silent -C src/hlib
 
 clean:
 	@echo "clearing build folder"
-	@rm -r $(BUILD_FOLDER) initrd src/userland/*/build
+	@rm -r $(BUILD_FOLDER) initrd src/userland/build
