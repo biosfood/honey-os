@@ -1,6 +1,6 @@
 #include <hlib.h>
 
-void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data) {
+void _listAdd(AllocationData allocationData, ListElement **list, void *data) {
     ListElement *element = malloc(sizeof(ListElement));
     element->data = data;
     element->next = NULL;

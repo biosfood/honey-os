@@ -1,6 +1,4 @@
-#define ALLOC_MAIN
 #include <hlib.h>
-
 #include <usb.h>
 
 uint32_t serviceId, xhciEvent;

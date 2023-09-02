@@ -1,5 +1,3 @@
-#define ALLOC_MAIN
-
 #include <hlib.h>
 #include <stdbool.h>
 #include <stdint.h>

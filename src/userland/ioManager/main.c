@@ -1,5 +1,3 @@
-#define ALLOC_MAIN
-
 #include <hlib.h>
 #include <stdint.h>
 
@@ -129,8 +127,6 @@ int32_t main() {
     globalService = loadFromInitrd("parallel");
     globalOut = getFunction(globalService, "writeChar");
     loadFromInitrd("log");
-    loadFromInitrd("pic");
-    loadFromInitrd("keyboard");
     createFunction("setForeground", (void *)setForeground);
     keyEvent = createEvent("keyPress");
     newLineEvent = createEvent("newLine");

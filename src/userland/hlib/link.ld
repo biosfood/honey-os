@@ -6,7 +6,7 @@ SECTIONS {
     .hlib : {
         *(.text)
         *(.rodata)
-         *(.data)
+        *(.data)
         *(.bss)
     }
 }

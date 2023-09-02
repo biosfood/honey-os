@@ -1,4 +1,3 @@
-#define ALLOC_MAIN
 #include "pci.h"
 #include <hlib.h>
 #include <stdint.h>

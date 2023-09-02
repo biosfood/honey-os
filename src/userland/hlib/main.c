@@ -28,7 +28,6 @@ uint32_t loadFromInitrd(char *name) {
     if (!service) {
         return syscall(SYS_LOAD_INITRD, id, 1, 0, 0);
     }
-    request(service, 0, 0, 0);
     return service;
 }
 

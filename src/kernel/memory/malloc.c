@@ -18,12 +18,12 @@ void *reserveBlock(AllocationBlock *block, uint8_t coarse, uint8_t fine) {
 
 #define NULL 0
 
-void *_malloc(AllocationData *allocationData, uint32_t size) {
+void *_malloc(AllocationData allocationData, uint32_t size) {
     uint32_t sizeBit = LOG2(size) + 1;
     if (sizeBit > 10) {
         return getPagesCount(((size - 1) >> 12) + 1);
     }
-    AllocationBlock *block = (*allocationData)[sizeBit], *last = 0;
+    AllocationBlock *block = allocationData[sizeBit], *last = 0;
     while (1) {
         if (!block) {
             block = getPage();
@@ -33,7 +33,7 @@ void *_malloc(AllocationData *allocationData, uint32_t size) {
                 block->previous = last;
                 last->next = block;
             } else {
-                (*allocationData)[sizeBit] = block;
+                allocationData[sizeBit] = block;
                 block->previous = NULL;
             }
             block->magic = ALLOCATION_MAGIC;

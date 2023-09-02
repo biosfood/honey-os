@@ -1,4 +1,3 @@
-#define ALLOC_MAIN
 #include <hlib.h>
 
 #define PIT_A 0x40
@@ -22,10 +21,7 @@
 #define CMD_COUNTER0 0x00
 #define CMD_COUNTER2 0x80
 
-#include "../hlib/include/syscalls.h"
-
 uint32_t systemTime = 0;
-ListElement *sleepNotifications = NULL;
 uint32_t serviceId, timeEvent;
 bool initialized = false;
 

@@ -170,7 +170,7 @@ void sprintf(char *data, const char *format, ...) {
     va_end(valist);
 }
 
-char *_asprintf(void *(malloc)(uint32_t), const char *format, ...) {
+char *_asprintf(AllocationData allocationData, const char *format, ...) {
     va_list valist;
     va_start(valist, format);
     uint32_t size = printfSize(format, &valist);
@@ -181,7 +181,7 @@ char *_asprintf(void *(malloc)(uint32_t), const char *format, ...) {
     return data;
 }
 
-void _printf(void *(malloc)(uint32_t), const char *format, ...) {
+void _printf(AllocationData allocationData, const char *format, ...) {
     // I have absolutely no idea why this line fixes an issue where the first
     // printf operation consistently doesn't correctly insert its string
     free(malloc(1));

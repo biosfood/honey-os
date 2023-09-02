@@ -25,25 +25,10 @@ typedef struct AllocationBlock {
 
 typedef AllocationBlock *AllocationData[12];
 
+extern AllocationData allocationData;
+
 extern void free(void *);
-
-extern void _printf(void *(malloc)(uint32_t), const char *format, ...);
-extern char *_asprintf(void *(malloc)(uint32_t), const char *format, ...);
-
-#define printf(...) _printf(malloc, __VA_ARGS__)
-#define asprintf(...) _asprintf(malloc, __VA_ARGS__)
-
-#ifdef ALLOC_MAIN
-#undef ALLOC_MAIN
-
-AllocationData allocationData;
-
-extern void *_malloc(void *, uintptr_t);
-void *malloc(uint32_t size) { return _malloc(&allocationData, size); }
-
-#else
-extern void *malloc(uint32_t size);
-
-#endif
+extern void *_malloc(AllocationData, uint32_t);
+#define malloc(size) _malloc(allocationData, size)
 
 #endif

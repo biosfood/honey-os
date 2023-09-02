@@ -53,5 +53,4 @@ void write(char c) {
 int32_t main() {
     videoSource = requestMemory(2, NULL, PTR(0xB8000));
     createFunction("writeChar", (void *)write);
-    return 0;
 }

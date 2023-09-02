@@ -1,4 +1,3 @@
-#define ALLOC_MAIN
 #include <hlib.h>
 #include <keycodes.h>
 

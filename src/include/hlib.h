@@ -79,8 +79,8 @@ extern void *getPhysicalAddress(void *address);
 extern void sleep(uint32_t millis);
 extern uint32_t fork(void (f)(), void *, void *, void *);
 
-extern void _listAdd(void *(malloc)(uint32_t), ListElement **list, void *data);
-#define listAdd(list, data) _listAdd(malloc, list, data)
+extern void _listAdd(AllocationData, ListElement **list, void *data);
+#define listAdd(list, data) _listAdd(allocationData, list, data)
 extern void listClear(ListElement **list, bool freeData);
 
 #define REQUEST(functionName, service, function)                               \
@@ -99,5 +99,10 @@ extern void listClear(ListElement **list, bool freeData);
         }                                                                      \
         return request(serviceId, functionId, data1, data2);                   \
     }
+
+extern void _printf(AllocationData, const char *format, ...);
+extern char *_asprintf(AllocationData, const char *format, ...);
+#define printf(...) _printf(allocationData, __VA_ARGS__)
+#define asprintf(...) _asprintf(allocationData, __VA_ARGS__)
 
 #endif

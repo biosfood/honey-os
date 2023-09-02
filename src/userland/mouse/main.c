@@ -1,4 +1,3 @@
-#define ALLOC_MAIN
 #include <hlib.h>
 
 volatile int32_t x = 0, y = 0;

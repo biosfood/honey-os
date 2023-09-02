@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "../kernel/memory/malloc.h"
 
 #define ADDRESS(pageId) PTR((pageId) << 12)
 #define PAGE_ID(address) (U32(address) >> 12)
@@ -46,7 +47,6 @@ extern void freePhysicalPage(uint32_t pageId);
 extern void unmapPage(void *pageAddress);
 
 extern void free(void *address);
-extern void *malloc(uint32_t size);
 
 extern void *getPhysicalAddressKernel(void *address);
 extern void *getPhysicalAddress(PageDirectoryEntry *pageDirectory,

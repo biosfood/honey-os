@@ -31,6 +31,9 @@ SECTIONS {
 
     .bss :AT(ADDR(.bss) -        0xFFB00000) {
         *(.bss)
+        . = ALIGN(4);
+        allocationData = .;
+        . += 4 * 12;
         . = ALIGN(4M);
     }
 
