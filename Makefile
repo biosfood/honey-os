@@ -17,7 +17,7 @@ USER_PROGRAMS := $(shell tree -d -L 1 -i --noreport src/userland/ | tail -n+2)
 USER_PROGRAM_NAMES := $(USER_PROGRAMS:%=user/%)
 USER_PROGRAM_FILES := $(USER_PROGRAMS:%=initrd/%)
 
-run: build initrd user/hlib $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
+run: build initrd hlib $(USER_PROGRAM_NAMES) $(IMAGE_FILE)
 	@echo "starting qemu"
 	@$(EMU) $(EMUFLAGS)
 
@@ -70,6 +70,10 @@ $(BUILD_FOLDER)/%.s.o: %.s
 user/%: src/userland/%
 	@echo "compiling userspace program $<"
 	@make -C $<
+
+hlib:
+	@echo "compiling userspace honey-os library"
+	@make -C src/hlib
 
 clean:
 	@echo "clearing build folder"
