@@ -45,7 +45,8 @@ $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	sudo losetup -d $$loop1
 
 rootfs/initrd.tar: $(USER_PROGRAM_FILES)
-	tar cvf rootfs/initrd.tar initrd/
+	@echo "packing files into rootfs/initrd.tar"
+	@tar cf rootfs/initrd.tar initrd/
 
 rootfs/boot/kernel: $(OBJS) link.ld
 	@echo "linking"
@@ -72,4 +73,4 @@ user/%: src/userland/%
 
 clean:
 	@echo "clearing build folder"
-	@rm -r $(BUILD_FOLDER)
+	@rm -r $(BUILD_FOLDER) initrd src/userland/*/build
