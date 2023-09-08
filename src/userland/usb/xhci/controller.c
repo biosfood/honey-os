@@ -41,8 +41,7 @@ void setupEventRingSegmentTable(XHCIController *controller) {
 
     controller->eventRingSegmentTable[0].ringSegmentBaseAddress[0] =
         U32(controller->events.physical);
-    controller->eventRingSegmentTable[0].ringSegmentSize =
-        controller->events.size;
+    controller->eventRingSegmentTable[0].ringSegmentSize = controller->events.size - 1;
 }
 
 void readExtendedCapabilities(XHCIController *controller) {
@@ -135,17 +134,12 @@ void xhciInterrupt() {
     if (globalController->runtime->interrupters[0].management & 1) {
         globalController->runtime->interrupters[0].management |= 1;
         XHCITRB *trb;
-        uint32_t index;
-        while ((trb = trbRingFetch(&globalController->events, &index))) {
+        while ((trb = trbRingFetch(&globalController->events, NULL))) {
             globalController->runtime->interrupters[0]
                 .eventRingDequeuePointer[0] =
                 U32(&globalController->events
                          .physical[globalController->events.dequeue]) |
                 (1 << 3);
-            // printf("event %i [%x %x %x %x]: %i\n",
-            //       globalController->events.dequeue, trb->dataLow,
-            //       trb->dataHigh, trb->status, trb->control,
-            //       trb->control >> 10 & 0x3F);
             fireEventCode(xhciEvent, U32(trb), trb->dataLow);
         }
     }
@@ -157,8 +151,9 @@ XHCIController *xhciSetup(uint32_t deviceId, uint32_t bar0,
     globalController = controller;
     restartXHCIController(controller);
 
-    setupTrbRing(&controller->commands, 256);
-    setupTrbRing(&controller->events, 256);
+    setupTrbRing(&controller->commands, 255);
+    // someting goes wrong when size > around 230
+    setupTrbRing(&controller->events, 200);
     readExtendedCapabilities(controller);
     setupOperationalRegisters(controller);
     setupEventRingSegmentTable(controller);

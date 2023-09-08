@@ -147,7 +147,7 @@ uint32_t xhciConfigureEndpoint(SlotXHCI *slot, UsbEndpointDescriptor *endpoint) 
         direction << 2 | endpoint->attributes & 3;
     endpointContext->maxPacketSize = endpoint->maxPacketSize;
     slot->endpointRings[endpointIndex] = malloc(sizeof(TrbRing));
-    setupTrbRing(slot->endpointRings[endpointIndex], 256);
+    setupTrbRing(slot->endpointRings[endpointIndex], 255);
     endpointContext->transferDequeuePointerLow =
         U32(slot->endpointRings[endpointIndex]->physical) | 1;
     endpointContext->transferDequeuePointerHigh = 0;

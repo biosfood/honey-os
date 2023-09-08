@@ -7,14 +7,8 @@ XHCITRB *enqueueCommand(TrbRing *ring, XHCITRB *trb) {
     XHCITRB *result = &ring->physical[ring->enqueue];
     ring->enqueue++;
     if (ring->enqueue == ring->size - 1) {
-        if (ring->trbs[ring->enqueue].control & 1) {
-            ring->trbs[ring->enqueue].control &= ~1;
-        } else {
-            ring->trbs[ring->enqueue].control |= 1;
-        }
-        if (ring->trbs[ring->enqueue].control & 1) {
-            ring->cycle ^= 1;
-        }
+        ring->trbs[ring->enqueue].control = 1 ^ ring->trbs[ring->enqueue].control;
+        ring->cycle ^= 1;
         ring->enqueue = 0;
     }
     return result;
@@ -29,15 +23,15 @@ XHCITRB *trbRingFetch(TrbRing *ring, uint32_t *index) {
     }
     XHCITRB *result = &ring->trbs[ring->dequeue];
     ring->dequeue++;
-    if (ring->dequeue == ring->size) {
+    if (ring->dequeue == ring->size - 1) {
         ring->dequeue = 0;
-        ring->cycle ^= -1;
+        ring->cycle ^= 1;
     }
     return result;
 }
 
 void setupTrbRing(TrbRing *ring, uint32_t size) {
-    ring->trbs = requestMemory(1, 0, 0);
+    ring->trbs = malloc(sizeof(XHCITRB) * (size + 1));
     ring->physical = getPhysicalAddress((void *)ring->trbs);
     ring->cycle = true;
     ring->enqueue = 0;
@@ -45,12 +39,14 @@ void setupTrbRing(TrbRing *ring, uint32_t size) {
     ring->size = size;
     // define link to beginning
     ring->trbs[ring->size - 1].dataLow = U32(ring->physical);
-    ring->trbs[ring->size - 1].control |= 1 << 1 | COMMAND_TYPE(6);
+    ring->trbs[ring->size - 1].dataHigh = 0;
+    ring->trbs[ring->size - 1].control = 1 << 1 | COMMAND_TYPE(6);
+    printf("TRB ring: size %i, malloced %i bytes", size, sizeof(XHCITRB) * (size + 1));
 }
 
 TrbRing *createSlotTRB(SlotXHCI *slot) {
     TrbRing *ring = malloc(sizeof(TrbRing));
-    setupTrbRing(ring, 256);
+    setupTrbRing(ring, 255);
     slot->inputContext->deviceContext.endpoints[0].transferDequeuePointerLow =
         U32(ring->physical) | 1;
     slot->inputContext->deviceContext.endpoints[0].transferDequeuePointerHigh =
