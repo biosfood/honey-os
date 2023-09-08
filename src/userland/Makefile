@@ -11,6 +11,10 @@ OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 PROGRAM_NAMES := $(shell ls -d */ | sed "s/\/$$//" | sed "s|build||")
 PROGRAMS := $(PROGRAM_NAMES:%=../../initrd/%)
 
+../../rootfs/initrd.tar: all
+	@echo "packing files into rootfs/initrd.tar"
+	@tar cf ../../rootfs/initrd.tar ../../initrd/
+
 all: $(PROGRAMS)
 
 .SUFFIXES:
@@ -29,13 +33,3 @@ build/$(1)/%.c.o: $(1)/%.c
 endef
 
 $(foreach NAME, $(PROGRAM_NAMES), $(eval $(call MAKE_PROGRAM,$(NAME),$(shell find $(NAME) -name "*.c" | sed "s|$$|.o|" | sed "s|^|build/|"))))
-
-
-#  $(shell find $(subst user/,,$@) -name "*.c" | sed "s?/\([^/]*\)?/build/\1?")
-#user/%: $$(shell echo "test")
-#	NAME=$$(echo $@ | sed "s?user/??");  \
-#	SOURCES=$$(find $$NAME -name "*.c"); \
-#	OBJS=$$(echo $$SOURCES | sed "s|$$|.o|" | sed "s|^|build/|"); \
-#	make $$OBJS;\
-#	echo "linking $@ $<";\
-#	$(LD) $(LD_FLAGS) -I include$$NAME -o ../../initrd/$$NAME 

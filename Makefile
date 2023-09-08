@@ -41,10 +41,6 @@ $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	sudo losetup -d $$loop0 &&\
 	sudo losetup -d $$loop1
 
-rootfs/initrd.tar: $(USER_PROGRAM_FILES)
-	@echo "packing files into rootfs/initrd.tar"
-	@tar cf rootfs/initrd.tar initrd/
-
 rootfs/boot/kernel: $(OBJS) link.ld
 	@echo "linking"
 	@$(LD) $(LD_FLAGS) -o $@ $(OBJS)

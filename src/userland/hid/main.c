@@ -283,8 +283,9 @@ uint32_t registerHID(uint32_t usbDevice, void *reportDescriptor, uint32_t servic
     device->buffer = malloc(0x1000);
     device->normalFunction = getFunction(serviceId, "hid_normal");
     device->inputGroups = NULL;
-    printf("registered a new HID device, dumping report descriptor:\n");
+    printf("registered a new HID device, dumping report descriptor here:\n");
     uint32_t totalBits = parseReportDescriptor(report, &device->inputGroups);
+        printf("start waiting\n");
     uint32_t getIntervalFunction = getFunction(serviceId, "hid_interval");
     device->interval = request(serviceId, getIntervalFunction, usbDevice, 0);
     fork(hidListening, device, 0, 0);
