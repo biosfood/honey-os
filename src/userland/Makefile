@@ -11,11 +11,14 @@ OBJS := $(SOURCE_FILES:%=$(BUILD_FOLDER)/%.o)
 PROGRAM_NAMES := $(shell ls -d */ | sed "s/\/$$//" | sed "s|build||")
 PROGRAMS := $(PROGRAM_NAMES:%=../../initrd/%)
 
-../../rootfs/initrd.tar: all
-	@echo "packing files into rootfs/initrd.tar"
-	@tar cf ../../rootfs/initrd.tar ../../initrd/
+default: ../../rootfs/initrd.tar
 
 all: $(PROGRAMS)
+
+../../rootfs/initrd.tar: $(PROGRAMS)
+	@echo "packing files into rootfs/initrd.tar"
+	@echo "$(PROGRAMS)"
+	@tar cf ../../rootfs/initrd.tar ../../initrd/
 
 .SUFFIXES:
 

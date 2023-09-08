@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-uint16_t *videoSource;
+volatile uint16_t *videoSource;
 uint32_t offset = 0;
 
 #define WIDTH 80
