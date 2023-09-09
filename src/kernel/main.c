@@ -49,7 +49,7 @@ void kernelMain(void *multibootInfo) {
     while (1) {
         Syscall *call = listPopFirst(&callsToProcess);
         if (!call) {
-            asm("sti;hlt");
+            asm("sti;hlt;cli");
             continue;
         }
         processSyscall(call);
