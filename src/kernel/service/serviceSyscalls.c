@@ -115,8 +115,8 @@ void handleForkSyscall(Syscall *call) {
     Service *service = call->service;
     ServiceFunction function = {
         .service = service,
-        .address = call->parameters[0],
-        .name = "fork function",
+        .address = PTR(call->parameters[0]),
+        .name = "forked function",
     };
     scheduleFunction(&function, NULL, call->parameters[1], call->parameters[2], call->parameters[3]);
 }
