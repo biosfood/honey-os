@@ -81,4 +81,19 @@ bool stackContains(uint32_t serviceId) {
         return (returnType)request(serviceId, functionId, data, 0);            \
     }
 
+#define REQUEST0(returnType, functionName, service, function)                  \
+    returnType functionName() {                                                \
+        static uint32_t serviceId = 0;                                         \
+        if (!serviceId) {                                                      \
+            serviceId = getService(service);                                   \
+            serviceId = getService(service);                                   \
+        }                                                                      \
+        static uint32_t functionId = 0;                                        \
+        if (!functionId) {                                                     \
+            functionId = getFunction(serviceId, function);                     \
+        }                                                                      \
+        return (returnType)request(serviceId, functionId, 0, 0);               \
+    }
+
 REQUEST1(void, sleep, "pit", "sleep")
+REQUEST0(bool, checkFocus, "ioManager", "checkFocus")

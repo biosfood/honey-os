@@ -4,8 +4,6 @@ volatile int32_t x = 0, y = 0;
 volatile uint32_t updateEvent;
 volatile bool buttons[5];
 
-REQUEST(checkFocus, "ioManager", "checkFocus");
-
 void moveAbsolute(int32_t newX, int32_t newY) {
     x = newX;
     y = newY;
@@ -43,7 +41,7 @@ void initialize() {
 
 int32_t main() {
     if (!initialized) { initialize(); }
-    if (!checkFocus(0, 0)) {
+    if (!checkFocus()) {
         return 0;
     }
     uint32_t serviceId = getServiceId();

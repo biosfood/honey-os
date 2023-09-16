@@ -89,8 +89,6 @@ void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
         pciDevice->bar[i] = bar;
     }
     listAdd(&pciDevices, pciDevice);
-    printf("device at [%i:%i:%i]: %s (subclass %i)\n", bus, device, function,
-           classNames[class], subclass);
     if (class == 6 && subclass == 4) {
         checkBus(pciConfigRead(bus, device, function, 0x19) & 0xFF);
     }
@@ -190,7 +188,9 @@ int32_t getPCIInterrupt(uint32_t deviceId) {
 int32_t main() {
     if (!initialized) {
         initializePci();
-        return 0;
+    }
+    if (!checkFocus()) {
+        //return 0;
     }
     foreach (pciDevices, PciDevice *, device, {
         printf("[%i:%i:%i]: %s\n", device->bus, device->device,

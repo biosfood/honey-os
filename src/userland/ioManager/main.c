@@ -26,7 +26,7 @@ void logMain(uint32_t stringId) {
     lock = false;
 }
 
-bool checkFocus() {
+bool doCheckFocus() {
     return stackContains(focusService);
 }
 
@@ -121,7 +121,7 @@ int32_t main() {
     ioManager = getServiceId();
     logFunction = createFunction("", (void *)handleLog);
     createFunction("keyCallback", (void *)handleKey);
-    createFunction("checkFocus", (void *)checkFocus);
+    createFunction("checkFocus", (void *)doCheckFocus);
     mainService = loadFromInitrd("vga");
     mainOut = getFunction(mainService, "writeChar");
     globalService = loadFromInitrd("parallel");

@@ -105,4 +105,6 @@ extern char *_asprintf(AllocationData, const char *format, ...);
 #define printf(...) _printf(allocationData, __VA_ARGS__)
 #define asprintf(...) _asprintf(allocationData, __VA_ARGS__)
 
+extern bool checkFocus();
+
 #endif

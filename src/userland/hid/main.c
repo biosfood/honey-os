@@ -2,7 +2,6 @@
 
 #include <hid.h>
 
-REQUEST(checkFocus, "ioManager", "checkFocus");
 ListElement *hidDevices = NULL;
 
 char *collectionTypes[] = {
@@ -302,7 +301,7 @@ int32_t main() {
         initialized = true;
         initialize();
     }
-    if (!checkFocus(0, 0)) {
+    if (!checkFocus()) {
         return 0;
     }
 }
