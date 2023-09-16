@@ -1,0 +1,6 @@
+label: dos
+label-id: 0x206906c4
+device: /run/user/1000/honey-os.img
+unit: sectors
+sector-size: 512
+/run/user/1000/honey-os.img : start=        2048, size=       30720, type=83, bootable

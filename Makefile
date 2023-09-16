@@ -27,7 +27,7 @@ initrd:
 $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	@echo "creating the iso image"
 	@dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
-	printf "n\np\n1\n\n\na\nw\n" | fdisk $(IMAGE_FILE) &&\
+	sfdisk -q $(IMAGE_FILE) < honey-os.sfdisk &&\
 	loop0=$$(sudo losetup -f) &&\
 	sudo losetup $$loop0 $(IMAGE_FILE) &&\
 	loop1=$$(sudo losetup -f) &&\
