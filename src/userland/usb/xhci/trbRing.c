@@ -41,7 +41,6 @@ void setupTrbRing(TrbRing *ring, uint32_t size) {
     ring->trbs[ring->size - 1].dataLow = U32(ring->physical);
     ring->trbs[ring->size - 1].dataHigh = 0;
     ring->trbs[ring->size - 1].control = 1 << 1 | COMMAND_TYPE(6);
-    printf("TRB ring: size %i, malloced %i bytes", size, sizeof(XHCITRB) * (size + 1));
 }
 
 TrbRing *createSlotTRB(SlotXHCI *slot) {

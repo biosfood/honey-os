@@ -190,7 +190,7 @@ int32_t main() {
         initializePci();
     }
     if (!checkFocus()) {
-        //return 0;
+        return 0;
     }
     foreach (pciDevices, PciDevice *, device, {
         printf("[%i:%i:%i]: %s\n", device->bus, device->device,
