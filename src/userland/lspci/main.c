@@ -2,6 +2,20 @@
 #include <hlib.h>
 #include <stdint.h>
 
+#define GET_HEADER                                                             \
+    if (!initialized) {                                                        \
+        initializePci();                                                       \
+    }                                                                          \
+    if (deviceId >= deviceCount) {                                             \
+        return 0;                                                              \
+    }                                                                          \
+    PciDevice *device = listGet(pciDevices, deviceId);
+
+#define READ(offset)   (pciConfigRead(bus, device, function, (offset)))
+#define READ16(offset) (READ(offset) & 0xFFFF)
+#define READ8(offset)  (READ(offset) & 0xFF  )
+#define VENDOR_ID()    (pciConfigRead(bus, device, function, 0) & 0xFFFF)
+
 char *classNames[] = {
     "Unclassified",
     "Mass Storage Controller",
@@ -55,54 +69,47 @@ void pciConfigWriteWord(uint8_t bus, uint8_t device, uint8_t function,
     pciConfigWriteByte(bus, device, function, offset + 1, (uint8_t)(data >> 8));
 }
 
-uint8_t getHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
-    return pciConfigRead(bus, device, function, 0x0E) & 0xFF;
-}
-
-uint16_t getVendorID(uint8_t bus, uint8_t device, uint8_t function) {
-    return pciConfigRead(bus, device, function, 0) & 0xFFFF;
-}
+//uint8_t getHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
+//    return pciConfigRead(bus, device, function, 0x0E) & 0xFF;
+// }
 
 void checkBus(uint8_t);
 
 void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
-    uint8_t class = pciConfigRead(bus, device, function, 0xB) & 0xFF;
+    uint8_t class = READ8(0xB);
     if (!class || class == 0xFF) {
         return;
     }
-    uint8_t subclass = pciConfigRead(bus, device, function, 0xA) & 0xFF;
     PciDevice *pciDevice = malloc(sizeof(PciDevice));
     pciDevice->bus = bus;
     pciDevice->device = device;
     pciDevice->function = function;
     pciDevice->class = class;
-    pciDevice->subclass = subclass;
-    pciDevice->vendorId = pciConfigRead(bus, device, function, 0x00) & 0xFFFF;
-    pciDevice->deviceId = pciConfigRead(bus, device, function, 0x02) & 0xFFFF;
-    pciDevice->programmingInterface =
-        pciConfigRead(bus, device, function, 0x09) & 0xFF;
-    pciDevice->configuration =
-        pciConfigRead(bus, device, function, 0x04) & 0xFFFF;
+    pciDevice->vendorId =             READ16(0x00);
+    pciDevice->deviceId =             READ16(0x02);
+    pciDevice->configuration =        READ16(0x04);
+    pciDevice->programmingInterface = READ8( 0x09);
+    pciDevice->subclass =             READ8( 0x0A);
+    uint32_t temp;
     for (uint8_t i = 0; i < 6; i++) {
-        // unknown issue: direct assignment doesn't work
-        uint32_t bar = pciConfigRead(bus, device, function, 0x10 + 4 * i);
-        pciDevice->bar[i] = bar;
+        pciDevice->bar[i] = (temp = READ(0x10 + 4 * i));
     }
     listAdd(&pciDevices, pciDevice);
-    if (class == 6 && subclass == 4) {
-        checkBus(pciConfigRead(bus, device, function, 0x19) & 0xFF);
+    if (class == 6 && pciDevice->subclass == 4) {
+        checkBus(READ8(0x19));
     }
 }
 
 void checkDevice(uint8_t bus, uint8_t device) {
-    uint16_t vendorID = getVendorID(bus, device, 0);
+    uint32_t function = 0;
+    uint16_t vendorID = VENDOR_ID();
     if (vendorID == 0xFFFF) {
         return;
     }
-    if (getHeaderType(bus, device, 0) & 0x80) {
+    if (READ8(0x0E) & 0x80) {
         // multifunction device
-        for (uint16_t function = 0; function < 8; function++) {
-            if (getVendorID(bus, device, function) != 0xFFFF) {
+        for (; function < 8; function++) {
+            if (VENDOR_ID() != 0xFFFF) {
                 checkFunction(bus, device, function);
             }
         }
@@ -131,7 +138,7 @@ void initializePci() {
     createFunction("getBaseAddress", (void *)getBaseAddress);
     createFunction("enableBusMaster", (void *)enableBusMaster);
     createFunction("getInterrupt", (void *)getPCIInterrupt);
-    if (!(getHeaderType(0, 0, 0) & 0x80)) {
+    if (!(pciConfigRead(0, 0, 0, 0x0E) & 0x80)) {
         checkBus(0);
     } else {
         for (uint8_t bus = 0; bus < 8; bus++) {
@@ -141,15 +148,6 @@ void initializePci() {
     deviceCount = listCount(pciDevices);
     initialized = true;
 }
-
-#define GET_HEADER                                                             \
-    if (!initialized) {                                                        \
-        initializePci();                                                       \
-    }                                                                          \
-    if (deviceId >= deviceCount) {                                             \
-        return 0;                                                              \
-    }                                                                          \
-    PciDevice *device = listGet(pciDevices, deviceId);
 
 int32_t getDeviceClass(uint32_t deviceId) {
     GET_HEADER
