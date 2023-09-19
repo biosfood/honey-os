@@ -145,6 +145,13 @@ void xhciInterrupt() {
     }
 }
 
+void subscribeIRQ(uint8_t interrupt) {
+    char *eventName = asprintf("irq%i", interrupt);
+    int pic = getService("pic");
+    subscribeEvent(pic, getEvent(pic, eventName), xhciInterrupt);
+    free(eventName);
+}
+
 XHCIController *xhciSetup(uint32_t deviceId, uint32_t bar0,
                           uint32_t interrupt) {
     XHCIController *controller = initializeController(deviceId, bar0);
@@ -159,11 +166,9 @@ XHCIController *xhciSetup(uint32_t deviceId, uint32_t bar0,
     setupEventRingSegmentTable(controller);
     setupRuntime(controller);
     setupScratchpadBuffers(controller);
+    subscribeIRQ(interrupt);
 
     controller->operational->status |= (1 << 3);
-    printf("using irq no. %i\n", interrupt);
-    int pic = getService("pic");
-    subscribeEvent(pic, getEvent(pic, "irq11"), xhciInterrupt);
     controller->operational->command |= (1 << 0) | (1 << 2);
     sleep(100);
 

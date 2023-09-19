@@ -33,7 +33,6 @@ void *resetSlot(XHCIController *controller, uint32_t portIndex) {
     slot->controller = controller;
     slot->slotIndex = requestSlotIndex(controller);
     slot->port = &controller->operational->ports[portIndex - 1];
-    printf("port %i: connecting to slot %i\n", portIndex, slot->slotIndex);
 
     slot->port->status |= 1 << 4;
     awaitCode(serviceId, xhciEvent, slot->portIndex << 24);
@@ -47,7 +46,6 @@ void *resetSlot(XHCIController *controller, uint32_t portIndex) {
     slot->controller->deviceContextBaseAddressArray[slot->slotIndex] =
         U32(getPhysicalAddress(
             (void *)controller->deviceContexts[slot->slotIndex]));
-    printf("port %i: addressing slot\n", portIndex);
     addressDevice(slot, true);
     addressDevice(slot, false);
     UsbSlot *result = malloc(sizeof(UsbSlot));
