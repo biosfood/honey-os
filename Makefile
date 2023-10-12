@@ -26,20 +26,7 @@ initrd:
 
 $(IMAGE_FILE): rootfs/boot/kernel rootfs/initrd.tar
 	@echo "creating the iso image"
-	@dd if=/dev/zero of=$(IMAGE_FILE) bs=512 count=32768 &&\
-	sfdisk -q $(IMAGE_FILE) < honey-os.sfdisk &&\
-	loop0=$$(sudo losetup -f) &&\
-	sudo losetup $$loop0 $(IMAGE_FILE) &&\
-	loop1=$$(sudo losetup -f) &&\
-	sudo losetup $$loop1 $(IMAGE_FILE) -o 1048576 &&\
-	sudo mkfs.fat -F16 $$loop1 &&\
-	sudo mount $$loop1 /mnt &&\
-	sudo grub-install --root-directory=/mnt --no-floppy --modules="normal part_msdos multiboot" $$loop0 &&\
-	sudo cp -RT rootfs/ /mnt &&\
-	sync &&\
-	sudo umount /mnt &&\
-	sudo losetup -d $$loop0 &&\
-	sudo losetup -d $$loop1
+	@grub-mkrescue -o $(IMAGE_FILE) rootfs
 
 rootfs/boot/kernel: $(OBJS) link.ld
 	@echo "linking"
