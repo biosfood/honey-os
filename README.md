@@ -10,6 +10,10 @@ To build the OS and run in an emulator, run
 
     make
 
+The ´dependencies´ file contains a list of AUR packages that should be installed when runnung Honey-OS. To install them all, user your package manager (paru in this instance) like this:
+
+    cat dependencies | paru -S -
+
 ## Directory structure
 
 The `rootfs` directory contains all files for the 'root file system' of the final iso. It contains the final honey os kernel executable file as well as necessary grub configuration files.
