@@ -47,6 +47,10 @@ void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     free(report);
 }
 
+void setupMassStorage(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
+    printf("detected a USB mass storage device \n");
+}
+
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
@@ -67,6 +71,8 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         }
         if (interface->interfaceClass == 3) {
             setupHID(slot, interface);
+        } else if (interface->interfaceClass == 8) {
+            setupMassStorage(slot, interface);
         }
         interface = nextInterface;
     }
