@@ -44,7 +44,7 @@ void waitForWrite() {
     }
 }
 
-uint8_t read(uint8_t device) {
+uint8_t read() {
     if (waitForRead() == 1) {
         return 0xFF;
     }
@@ -75,10 +75,6 @@ void writeConfiguration(uint8_t data) {
     writeDevice(0, data);
 }
 
-uint8_t checkPort(uint8_t device) {
-    return read(0);
-}
-
 void flushOutputBuffer() {
     while (readStatus().data.outputBufferStatus) {
         ioIn(DATA, 1);
@@ -93,9 +89,9 @@ DeviceType getDeviceType(uint8_t device) {
     // send identify command
     writeDevice(device, 0xF2);
     // wait for ACK
-    while (read(device) != 0xFA);
+    while (read() != 0xFA);
     // read data
-    uint8_t result1 = read(device);
+    uint8_t result1 = read();
     switch (result1) {
         case 0xFF: return ATKeyboard;
         case 0x00: return StandardPS2Mouse;
@@ -122,7 +118,7 @@ void initDevice(uint8_t device) {
     flushOutputBuffer();
     // test port
     writeController(device == 0 ? 0xAB : 0xA9);
-    uint8_t deviceHealth = read(0);
+    uint8_t deviceHealth = read();
     if (deviceHealth) {
         printf("device %i interface test failed: %i\n", device, deviceHealth);
         return;
@@ -133,15 +129,23 @@ void initDevice(uint8_t device) {
     flushOutputBuffer();
     // send reset command to device
     writeDevice(device, 0xFF);
-    uint8_t ack = read(device);
-    deviceHealth = read(device);
+    uint8_t ack = read();
+    deviceHealth = read();
     if (ack != 0xFA || deviceHealth != 0xAA) {
         printf("device %i reset failed with response %x, %x\n", device, ack, deviceHealth);
         return;
     }
 
     DeviceType deviceType = getDeviceType(device);
+    if (deviceType == UnknownPS2Device) {
+        printf("device %i is unknown\n", device);
+        return;
+    }
     printf("device %i has type '%s'\n", device, deviceTypeNames[deviceType]);
+    if (deviceType == StandardPS2Mouse || deviceType == StandardPS2MouseWithScrollWheel || deviceType == MouseWith5Buttons) {
+        // TODO: start mouse listening
+    } else {
+    }
 }
 
 int32_t main() {
