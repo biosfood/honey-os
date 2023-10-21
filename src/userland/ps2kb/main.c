@@ -22,25 +22,14 @@ const char *altKeycodes[128] = {
     0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
     0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0};
 
-uint8_t getScancode() {
-    int_fast16_t scancode = -1;
-    for (uint16_t i = 0; i < 1000; i++) {
-        if ((ioIn(0x64, 1) & 1) == 0) {
-            continue;
-        }
-        scancode = ioIn(0x60, 1);
-        break;
-    }
-    return scancode;
-}
-
 REQUEST(keyDown, "keyboard", "keyDown");
 REQUEST(keyUp, "keyboard", "keyUp");
+REQUEST(read, "ps2", "read");
 
 void onKey() {
-    uint8_t scancode = getScancode();
+    uint8_t scancode = read(0, 0);
     if (scancode == 0xE0) {
-        scancode = getScancode();
+        scancode = read(0, 0);
         if (scancode & 0x80) {
             return;
         }
