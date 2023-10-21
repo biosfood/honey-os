@@ -1,67 +1,6 @@
 #include <hlib.h>
-#include <keycodes.h>
-
-const char modifierScancodes[] = {0x2A, 0x36, 0x1D, 0x9D};
-
-uint32_t keycodes[128] = { 
-    0,   27,   KEY_1,  KEY_2, KEY_3,  KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_MINUS,
-    KEY_EQUALS, KEY_DELETE, KEY_TAB, KEY_Q, KEY_W,  KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
-    KEY_BRACEOPEN, KEY_BRACECLOSE,  KEY_RETURN, 0,  KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
-    KEY_SEMICOLON, KEY_APOSTROPHE, /*backtick*/0,  0, KEY_BACKSLASH, KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, /*comma*/ 0,
-    KEY_DOT, KEY_SLASH,  0, /* asterisk */0, 0, KEY_SPACEBAR, 0,   0,   0,   0,   0,   0,   0,
-    0,   0,    0,    0,   0,    0,   0,   0,   0,   KEY_MINUS, 0,   0,   0,
-    /*KEY_PLUS*/0, 0,    0,    0,   0,    0,   0,   0,   0,   0,   0,   0};
-
-const char *altKeycodes[128] = {
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, "\e[H", "\e[A", 0, 0, "\e[D", 0, "\e[C", 0, 0,
-    "\e[B", 0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0,
-    0,      0, 0, 0, 0, 0, 0, 0,      0,      0, 0, 0,      0, 0,      0, 0};
-
-uint8_t getScancode() {
-    int_fast16_t scancode = -1;
-    for (uint16_t i = 0; i < 1000; i++) {
-        if ((ioIn(0x64, 1) & 1) == 0) {
-            continue;
-        }
-        scancode = ioIn(0x60, 1);
-        break;
-    }
-    return scancode;
-}
-
-REQUEST(keyDown, "keyboard", "keyDown");
-REQUEST(keyUp, "keyboard", "keyUp");
-
-void onKey() {
-    uint8_t scancode = getScancode();
-    if (scancode == 0xE0) {
-        scancode = getScancode();
-        if (scancode & 0x80) {
-            return;
-        }
-        // TODO: send alternate keycodes
-        return;
-    }
-    if (!keycodes[scancode]) {
-        return;
-    }
-    if (scancode & 0x80) {
-        scancode = scancode & 0x7F;
-        keyUp(keycodes[scancode], 0);
-        return;
-    } else {
-        keyDown(keycodes[scancode], 0);
-    }
-}
 
 int32_t main() {
-    uint32_t service = getService("pic");
-    uint32_t event = getEvent(service, "irq1");
-    subscribeEvent(service, event, onKey);
-    printf("PS/2 keyboard handler installed\n");
+  loadFromInitrd("ps2kb");
+  return 0;
 }
