@@ -1,5 +1,6 @@
 #include <hlib.h>
 #include <keycodes.h>
+#include <stdint.h>
 
 const char modifierScancodes[] = {0x2A, 0x36, 0x1D, 0x9D};
 
@@ -36,7 +37,7 @@ void onKey() {
         // TODO: send alternate keycodes
         return;
     }
-    if (!keycodes[scancode]) {
+    if (!keycodes[scancode & 0x7F]) {
         return;
     }
     if (scancode & 0x80) {
@@ -45,12 +46,14 @@ void onKey() {
         return;
     } else {
         keyDown(keycodes[scancode], 0);
+        keyUp(keycodes[scancode], 0);
     }
 }
 
+void doRegister(uint32_t deviceType, uint32_t event) {
+    subscribeEvent(getService("pic"), event, onKey);
+}
+
 int32_t main() {
-    uint32_t service = getService("pic");
-    uint32_t event = getEvent(service, "irq1");
-    subscribeEvent(service, event, onKey);
-    printf("PS/2 keyboard handler installed\n");
+    createFunction("register", (void *)doRegister);
 }

@@ -64,7 +64,14 @@ void writeDevice(uint8_t device, uint8_t data) {
     ioOut(DATA, data, 1);
 }
 
+void flushOutputBuffer() {
+    while (readStatus().data.outputBufferStatus) {
+        ioIn(DATA, 1);
+    }
+}
+
 Configuration readConfiguration() {
+    flushOutputBuffer();
     writeController(0x20);
     Configuration result = {.byte = read(0)};
     return result;
@@ -73,12 +80,7 @@ Configuration readConfiguration() {
 void writeConfiguration(uint8_t data) {
     writeController(0x60);
     writeDevice(0, data);
-}
-
-void flushOutputBuffer() {
-    while (readStatus().data.outputBufferStatus) {
-        ioIn(DATA, 1);
-    }
+    flushOutputBuffer();
 }
 
 DeviceType getDeviceType(uint8_t device) {
@@ -114,6 +116,8 @@ DeviceType getDeviceType(uint8_t device) {
     return UnknownPS2Device;
 }
 
+REQUEST(registerKeyboard, "ps2kb", "register");
+
 void initDevice(uint8_t device) {
     flushOutputBuffer();
     // test port
@@ -142,13 +146,31 @@ void initDevice(uint8_t device) {
         return;
     }
     printf("device %i has type '%s'\n", device, deviceTypeNames[deviceType]);
+    uint32_t picService = getService("pic");
+    uint32_t event = getEvent(picService, device == 0 ? "irq1" : "irq12");
     if (deviceType == StandardPS2Mouse || deviceType == StandardPS2MouseWithScrollWheel || deviceType == MouseWith5Buttons) {
         // TODO: start mouse listening
     } else {
+        // get current scancode set
+        flushOutputBuffer();
+        writeDevice(device, 0xF0);
+        writeDevice(device, 0x00);
+        // wait for ACK
+        while (read() != 0xFA);
+        uint8_t result = read();
+        printf("current scancode set: %i\n", result);
+        // set scancode set 1
+        flushOutputBuffer();
+        writeDevice(device, 0xF0);
+        writeDevice(device, 1);
+        // wait for ACK
+        while (read() != 0xFA);
+        registerKeyboard(deviceType, event);
     }
 }
 
 int32_t main() {
+    loadFromInitrd("ps2kb");
     createFunction("read", (void *)read);
 
     // disable all devices
@@ -167,7 +189,7 @@ int32_t main() {
 
     // perform self test
     writeController(0xAA);
-    uint8_t result = read(0);
+    uint8_t result = read();
     if (result != 0x55) {
         printf("controller self test failed: %x\n", result);
         return -1;
@@ -187,9 +209,17 @@ int32_t main() {
             writeController(0xA7);
 
             initDevice(1);
+            writeDevice(1, 0xF4);
         }
     }
+    writeDevice(0, 0xF4);
+    // enable interrupts again
+    config = readConfiguration();
+    config.data.firstInterruptEnabled = 1;
+    config.data.secondInterruptEnabled = 1;
+    writeConfiguration(config.byte);
 
-    loadFromInitrd("ps2kb");
+    printf("configuration now: %x", readConfiguration().byte);
+
     return 0;
 }
