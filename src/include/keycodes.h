@@ -64,7 +64,9 @@
     f(KEY_GRAVE     ,  53, ""  , NULL, MODIFIERS_NONE ) \
     f(KEY_DOT       ,  55, "." , ">" , MODIFIERS_SHIFT) \
     f(KEY_SLASH     ,  56, "/" , "?" , MODIFIERS_SHIFT) \
-    f(KEY_CAPS      ,  57, ""  , NULL, MODIFIERS_NONE )
+    f(KEY_CAPS      ,  57, ""  , NULL, MODIFIERS_NONE ) \
+    f(KEY_LEFT_SHIFT,  225, NULL, NULL, MODIFIERS_NONE) \
+    f(KEY_RIGHT_SHIFT, 229, NULL, NULL, MODIFIERS_NONE)
 
 #define KEY_ENUM(name, id, normal, modified, modifiers) name = id,
 
