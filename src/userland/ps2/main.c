@@ -1,5 +1,4 @@
 #include <hlib.h>
-#include <stdint.h>
 #include "ps2.h"
 
 const char* deviceTypeNames[] = {
@@ -117,6 +116,7 @@ DeviceType getDeviceType(uint8_t device) {
 }
 
 REQUEST(registerKeyboard, "ps2kb", "register");
+REQUEST(registerMouse, "ps2mouse", "register");
 
 void initDevice(uint8_t device) {
     flushOutputBuffer();
@@ -129,7 +129,7 @@ void initDevice(uint8_t device) {
     }
     // send enable command
     writeController(device == 0 ? 0xAE : 0xA8);
-    read(device);
+    read();
     flushOutputBuffer();
     // send reset command to device
     writeDevice(device, 0xFF);
@@ -149,7 +149,18 @@ void initDevice(uint8_t device) {
     uint32_t picService = getService("pic");
     uint32_t event = getEvent(picService, device == 0 ? "irq1" : "irq12");
     if (deviceType == StandardPS2Mouse || deviceType == StandardPS2MouseWithScrollWheel || deviceType == MouseWith5Buttons) {
-        // TODO: start mouse listening
+        writeDevice(device, 0xF6);
+        // wait for ACK
+        while (read() != 0xFA);
+        flushOutputBuffer();
+        writeDevice(device, 0xF3);
+        while (read() != 0xFA);
+        flushOutputBuffer();
+        writeDevice(device, 10);
+        // wait for ACK
+        while (read() != 0xFA);
+        flushOutputBuffer();
+        registerMouse(deviceType, event);
     } else {
         // get current scancode set
         flushOutputBuffer();
@@ -171,7 +182,9 @@ void initDevice(uint8_t device) {
 
 int32_t main() {
     loadFromInitrd("ps2kb");
+    loadFromInitrd("ps2mouse");
     createFunction("read", (void *)read);
+    createFunction("flush", (void *)flushOutputBuffer);
 
     // disable all devices
     writeController(0xAD);

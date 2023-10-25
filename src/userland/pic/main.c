@@ -30,19 +30,21 @@ uint16_t getISR() {
 
 void irqMaster(uint32_t intNo) {
     uint16_t isr = getISR();
-    if (isr) {
-        ioOut(PIC1, 0x20, 1);
-    }
-    bool sentPic2EOI = false;
+    bool sendPic2EOI = false;
     for (uint8_t i = 0; i < 16; i++) {
         if (!(isr & (1 << i))) {
             continue;
         }
-        if (i >= 8 && !sentPic2EOI) {
-            sentPic2EOI = true;
-            ioOut(PIC2, 0x20, 1);
+        if (i >= 8) {
+            sendPic2EOI = true;
         }
         fireEvent(eventIds[i], 0);
+    }
+    if (isr) {
+        ioOut(PIC1, 0x20, 1);
+        if (sendPic2EOI) {
+            ioOut(PIC2, 0x20, 1);
+        }
     }
 }
 

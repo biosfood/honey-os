@@ -19,7 +19,7 @@ typedef union {
         uint8_t timeoutError: 1;
         uint8_t parityError: 1;
     } __attribute__((packed)) data;
-    } Status;
+} Status;
 
 typedef union {
     uint8_t byte;
@@ -33,7 +33,7 @@ typedef union {
         uint8_t firstPortTranslation: 1;
         uint8_t zero2: 1;
     } __attribute__((packed)) data;
-    } Configuration;
+} Configuration;
 
 typedef enum {
     UnknownPS2Device,
