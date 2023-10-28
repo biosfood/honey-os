@@ -21,6 +21,7 @@ char *usbReadString(UsbSlot *slot, uint32_t language, uint32_t stringDescriptor,
 }
 
 REQUEST(registerHID, "hid", "registerHID");
+REQUEST(registerMassStorage, "usbStorage", "setup");
 
 UsbDescriptor *findDescriptor(UsbDescriptor *start, uint8_t descriptorType) {
     UsbDescriptor *result = start;
@@ -47,8 +48,21 @@ void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     free(report);
 }
 
+uint8_t getEndpointIndex(UsbEndpointDescriptor *endpoint) {
+    uint8_t endpointNumber = endpoint->address & 0xF; // never 0
+    uint8_t direction = endpoint->address >> 7;
+    return (endpointNumber)*2 - 1 + direction;
+}
+
 void setupMassStorage(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
-    printf("detected a USB mass storage device \n");
+    UsbEndpointDescriptor *endpoint = (void *) findDescriptor((void *) interface, 5);
+    uint8_t endpoint1 = getEndpointIndex(endpoint);
+    endpoint = (void *) findDescriptor((void *) endpoint + endpoint->size, 5);
+    uint8_t endpoint2 = getEndpointIndex(endpoint);
+    uint32_t deviceType = interface->subClass & 0xFF | interface->protocol & 0xFF << 8;
+    uint8_t inEndpoint = endpoint1 & 1 ? endpoint1 : endpoint2;
+    uint8_t outEndpoint = endpoint1 & 1 ? endpoint2 : endpoint1;
+    registerMassStorage(slot->id | (uint32_t) inEndpoint << 16, slot->id | (uint32_t) outEndpoint << 16);
 }
 
 void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
@@ -158,6 +172,7 @@ void initialize() {
     // code will be used to identify an event
     xhciEvent = createEvent("xhciEvent");
     loadFromInitrd("hid");
+    loadFromInitrd("usbStorage");
     createFunction("hid_normal", (void *)hidNormal);
     createFunction("hid_interval", (void *)hidInterval);
     for (uint32_t i = 0;; i++) {
