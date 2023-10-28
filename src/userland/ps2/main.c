@@ -149,6 +149,7 @@ void initDevice(uint8_t device) {
     uint32_t picService = getService("pic");
     uint32_t event = getEvent(picService, device == 0 ? "irq1" : "irq12");
     if (deviceType == StandardPS2Mouse || deviceType == StandardPS2MouseWithScrollWheel || deviceType == MouseWith5Buttons) {
+        loadFromInitrd("ps2mouse");
         writeDevice(device, 0xF6);
         // wait for ACK
         while (read() != 0xFA);
@@ -162,6 +163,7 @@ void initDevice(uint8_t device) {
         flushOutputBuffer();
         registerMouse(deviceType, event);
     } else {
+        loadFromInitrd("ps2kb");
         // get current scancode set
         flushOutputBuffer();
         writeDevice(device, 0xF0);
@@ -181,8 +183,6 @@ void initDevice(uint8_t device) {
 }
 
 int32_t main() {
-    loadFromInitrd("ps2kb");
-    loadFromInitrd("ps2mouse");
     createFunction("read", (void *)read);
     createFunction("flush", (void *)flushOutputBuffer);
 
