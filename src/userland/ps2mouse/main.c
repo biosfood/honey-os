@@ -40,7 +40,7 @@ void onMove(uint8_t device) {
 }
 
 void doRegister(uint32_t deviceType, uint32_t event) {
-    subscribeEvent(getService("pic"), event, onMove);
+    subscribeEvent(getService("pic"), event, (void *) onMove);
     deviceTypes[event] = deviceType;
 }
 

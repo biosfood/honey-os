@@ -38,7 +38,7 @@ void irqMaster(uint32_t intNo) {
         if (i >= 8) {
             sendPic2EOI = true;
         }
-        fireEvent(eventIds[i], 0);
+        fireEvent(eventIds[i], i);
     }
     if (isr) {
         ioOut(PIC1, 0x20, 1);
