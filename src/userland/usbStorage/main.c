@@ -10,11 +10,9 @@ typedef union {
 
 
 void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
-    StorageDevice *device = malloc(sizeof(StorageDevice));
-    device->serviceId = serviceId;
-    device->getType = getFunction(serviceId, "get_type");
-    UsbInterfaceType typeIn = { .value = request(serviceId, device->getType, in, 0) };
-    UsbInterfaceType typeOut = { .value = request(serviceId, device->getType, out, 0) };
+    uint32_t getType = getFunction(serviceId, "get_type");
+    UsbInterfaceType typeIn = { .value = request(serviceId, getType, in, 0) };
+    UsbInterfaceType typeOut = { .value = request(serviceId, getType, out, 0) };
     if (typeIn.value != typeOut.value) {
         printf("something went wrong when assigning the in and out pipes, aborting...\n");
         return;
@@ -43,6 +41,12 @@ void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) 
     case 0x62: printf("protocol: UAS\n"); break;
     default: printf("protocol: unknown\n"); break;
     }
+    if (typeIn.types.protocol != 0x50) {
+        printf("only bulk only protocol supported for now, aborting...\n");
+        return;
+    }
+    StorageDevice *device = malloc(sizeof(StorageDevice));
+    device->serviceId = serviceId;
     printf("in: %x, out: %x, typeIn: %x, typeOut: %x\n", in, out, typeIn, typeOut);
 }
 
