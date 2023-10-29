@@ -51,7 +51,7 @@ void setupHID(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
 uint8_t getEndpointIndex(UsbEndpointDescriptor *endpoint) {
     uint8_t endpointNumber = endpoint->address & 0xF; // never 0
     uint8_t direction = endpoint->address >> 7;
-    return (endpointNumber)*2 - 1 + direction;
+    return (endpointNumber << 1) - 1 + direction;
 }
 
 void setupMassStorage(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
@@ -65,12 +65,12 @@ void setupMassStorage(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     registerMassStorage(slot->id | (uint32_t) inEndpoint << 16, slot->id | (uint32_t) outEndpoint << 16);
 }
 
-void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
+void setupInterfaces(UsbSlot *slot) {
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
-    UsbInterfaceDescriptor *interface = start;
-    slot->interface->setupEndpointsStart(slot->data, configurationValue);
-    while (interface->descriptorType == 4) {
+    UsbInterfaceDescriptor *interface = (void *)slot->descriptor + slot->descriptor->size;
+    slot->interface->setupEndpointsStart(slot->data, slot->descriptor->configurationValue);
+    while (U32(interface) < U32(slot->descriptor) + slot->descriptor->totalLength) {
         printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
                interface->interfaceNumber, interface->endpointCount,
                interface->interfaceClass, interface->subClass);
@@ -90,7 +90,7 @@ void setupInterfaces(UsbSlot *slot, void *start, uint32_t configurationValue) {
         }
         interface = nextInterface;
     }
-    slot->interface->setupEndpointsEnd(slot->data, configurationValue);
+    slot->interface->setupEndpointsEnd(slot->data, slot->descriptor->configurationValue);
 }
 
 ListElement *usbSlots = NULL;
@@ -116,8 +116,9 @@ void resetPort(UsbSlot *slot) {
            manufacturer, device, serial);
 
     slot->interface->getDescriptor(slot->data, 2 << 8, 0, buffer, 0);
-    UsbConfigurationDescriptor *configuration = malloc(((uint16_t *)buffer)[1]);
-    memcpy(buffer, configuration, ((uint16_t *)buffer)[1]);
+    UsbConfigurationDescriptor *configurationBuffer = buffer;
+    UsbConfigurationDescriptor *configuration = malloc(configurationBuffer->totalLength);
+    memcpy(buffer, configuration, configurationBuffer->totalLength);
     char *configurationString = usbReadString(
         slot, language, configuration->configurationString, buffer);
     printf("port %i: %i interfaces, configuration %s, %i bytes\n",
@@ -125,8 +126,8 @@ void resetPort(UsbSlot *slot) {
            configuration->totalLength);
     slot->id = listCount(usbSlots);
     listAdd(&usbSlots, slot);
-    setupInterfaces(slot, (void *)configuration + configuration->size,
-                    configuration->configurationValue);
+    slot->descriptor = configuration;
+    setupInterfaces(slot);
 }
 
 extern UsbHostControllerInterface xhci;
@@ -166,6 +167,42 @@ uint32_t hidInterval(uint32_t slotId) {
     return usbSlot->interval;
 }
 
+typedef union {
+    uint32_t value;
+    struct {
+        uint8_t class, subClass, protocol;
+    } __attribute__((packed)) types;
+} UsbInterfaceType;
+
+uint32_t getType(uint32_t slotId) {
+    UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
+    uint8_t endpoint = (slotId >> 16) + 1;
+    uint8_t address = endpoint >> 1 | ((endpoint & 1) << 7);
+    UsbInterfaceDescriptor *interface = (void *)usbSlot->descriptor + usbSlot->descriptor->size;
+    while (U32(interface) < U32(usbSlot->descriptor) + usbSlot->descriptor->totalLength) {
+        void *nextInterface = (void *)interface + interface->size;
+        for (uint32_t i = 0; i < interface->endpointCount;) {
+            UsbEndpointDescriptor *endpoint = nextInterface;
+            if (endpoint->descriptorType == 5) {
+                if (endpoint->address == address) {
+                    UsbInterfaceType result = {
+                        .types = {
+                            .class = interface->interfaceClass,
+                            .subClass = interface->subClass,
+                            .protocol = interface->protocol,
+                        }
+                    };
+                    return result.value;
+                }
+                i++;
+            }
+            nextInterface += endpoint->size;
+        }
+        interface = nextInterface;
+    }
+    return -1;
+}
+
 void initialize() {
     serviceId = getServiceId();
     // xhciEvent will carry data corresponding to the data in the xhci event
@@ -175,6 +212,7 @@ void initialize() {
     loadFromInitrd("usbStorage");
     createFunction("hid_normal", (void *)hidNormal);
     createFunction("hid_interval", (void *)hidInterval);
+    createFunction("get_type", (void *)getType);
     for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);
         if (!class) {

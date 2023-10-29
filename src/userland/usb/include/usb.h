@@ -83,6 +83,7 @@ typedef struct {
     UsbHostControllerInterface *interface;
     uint32_t portIndex;
     uint32_t id, interval;
+    UsbConfigurationDescriptor *descriptor;
 } UsbSlot;
 
 extern uint32_t serviceId;
