@@ -182,10 +182,7 @@ void initDevice(uint8_t device) {
     }
 }
 
-int32_t main() {
-    createFunction("read", (void *)read);
-    createFunction("flush", (void *)flushOutputBuffer);
-
+void start() {
     // disable all devices
     writeController(0xAD);
     writeController(0xA7);
@@ -205,7 +202,7 @@ int32_t main() {
     uint8_t result = read();
     if (result != 0x55) {
         printf("controller self test failed: %x\n", result);
-        return -1;
+        return;
     }
 
     initDevice(0);
@@ -233,6 +230,12 @@ int32_t main() {
     writeConfiguration(config.byte);
 
     printf("configuration now: %x", readConfiguration().byte);
+}
 
+int32_t main() {
+    createFunction("read", (void *)read);
+    createFunction("flush", (void *)flushOutputBuffer);
+
+    fork(start, NULL, NULL, NULL);
     return 0;
 }
