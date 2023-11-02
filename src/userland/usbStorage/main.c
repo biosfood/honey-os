@@ -30,6 +30,9 @@ const char* protocolStrings[] = {
     "Unknown"
 };
 
+REQUEST(registerScisi, "scisi", "register");
+ListElement *devices;
+
 void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
     uint32_t getType = getFunction(serviceId, "get_type");
     UsbInterfaceType typeIn = { .value = request(serviceId, getType, in, 0) };
@@ -71,6 +74,11 @@ void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) 
     }
     StorageDevice *device = malloc(sizeof(StorageDevice));
     device->serviceId = serviceId;
+    device->id = listCount(devices);
+    listAdd(&devices, device);
+    if (subClass == SCISI_Transparent && protocol == BulkOnly) {
+        registerScisi(device->id, 0);
+    }
 }
 
 int32_t main() {

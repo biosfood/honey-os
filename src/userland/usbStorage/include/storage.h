@@ -6,6 +6,7 @@
 typedef struct {
     uint32_t serviceId;
     uint32_t deviceId;
+    uint32_t id;
 } StorageDevice;
 
 typedef enum UsbStorageSubClass {

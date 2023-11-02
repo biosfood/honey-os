@@ -88,6 +88,7 @@ extern void listClear(ListElement **list, bool freeData);
         static uint32_t serviceId, functionId, initialized = false;            \
         if (!initialized) {                                                    \
             while (!serviceId) {                                               \
+                loadFromInitrd(service);                                       \
                 serviceId = getService(service);                               \
                 serviceId = getService(service);                               \
             }                                                                  \
