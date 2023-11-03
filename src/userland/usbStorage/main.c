@@ -33,6 +33,20 @@ const char* protocolStrings[] = {
 REQUEST(registerScisi, "scisi", "register");
 ListElement *devices;
 
+uint32_t in(uint32_t in) {
+    StorageDevice *device = listGet(devices, in & 0xFFFF);
+    uint16_t endpoint = in >> 16;
+    printf("reading from device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, in);
+    return 0;
+}
+
+uint32_t out(uint32_t out) {
+    StorageDevice *device = listGet(devices, out & 0xFFFF);
+    uint16_t endpoint = out >> 16;
+    printf("writing to device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, out);
+    return 0;
+}
+
 void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
     uint32_t getType = getFunction(serviceId, "get_type");
     UsbInterfaceType typeIn = { .value = request(serviceId, getType, in, 0) };
@@ -77,10 +91,12 @@ void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) 
     device->id = listCount(devices);
     listAdd(&devices, device);
     if (subClass == SCISI_Transparent && protocol == BulkOnly) {
-        registerScisi(device->id, 0);
+        registerScisi(device->id | (in & 0xFFFF0000), device->id | (out & 0xFFFF0000));
     }
 }
 
 int32_t main() {
     createFunction("setup", (void *) setup);
+    createFunction("scisi_in", (void *) in);
+    createFunction("scisi_out", (void *) out);
 }
