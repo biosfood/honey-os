@@ -114,7 +114,7 @@ typedef volatile struct {
 
     uint32_t cycle : 1, evaluateNext : 1, interruptOnShortPacket : 1,
         noSnoop : 1, chain : 1, interruptOnCompletion : 1, immediateData : 1,
-        reserved : 3, type : 6, inDirection : 1;
+        reserved : 3, type : 6, reserved1: 16;
 } __attribute__((packed)) XHCINormalTRB;
 
 typedef volatile struct {

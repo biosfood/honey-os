@@ -162,6 +162,15 @@ void hidNormal(uint32_t slotId, void *bufferPhysical) {
     // data is returned to buffer
 }
 
+void storageWrite(uint32_t slotId, void *buffer) {
+    uint32_t *bufferHere = requestMemory(1, NULL, buffer);
+    uint32_t size = *bufferHere;
+    UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
+    printf("write: %x, %x -> %x, %x (slot %i)\n", slotId, buffer, bufferHere, buffer + 4, slotId >> 16);
+    void (*write)(void *, void *, uint32_t, uint32_t) = usbSlot->interface->writeNormal;
+    write(usbSlot->data, buffer + 4, slotId >> 16, size);
+}
+
 uint32_t hidInterval(uint32_t slotId) {
     UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
     return usbSlot->interval;
@@ -212,6 +221,7 @@ void initialize() {
     loadFromInitrd("usbStorage");
     createFunction("hid_normal", (void *)hidNormal);
     createFunction("hid_interval", (void *)hidInterval);
+    createFunction("storage_out", (void *)storageWrite);
     createFunction("get_type", (void *)getType);
     for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);

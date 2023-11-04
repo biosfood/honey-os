@@ -40,10 +40,23 @@ uint32_t in(uint32_t in) {
     return 0;
 }
 
-uint32_t out(uint32_t out) {
+uint32_t out(uint32_t out, void *data) {
+    uint32_t *dataHere = requestMemory(1, NULL, data);
+    uint32_t size = *dataHere;
     StorageDevice *device = listGet(devices, out & 0xFFFF);
     uint16_t endpoint = out >> 16;
+    CommandBlockWrapper *command = malloc(sizeof(CommandBlockWrapper));
+    command->size = 15 + size;
+    command->signature = 0x43425355;
+    command->tag = 0xB105F00D; // just testing for now...
+    command->length = 0;
+    command->flags.values.direction = 1;
+    command->LUN = 0;
+    command->length = size;
+    memcpy(dataHere + 1, command->data, size);
+    request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
     printf("writing to device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, out);
+    freePage(dataHere);
     return 0;
 }
 
@@ -89,6 +102,9 @@ void setup(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) 
     StorageDevice *device = malloc(sizeof(StorageDevice));
     device->serviceId = serviceId;
     device->id = listCount(devices);
+    device->deviceId = in & 0xFFFF;
+    device->inFunction = getFunction(serviceId, "storage_in");
+    device->outFunction = getFunction(serviceId, "storage_out");
     listAdd(&devices, device);
     if (subClass == SCISI_Transparent && protocol == BulkOnly) {
         registerScisi(device->id | (in & 0xFFFF0000), device->id | (out & 0xFFFF0000));

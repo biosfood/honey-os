@@ -7,6 +7,7 @@ typedef struct {
     uint32_t serviceId;
     uint32_t deviceId;
     uint32_t id;
+    uint32_t inFunction, outFunction;
 } StorageDevice;
 
 typedef enum UsbStorageSubClass {
@@ -30,5 +31,23 @@ typedef enum UsbStorageProtocol {
     UAS = 4,
     UnknownProtocol = 5
 } UsbStorageProtocol;
+
+typedef struct {
+    uint32_t size;
+    uint32_t signature;
+    uint32_t tag;
+    uint32_t transferSize;
+    union {
+        uint8_t byte;
+        struct {
+            uint8_t reserved: 6;
+            uint8_t obsolete: 1;
+            uint8_t direction: 1;
+        } __attribute__((packed)) values;
+    } flags;
+    uint8_t LUN;
+    uint8_t length;
+    uint8_t data[16];
+} CommandBlockWrapper;
 
 #endif // STORAGE_H

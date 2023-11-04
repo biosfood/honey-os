@@ -71,13 +71,29 @@ void *init(uint32_t deviceId, uint32_t bar0, uint32_t interrupt) {
 void xhciNormal(SlotXHCI *slot, void *bufferPhysical, uint32_t endpointIndex) {
     XHCINormalTRB normal = {0};
     normal.type = 1;
-    normal.inDirection = 1;
     normal.interrupterTarget = 0;
     normal.interruptOnCompletion = 1;
     normal.interruptOnShortPacket = 1;
     normal.dataBuffer[0] = U32(bufferPhysical);
     normal.dataBuffer[1] = 0;
     normal.transferSize = 4;
+    uint32_t commandAddress = U32(enqueueCommand(
+        slot->endpointRings[endpointIndex], (void *)&normal));
+    slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
+    awaitCode(serviceId, xhciEvent, commandAddress);
+}
+
+void doXhciWriteNormal(SlotXHCI * slot, void *bufferPhysical, uint32_t endpointIndex, uint32_t transferSize) {
+    printf("still alive: %x, %x, %i, %i\n", slot, bufferPhysical, endpointIndex, transferSize);
+    printf("%x", slot->inputContext->deviceContext.endpoints[endpointIndex].endpointType);
+    XHCINormalTRB normal = {0};
+    normal.dataBuffer[0] = U32(bufferPhysical);
+    normal.dataBuffer[1] = 0;
+    normal.interrupterTarget = 0;
+    normal.interruptOnCompletion = 1;
+    normal.interruptOnShortPacket = 1;
+    normal.transferSize = transferSize;
+    normal.type = 1;
     uint32_t commandAddress = U32(enqueueCommand(
         slot->endpointRings[endpointIndex], (void *)&normal));
     slot->controller->doorbells[slot->slotIndex] = endpointIndex + 1;
@@ -165,4 +181,5 @@ UsbHostControllerInterface xhci = {
     .pciClass = 0x0C0330,
     .doNormal = (void *)xhciNormal,
     .command = (void *)doXhciCommand,
+    .writeNormal = (void *)doXhciWriteNormal,
 };
