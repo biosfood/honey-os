@@ -92,7 +92,7 @@ void doXhciWriteNormal(SlotXHCI * slot, void *bufferPhysical, uint32_t endpointI
     normal.interrupterTarget = 0;
     normal.interruptOnCompletion = 1;
     normal.interruptOnShortPacket = 1;
-    normal.transferSize = transferSize;
+    normal.transferSize = 4;
     normal.type = 1;
     uint32_t commandAddress = U32(enqueueCommand(
         slot->endpointRings[endpointIndex], (void *)&normal));

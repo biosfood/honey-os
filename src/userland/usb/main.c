@@ -70,6 +70,7 @@ void setupInterfaces(UsbSlot *slot) {
     // also interface assosciations...
     UsbInterfaceDescriptor *interface = (void *)slot->descriptor + slot->descriptor->size;
     slot->interface->setupEndpointsStart(slot->data, slot->descriptor->configurationValue);
+    UsbInterfaceDescriptor *firstInterface = NULL;
     while (U32(interface) < U32(slot->descriptor) + slot->descriptor->totalLength) {
         printf("interface %i: %i endpoint(s), class %i, subclass %i\n",
                interface->interfaceNumber, interface->endpointCount,
@@ -83,14 +84,17 @@ void setupInterfaces(UsbSlot *slot) {
             }
             nextInterface += endpoint->size;
         }
-        if (interface->interfaceClass == 3) {
-            setupHID(slot, interface);
-        } else if (interface->interfaceClass == 8) {
-            setupMassStorage(slot, interface);
+        if (!firstInterface) {
+            firstInterface = interface;
         }
         interface = nextInterface;
     }
     slot->interface->setupEndpointsEnd(slot->data, slot->descriptor->configurationValue);
+    if (firstInterface->interfaceClass == 3) {
+        setupHID(slot, firstInterface);
+    } else if (firstInterface->interfaceClass == 8) {
+        setupMassStorage(slot, firstInterface);
+    }
 }
 
 ListElement *usbSlots = NULL;
@@ -166,7 +170,6 @@ void storageWrite(uint32_t slotId, void *buffer) {
     uint32_t *bufferHere = requestMemory(1, NULL, buffer);
     uint32_t size = *bufferHere;
     UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
-    printf("write: %x, %x -> %x, %x (slot %i)\n", slotId, buffer, bufferHere, buffer + 4, slotId >> 16);
     void (*write)(void *, void *, uint32_t, uint32_t) = usbSlot->interface->writeNormal;
     write(usbSlot->data, buffer + 4, slotId >> 16, size);
 }
