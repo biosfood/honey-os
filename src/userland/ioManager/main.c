@@ -32,28 +32,34 @@ bool doCheckFocus() {
 
 void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
                uint32_t callerId) {
+    free(malloc(1));
     if (stackContains(focusService)) {
         logMain(stringId);
         return;
     }
     static bool lock = false;
-    static char buffer[100];
     while (lock) {
         syscall(-1, 0, 0, 0, 0);
     }
     lock = true;
-    writeString("[ ");
-    readString(caller, buffer);
-    writeString(buffer);
-    for (int32_t i = 10 - strlen(buffer); i > 0; i--) {
-        request(globalService, globalOut, ' ', 0);
-    }
-    writeString(" ] ");
+
+    char *buffer = malloc(getStringLength(stringId));
     readString(stringId, buffer);
-    writeString(buffer);
-    if (buffer[strlen(buffer) - 1] != '\n') {
-        writeString("\n");
+    char *result = asprintf("[            ] %s ", buffer);
+    uint32_t resultLength = strlen(result);
+    if (result[resultLength - 2] != '\n') {
+        result[resultLength - 1] = '\n';
+    } else {
+        result[resultLength - 1] = 0;
     }
+    uint32_t callerNameLength = getStringLength(caller);
+    char *callerName = malloc(callerNameLength + 2);
+    readString(caller, callerName);
+    for (uint32_t i = 0; i < callerNameLength; i++) {
+        result[i + 2] = callerName[i];
+    }
+    writeString(result);
+    
     lock = false;
 }
 
