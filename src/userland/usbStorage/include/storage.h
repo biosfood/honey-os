@@ -50,4 +50,12 @@ typedef struct {
     uint8_t data[16];
 } CommandBlockWrapper;
 
+typedef struct {
+    uint32_t size;
+    uint32_t signature;
+    uint32_t tag;
+    uint32_t dataResidue;
+    uint8_t status;
+} CommandStatusWrapper;
+
 #endif // STORAGE_H

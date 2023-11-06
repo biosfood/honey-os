@@ -38,14 +38,19 @@ uint32_t in(uint32_t in, void *data) {
     uint16_t endpoint = in >> 16;
     printf("reading from device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, in);
     
-    uint32_t *dataHere = malloc(100);
-    *dataHere = 100;
-    uint32_t size = *dataHere;
-    uint8_t *resultData = (void *)dataHere;
-
-    request(device->serviceId, device->inFunction, in & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(resultData)));
-    for (uint32_t i = 1; i <= 8; i++) {
-        printf("read: %x %x %x %x\n", resultData[4*i], resultData[4*i + 1], resultData[4*i + 2], resultData[4*i + 3]);
+    request(device->serviceId, device->inFunction, in & 0xFFFF0000 | device->deviceId, U32(data));
+    
+    CommandStatusWrapper *commandStatusWrapper = malloc(sizeof(CommandStatusWrapper));
+    commandStatusWrapper->size = sizeof(CommandStatusWrapper) - sizeof(uint32_t);
+    request(device->serviceId, device->inFunction, in & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(commandStatusWrapper)));
+    
+    if (commandStatusWrapper->signature != 0x53425355) {
+        printf("CSW signature did not match, got: %x\n", commandStatusWrapper->signature);
+        return -1;
+    }
+    if (commandStatusWrapper->status != 0) {
+        printf("CSW: bad status, got %x\n", commandStatusWrapper->status);
+        return -1;
     }
     return 0;
 }

@@ -14,8 +14,6 @@ void doInquiry(ScisiDevice *device) {
     command->size = sizeof(InquiryCommand) - sizeof(uint32_t);
     request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(command)));
-    request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(command)));
-    request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(command)));
 }
 
 int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
