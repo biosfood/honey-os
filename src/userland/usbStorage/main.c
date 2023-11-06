@@ -33,10 +33,20 @@ const char* protocolStrings[] = {
 REQUEST(registerScisi, "scisi", "register");
 ListElement *devices;
 
-uint32_t in(uint32_t in) {
+uint32_t in(uint32_t in, void *data) {
     StorageDevice *device = listGet(devices, in & 0xFFFF);
     uint16_t endpoint = in >> 16;
     printf("reading from device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, in);
+    
+    uint32_t *dataHere = malloc(100);
+    *dataHere = 100;
+    uint32_t size = *dataHere;
+    uint8_t *resultData = (void *)dataHere;
+
+    request(device->serviceId, device->inFunction, in & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(resultData)));
+    for (uint32_t i = 1; i <= 8; i++) {
+        printf("read: %x %x %x %x\n", resultData[4*i], resultData[4*i + 1], resultData[4*i + 2], resultData[4*i + 3]);
+    }
     return 0;
 }
 
@@ -46,16 +56,17 @@ uint32_t out(uint32_t out, void *data) {
     StorageDevice *device = listGet(devices, out & 0xFFFF);
     uint16_t endpoint = out >> 16;
     CommandBlockWrapper *command = malloc(sizeof(CommandBlockWrapper));
-    command->size = 15 + size;
+    command->size = 31;
     command->signature = 0x43425355;
     command->tag = 0xB105F00D; // just testing for now...
     command->length = 0;
     command->flags.values.direction = 1;
     command->LUN = 0;
     command->length = size;
+    command->transferSize = 5;
     memcpy(dataHere + 1, command->data, size);
-    request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
     printf("writing to device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, out);
+    request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
     freePage(dataHere);
     return 0;
 }

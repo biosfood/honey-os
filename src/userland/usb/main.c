@@ -60,14 +60,15 @@ void setupMassStorage(UsbSlot *slot, UsbInterfaceDescriptor *interface) {
     endpoint = (void *) findDescriptor((void *) endpoint + endpoint->size, 5);
     uint8_t endpoint2 = getEndpointIndex(endpoint);
     uint32_t deviceType = interface->subClass & 0xFF | interface->protocol & 0xFF << 8;
-    uint8_t inEndpoint = endpoint1 & 1 ? endpoint1 : endpoint2;
-    uint8_t outEndpoint = endpoint1 & 1 ? endpoint2 : endpoint1;
+    uint8_t outEndpoint = endpoint1 & 1 ? endpoint1 : endpoint2;
+    uint8_t inEndpoint = endpoint1 & 1 ? endpoint2 : endpoint1;
     registerMassStorage(slot->id | (uint32_t) inEndpoint << 16, slot->id | (uint32_t) outEndpoint << 16);
 }
 
 void setupInterfaces(UsbSlot *slot) {
     // only doing blank interface descriptors for now, there are
     // also interface assosciations...
+    // also: only the first interface descriptor is used and set up here...
     UsbInterfaceDescriptor *interface = (void *)slot->descriptor + slot->descriptor->size;
     slot->interface->setupEndpointsStart(slot->data, slot->descriptor->configurationValue);
     UsbInterfaceDescriptor *firstInterface = NULL;
@@ -174,6 +175,14 @@ void storageWrite(uint32_t slotId, void *buffer) {
     write(usbSlot->data, buffer + 4, slotId >> 16, size);
 }
 
+void storageRead(uint32_t slotId, void *buffer) {
+    uint32_t *bufferHere = requestMemory(1, NULL, buffer);
+    uint32_t size = *bufferHere;
+    UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
+    void (*read)(void *, void *, uint32_t, uint32_t) = usbSlot->interface->readNormal;
+    read(usbSlot->data, buffer + 4, slotId >> 16, size);
+}
+
 uint32_t hidInterval(uint32_t slotId) {
     UsbSlot *usbSlot = listGet(usbSlots, slotId & 0xFFFF);
     return usbSlot->interval;
@@ -225,6 +234,7 @@ void initialize() {
     createFunction("hid_normal", (void *)hidNormal);
     createFunction("hid_interval", (void *)hidInterval);
     createFunction("storage_out", (void *)storageWrite);
+    createFunction("storage_in", (void *)storageRead);
     createFunction("get_type", (void *)getType);
     for (uint32_t i = 0;; i++) {
         uint32_t class = getDeviceClass(i, 0);

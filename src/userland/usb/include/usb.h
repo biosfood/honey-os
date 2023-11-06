@@ -72,6 +72,7 @@ typedef struct {
     void (*command)(void *, uint8_t, uint8_t, uint16_t, uint8_t);
     uint32_t (*configureEndpoint)(void *, UsbEndpointDescriptor *);
     void (*writeNormal)(void *, void *, uint32_t, uint32_t);
+    void (*readNormal)(void *, void *, uint32_t, uint32_t);
 } UsbHostControllerInterface;
 
 typedef struct {

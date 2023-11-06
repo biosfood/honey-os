@@ -84,15 +84,14 @@ void xhciNormal(SlotXHCI *slot, void *bufferPhysical, uint32_t endpointIndex) {
 }
 
 void doXhciWriteNormal(SlotXHCI * slot, void *bufferPhysical, uint32_t endpointIndex, uint32_t transferSize) {
-    printf("still alive: %x, %x, %i, %i\n", slot, bufferPhysical, endpointIndex, transferSize);
-    printf("%x", slot->inputContext->deviceContext.endpoints[endpointIndex].endpointType);
+    // incidentally, this also works for reading from the XHCI device. nice!
     XHCINormalTRB normal = {0};
     normal.dataBuffer[0] = U32(bufferPhysical);
     normal.dataBuffer[1] = 0;
     normal.interrupterTarget = 0;
     normal.interruptOnCompletion = 1;
     normal.interruptOnShortPacket = 1;
-    normal.transferSize = 4;
+    normal.transferSize = transferSize;
     normal.type = 1;
     uint32_t commandAddress = U32(enqueueCommand(
         slot->endpointRings[endpointIndex], (void *)&normal));
@@ -182,4 +181,5 @@ UsbHostControllerInterface xhci = {
     .doNormal = (void *)xhciNormal,
     .command = (void *)doXhciCommand,
     .writeNormal = (void *)doXhciWriteNormal,
+    .readNormal = (void *)doXhciWriteNormal,
 };
