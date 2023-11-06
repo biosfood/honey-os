@@ -1,12 +1,18 @@
 #include <hlib.h>
 #include <stdint.h>
 
-uint32_t mainService, mainOut, globalService, globalOut;
+uint32_t mainService, mainOut, globalService, globalOut, globalBulkOut;
 
 uint32_t focusService, focusServiceKeyHandler;
 uint32_t currentKeyConsumerService, currentKeyConsumerFunction;
 
 void writeString(char *string) {
+    if (globalBulkOut) {
+        uint32_t stringId = insertString(string);
+        request(globalService, globalBulkOut, stringId, 0);
+        discardString(stringId);
+        return;
+    }
     for (uint32_t i = 0; string[i]; i++) {
         request(globalService, globalOut, string[i], 0);
     }
@@ -37,11 +43,6 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
         logMain(stringId);
         return;
     }
-    static bool lock = false;
-    while (lock) {
-        syscall(-1, 0, 0, 0, 0);
-    }
-    lock = true;
 
     char *buffer = malloc(getStringLength(stringId));
     readString(stringId, buffer);
@@ -58,6 +59,13 @@ void handleLog(uint32_t stringId, uint32_t unused, uint32_t caller,
     for (uint32_t i = 0; i < callerNameLength; i++) {
         result[i + 2] = callerName[i];
     }
+    
+    static bool lock = false;
+    while (lock) {
+        syscall(-1, 0, 0, 0, 0);
+    }
+    lock = true;
+
     writeString(result);
     
     lock = false;
@@ -132,6 +140,7 @@ int32_t main() {
     mainOut = getFunction(mainService, "writeChar");
     globalService = loadFromInitrd("parallel");
     globalOut = getFunction(globalService, "writeChar");
+    globalBulkOut = getFunction(globalService, "write_bulk");
     loadFromInitrd("log");
     createFunction("setForeground", (void *)setForeground);
     keyEvent = createEvent("keyPress");

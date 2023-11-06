@@ -18,9 +18,21 @@ void parallelOut(uint32_t data, uint32_t dataLength) {
     }
 }
 
+void writeBulk(uint32_t stringId) {
+    uint32_t length = getStringLength(stringId);
+    char *buffer = malloc(length);
+    readString(stringId, buffer);
+    for (uint32_t i = 0; i < length; i++) {
+        parallelOut(buffer[i], 0);
+    }
+}
+
 int32_t parallelIn(void *data, uint32_t dataLength) {
     // todo
     return 0;
 }
 
-int32_t main() { createFunction("writeChar", (void *)parallelOut); }
+int32_t main() {
+    createFunction("writeChar", (void *)parallelOut);
+    createFunction("write_bulk", (void *)writeBulk);
+}
