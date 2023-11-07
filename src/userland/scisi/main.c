@@ -27,7 +27,7 @@ void doInquiry(ScisiDevice *device) {
             response->type, response->removable, response->version, response->responseData, response->additionalLength);
 }
 
-uint64_t getSize(ScisiDevice *device) {
+void readSize(ScisiDevice *device) {
     ReadCapacity10Command *command = malloc(sizeof(ReadCapacity10Command));
     command->size = sizeof(ReadCapacity10Command) - sizeof(uint32_t);
     command->operationCode = 0x25;
@@ -43,6 +43,24 @@ uint64_t getSize(ScisiDevice *device) {
     printf("max lba: %x, block size: %x\n", maxLba, blockSize);   
 }
 
+void read(ScisiDevice *device, uint32_t address, uint16_t size, void *data) {
+    Read10Command *command = malloc(sizeof(Read10Command));
+    command->size = sizeof(Read10Command) - sizeof(uint32_t);
+    command->operationCode = 0x28;
+    command->lba[0] = (uint8_t) (address >> 24);
+    command->lba[1] = (uint8_t) (address >> 16);
+    command->lba[2] = (uint8_t) (address >> 8);
+    command->lba[3] = (uint8_t) (address);
+
+    command->transferLength[0] = 1;
+    command->transferLength[1] = (uint8_t) (size);
+
+    command->control = 0;
+    
+    request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
+    request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(data)));
+}
+
 int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
     ScisiDevice *device = malloc(sizeof(ScisiDevice));
     device->serviceId = serviceId;
@@ -54,7 +72,15 @@ int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t
     listAdd(&devices, device);
     printf("registering a new SCISI device (in: %x, out: %x)\n", in, out);
     doInquiry(device);
-    uint64_t size = getSize(device);
+    readSize(device);
+    uint8_t *buffer = malloc(512);
+    *((uint32_t *)buffer) = 512;
+    read(device, 0, 512, buffer);
+    for (uint32_t i = 0; i < 512 / 8; i++) {
+        printf("%x %x %x %x %x %x %x %x",
+                buffer[i * 8 + 0], buffer[i * 8 + 1], buffer[i * 8 + 2], buffer[i * 8 + 3],
+                buffer[i * 8 + 4], buffer[i * 8 + 5], buffer[i * 8 + 6], buffer[i * 8 + 7]);
+    }
     return 0;
 }
 

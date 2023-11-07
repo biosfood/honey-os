@@ -59,4 +59,14 @@ typedef struct {
     uint8_t blockSize[4]; // most significant byte first
 } ReadCapacity10Response;
 
+typedef struct {
+    uint32_t size;
+    uint8_t operationCode; // 0x28
+    uint8_t protect; // leave at 0 for now
+    uint8_t lba[4]; // most significant byte first
+    uint8_t groupNumber; // probably 0
+    uint8_t transferLength[2]; // most significant byte first
+    uint8_t control;
+} Read10Command;
+
 #endif
