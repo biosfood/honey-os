@@ -25,10 +25,22 @@ void doInquiry(ScisiDevice *device) {
     
     printf("response: type: %x, removable: %i, version: %x, responseData: %x, additionalLength: %i\n",
             response->type, response->removable, response->version, response->responseData, response->additionalLength);
-    for (uint32_t i = 0; i < 10; i++) {
-        printf("restData: %x %x %x %x\n", response->restData[4*i], response->restData[4*i+1],
-                                                response->restData[4*i+2], response->restData[4*i+3]);
-    }
+}
+
+uint64_t getSize(ScisiDevice *device) {
+    ReadCapacity10Command *command = malloc(sizeof(ReadCapacity10Command));
+    command->size = sizeof(ReadCapacity10Command) - sizeof(uint32_t);
+    command->operationCode = 0x25;
+    command->control = 0;
+
+    request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
+
+    ReadCapacity10Response *response = malloc(sizeof(ReadCapacity10Response));
+    response->size = sizeof(ReadCapacity10Response) - sizeof(uint32_t);
+    request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(response)));
+    uint32_t blockSize = response->blockSize[0] << 24 | response->blockSize[1] << 16 | response->blockSize[2] << 8 | response->blockSize[3];
+    uint32_t maxLba = response->lastLBA[0] << 24 | response->lastLBA[1] << 16 | response->lastLBA[2] << 8 | response->lastLBA[3];
+    printf("max lba: %x, block size: %x\n", maxLba, blockSize);   
 }
 
 int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
@@ -42,6 +54,7 @@ int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t
     listAdd(&devices, device);
     printf("registering a new SCISI device (in: %x, out: %x)\n", in, out);
     doInquiry(device);
+    uint64_t size = getSize(device);
     return 0;
 }
 

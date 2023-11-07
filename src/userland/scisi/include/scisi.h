@@ -43,4 +43,20 @@ typedef struct {
     uint8_t restData[127];
 } InquiryResponse;
 
+typedef struct {
+    uint32_t size;
+    uint8_t operationCode; // 0x25
+    uint8_t obsolete;
+    uint32_t LBAObsolete; // set to 0, must be inserted with MSB first.
+    uint16_t reserved;
+    uint8_t PMIObsolete;
+    uint8_t control;
+} ReadCapacity10Command;
+
+typedef struct {
+    uint32_t size;
+    uint8_t lastLBA[4]; // most significant byte first
+    uint8_t blockSize[4]; // most significant byte first
+} ReadCapacity10Response;
+
 #endif
