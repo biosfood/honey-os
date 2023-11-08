@@ -38,12 +38,15 @@ void readSize(ScisiDevice *device) {
     ReadCapacity10Response *response = malloc(sizeof(ReadCapacity10Response));
     response->size = sizeof(ReadCapacity10Response) - sizeof(uint32_t);
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(response)));
-    uint32_t blockSize = response->blockSize[0] << 24 | response->blockSize[1] << 16 | response->blockSize[2] << 8 | response->blockSize[3];
+    device->blockSize = response->blockSize[0] << 24 | response->blockSize[1] << 16 | response->blockSize[2] << 8 | response->blockSize[3];
     uint32_t maxLba = response->lastLBA[0] << 24 | response->lastLBA[1] << 16 | response->lastLBA[2] << 8 | response->lastLBA[3];
-    printf("max lba: %x, block size: %x\n", maxLba, blockSize);   
+    printf("max lba: %x, block size: %x\n", maxLba, device->blockSize);   
 }
 
 void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
+    if (size == 0) {
+        return malloc(1);
+    }
     Read10Command *command = malloc(sizeof(Read10Command));
     command->size = sizeof(Read10Command) - sizeof(uint32_t);
     command->operationCode = 0x28;
@@ -51,9 +54,9 @@ void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
     command->lba[1] = (uint8_t) (address >> 16);
     command->lba[2] = (uint8_t) (address >> 8);
     command->lba[3] = (uint8_t) (address);
-
-    command->transferLength[0] = 1;
-    command->transferLength[1] = (uint8_t) (size);
+    uint32_t blockCount = (size-1) / device->blockSize + 1;
+    command->transferLength[0] = (uint8_t) (blockCount >> 8);
+    command->transferLength[1] = (uint8_t) (blockCount);
 
     command->control = 0;
 
