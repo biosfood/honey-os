@@ -36,7 +36,6 @@ ListElement *devices;
 uint32_t in(uint32_t in, void *data) {
     StorageDevice *device = listGet(devices, in & 0xFFFF);
     uint16_t endpoint = in >> 16;
-    printf("reading from device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, in);
     
     request(device->serviceId, device->inFunction, in & 0xFFFF0000 | device->deviceId, U32(data));
     
@@ -70,7 +69,6 @@ uint32_t out(uint32_t out, void *data) {
     command->length = size;
     command->transferSize = 5;
     memcpy(dataHere + 1, command->data, size);
-    printf("writing to device %i (usb device %i, endpoint %i, id %x)...\n", device->id, device->deviceId, endpoint, out);
     request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
     freePage(dataHere);
     return 0;
