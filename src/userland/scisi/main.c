@@ -43,7 +43,7 @@ void readSize(ScisiDevice *device) {
     printf("max lba: %x, block size: %x\n", maxLba, blockSize);   
 }
 
-void read(ScisiDevice *device, uint32_t address, uint16_t size, void *data) {
+void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
     Read10Command *command = malloc(sizeof(Read10Command));
     command->size = sizeof(Read10Command) - sizeof(uint32_t);
     command->operationCode = 0x28;
@@ -56,9 +56,13 @@ void read(ScisiDevice *device, uint32_t address, uint16_t size, void *data) {
     command->transferLength[1] = (uint8_t) (size);
 
     command->control = 0;
+
+    uint32_t *data = malloc(size + sizeof(uint32_t));
+    *data = size;
     
     request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(data)));
+    return data + 1;
 }
 
 int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
@@ -73,9 +77,7 @@ int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t
     printf("registering a new SCISI device (in: %x, out: %x)\n", in, out);
     doInquiry(device);
     readSize(device);
-    uint8_t *buffer = malloc(512);
-    *((uint32_t *)buffer) = 512;
-    read(device, 0, 512, buffer);
+    uint8_t *buffer = read(device, 0, 512);
     for (uint32_t i = 0; i < 512 / 8; i++) {
         printf("%x %x %x %x %x %x %x %x",
                 buffer[i * 8 + 0], buffer[i * 8 + 1], buffer[i * 8 + 2], buffer[i * 8 + 3],
