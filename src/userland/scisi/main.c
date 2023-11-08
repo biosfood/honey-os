@@ -40,7 +40,7 @@ void readSize(ScisiDevice *device) {
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(response)));
     device->blockSize = response->blockSize[0] << 24 | response->blockSize[1] << 16 | response->blockSize[2] << 8 | response->blockSize[3];
     uint32_t maxLba = response->lastLBA[0] << 24 | response->lastLBA[1] << 16 | response->lastLBA[2] << 8 | response->lastLBA[3];
-    printf("max lba: %x, block size: %x\n", maxLba, device->blockSize);   
+    printf("max block address: %x, block size: %x, capacity: %i = 0x%x\n", maxLba, device->blockSize, maxLba * device->blockSize, maxLba * device->blockSize);   
 }
 
 void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
