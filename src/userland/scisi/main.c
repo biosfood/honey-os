@@ -21,10 +21,8 @@ void doInquiry(ScisiDevice *device) {
     
     request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(response)));
-    
-    
-    printf("response: type: %x, removable: %i, version: %x, responseData: %x, additionalLength: %i\n",
-            response->type, response->removable, response->version, response->responseData, response->additionalLength);
+    free(command);
+    free(response);
 }
 
 void readSize(ScisiDevice *device) {
@@ -41,6 +39,8 @@ void readSize(ScisiDevice *device) {
     device->blockSize = response->blockSize[0] << 24 | response->blockSize[1] << 16 | response->blockSize[2] << 8 | response->blockSize[3];
     uint32_t maxLba = response->lastLBA[0] << 24 | response->lastLBA[1] << 16 | response->lastLBA[2] << 8 | response->lastLBA[3];
     printf("max block address: %x, block size: %x, capacity: %i = 0x%x\n", maxLba, device->blockSize, maxLba * device->blockSize, maxLba * device->blockSize);   
+    free(command);
+    free(response);
 }
 
 void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
@@ -65,7 +65,8 @@ void *read(ScisiDevice *device, uint32_t address, uint16_t size) {
     
     request(device->serviceId, device->outFunction, device->out, U32(getPhysicalAddress(command)));
     request(device->serviceId, device->inFunction, device->in, U32(getPhysicalAddress(data)));
-    return data + 1;
+    free(command);
+    return data + 1; // todo: ensure free will work on this
 }
 
 int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t serviceId) {
@@ -76,11 +77,13 @@ int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t
     device->out = out;
     device->inFunction = getFunction(serviceId, "scisi_in");
     device->outFunction = getFunction(serviceId, "scisi_out");
+    device->id = listCount(devices);
     listAdd(&devices, device);
-    printf("registering a new SCISI device (in: %x, out: %x)\n", in, out);
+    printf("registering a new SCISI device (in port: %x, out port: %x)\n", in, out);
     doInquiry(device);
     readSize(device);
     uint8_t *buffer = read(device, 0, 512);
+    printf("first sector of device %i: \n", device->id);
     for (uint32_t i = 0; i < 512 / 8; i++) {
         printf("%x %x %x %x %x %x %x %x",
                 buffer[i * 8 + 0], buffer[i * 8 + 1], buffer[i * 8 + 2], buffer[i * 8 + 3],
