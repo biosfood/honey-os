@@ -83,12 +83,10 @@ int32_t registerDevice(uint32_t in, uint32_t out, uint32_t serviceName, uint32_t
     doInquiry(device);
     readSize(device);
     uint8_t *buffer = read(device, 0, 512);
-    printf("first sector of device %i: \n", device->id);
-    for (uint32_t i = 0; i < 512 / 8; i++) {
-        printf("%x %x %x %x %x %x %x %x",
-                buffer[i * 8 + 0], buffer[i * 8 + 1], buffer[i * 8 + 2], buffer[i * 8 + 3],
-                buffer[i * 8 + 4], buffer[i * 8 + 5], buffer[i * 8 + 6], buffer[i * 8 + 7]);
+    if (buffer[510] == 0x55 && buffer[511] == 0xAA) {
+        printf("device %i is bootable!\n", device->id);
     }
+    free(buffer - 4);
     return 0;
 }
 
