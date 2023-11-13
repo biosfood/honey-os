@@ -3,6 +3,8 @@
 
 #include <hlib.h>
 
+// see https://www.seagate.com/files/staticfiles/support/docs/manual/Interface%20manuals/100293068j.pdf
+
 typedef struct {
     uint32_t in, out;
     uint32_t serviceId, id;
