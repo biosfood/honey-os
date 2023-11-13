@@ -57,6 +57,9 @@ uint32_t in(uint32_t in, void *data) {
 uint32_t out(uint32_t out, void *data) {
     uint32_t *dataHere = requestMemory(1, NULL, data);
     uint32_t size = *dataHere;
+    dataHere++;
+    uint32_t transferSize = *dataHere;
+    dataHere++;
     StorageDevice *device = listGet(devices, out & 0xFFFF);
     uint16_t endpoint = out >> 16;
     CommandBlockWrapper *command = malloc(sizeof(CommandBlockWrapper));
@@ -67,10 +70,11 @@ uint32_t out(uint32_t out, void *data) {
     command->flags.values.direction = 1;
     command->LUN = 0;
     command->length = size;
-    command->transferSize = 5;
-    memcpy(dataHere + 1, command->data, size);
+    command->transferSize = transferSize; // todo: fix this
+    memcpy(dataHere, command->data, size);
     request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
-    freePage(dataHere);
+    freePage(dataHere - 2);
+    free(command);
     return 0;
 }
 

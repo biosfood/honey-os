@@ -14,6 +14,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
+    uint32_t transferSize;
     uint8_t operationCode; // 0x12
     uint8_t evpd; // probably 0
     uint8_t pageCode; // must be 0 when evpd is 0
@@ -48,6 +49,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
+    uint32_t transferSize;
     uint8_t operationCode; // 0x25
     uint8_t obsolete;
     uint32_t LBAObsolete; // set to 0, must be inserted with MSB first.
@@ -64,6 +66,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
+    uint32_t transferSize;
     uint8_t operationCode; // 0x28
     uint8_t protect; // leave at 0 for now
     uint8_t lba[4]; // most significant byte first
