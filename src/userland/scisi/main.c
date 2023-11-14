@@ -3,6 +3,8 @@
 
 ListElement *devices = NULL;
 
+// see https://www.seagate.com/files/staticfiles/support/docs/manual/Interface%20manuals/100293068j.pdf
+
 void doInquiry(ScisiDevice *device) {
     InquiryCommand *command = malloc(sizeof(InquiryCommand));
     command->size = sizeof(InquiryCommand) - 2*sizeof(uint32_t);

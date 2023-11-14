@@ -1,6 +1,9 @@
 #include <storage.h>
 #include <hlib.h>
 
+// mass storage: https://www.usb.org/sites/default/files/Mass_Storage_Specification_Overview_v1.4_2-19-2010.pdf
+// bulk only: https://www.usb.org/sites/default/files/usbmassbulk_10.pdf
+
 typedef union {
     uint32_t value;
     struct {
