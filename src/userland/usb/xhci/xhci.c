@@ -5,6 +5,8 @@
 #include <hlib.h>
 #include <usb.h>
 
+// see https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf
+
 XHCIInputContext *createInputContext(SlotXHCI *slot) {
     XHCIInputContext *inputContext = requestMemory(1, 0, 0);
     inputContext->inputControl.addContextFlags = 3;
