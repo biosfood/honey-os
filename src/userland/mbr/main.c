@@ -24,6 +24,8 @@ void registerDevice(uint32_t deviceId, uint32_t reserved, uint32_t serviceName, 
         printf("partition %i: %i: start: %i, end: %i, active: %i\n", entry, partition->type, partition->lbaStart, partition->lbaStart + partition->sectorCount, partition->active);
         if (partition->type == 0xEE) {
             printf("partition %i is a GPT\n", entry);
+            // TODO
+            // look at https://uefi.org/sites/default/files/resources/UEFI_Spec_2_10_Aug29.pdf, page 110 for information for this
         }
     }
 }
