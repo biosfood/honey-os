@@ -26,6 +26,26 @@ uint32_t readLength(void *data, uint32_t size) {
     return 0;
 }
 
+int32_t readInteger(uint8_t *data, Formats format, FormatInfo *info) {
+    if (format == FORMAT_NEGATIVE_FIXINT) {
+        return ((int8_t) (*data | ~0x1F));
+    }
+    if (format == FORMAT_POSITIVE_FIXINT ||
+        format == FORMAT_UINT8 ||
+        format == FORMAT_UINT16 ||
+        format == FORMAT_UINT32 ||
+        format == FORMAT_UINT64) {
+
+        return *(uint32_t *)data;
+    }
+    if (data[info->readTypeParameter-1] & 0x80) {
+        for (uint8_t i = info->readTypeParameter; i < 8; i++) {
+            data[i] = 0xFF;
+        }
+    }
+    return *(int32_t *)data;
+}
+
 void dumpPack(uint8_t *data, uint32_t indent) {
     uint8_t firstByte = data[0];
     Formats format = FirstByteToFormat[firstByte];
@@ -68,7 +88,7 @@ void dumpPack(uint8_t *data, uint32_t indent) {
         // TODO: read compund types
         return;
     }
-    void *buffer = malloc(bytesToRead);
+    void *buffer = malloc(MAX(bytesToRead, 8));
     switch (info->readType) {
     case Inline:
         *((uint8_t *)buffer) = firstByte & info->readTypeParameter; break;
@@ -82,7 +102,7 @@ void dumpPack(uint8_t *data, uint32_t indent) {
     case TYPE_NIL:
         printf("NIL"); break;
     case TYPE_INTEGER:
-        printf("int(%i) ", *((int32_t *)(void*) buffer)); break;
+        printf("int(%i) ", readInteger(buffer, format, info)); break;
     default:
         printf("unknown "); break;
     }
@@ -93,6 +113,9 @@ void dumpPack(uint8_t *data, uint32_t indent) {
 
 uint8_t demo1[] = {0xD0, 1}; // int8
 uint8_t demo2[] = {27}; // fixint
+uint8_t demo3[] = {-1}; // fixint -1
+uint8_t demo4[] = {0xD0, -10}; // negative int8
+uint8_t demo5[] = {0xD1, -15, -1}; // negative int16
 
 void fillSpots(uint16_t from, uint16_t to, Formats value) {
     for (uint16_t i = from; i <= to; i++) {
@@ -114,4 +137,7 @@ int32_t main() {
     printf("dumping test data...\n");
     dumpPack(demo1, 0);
     dumpPack(demo2, 0);
+    dumpPack(demo3, 0);
+    dumpPack(demo4, 0);
+    dumpPack(demo5, 0);
 }
