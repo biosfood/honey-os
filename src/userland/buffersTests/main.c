@@ -31,22 +31,25 @@ void dumpPack(uint8_t *data, uint32_t indent) {
     Formats format = FirstByteToFormat[firstByte];
     FormatInfo *info = &formatInfo[format];
     uint32_t bytesToRead = 1;
-    uint32_t dataOffset = 0;
+    uint32_t dataOffset = 0, dataSize = 0;
     switch (info->readType) {
     case Inline:
         break;
     case InlineLength:
         bytesToRead += firstByte & info->readTypeParameter;
         dataOffset = 1;
+        dataSize = firstByte & info->readTypeParameter;
         break;
     case FixedLength:
         bytesToRead += info->readTypeParameter;
         dataOffset = 1;
+        dataSize = info->readTypeParameter;
         break;
     case ReadLength:
         uint32_t length = readLength(data + 1, info->readTypeParameter);
         bytesToRead += info->readTypeParameter + length;
         dataOffset = info->readTypeParameter;
+        dataSize = length;
         break;
     case ElementsInline:
         break;
@@ -60,11 +63,36 @@ void dumpPack(uint8_t *data, uint32_t indent) {
         sprintf(hexData + 3*i, "%x ", data[i]);
     }
     hexData[3*bytesToRead - 1] = 0;
-    printf("%s: %s\n", hexData, info->name);
+    printf("%s: ", hexData);
+    if (info->dataType == TYPE_ARRAY || info->dataType == TYPE_MAP) {
+        // TODO: read compund types
+        return;
+    }
+    void *buffer = malloc(bytesToRead);
+    switch (info->readType) {
+    case Inline:
+        *((uint8_t *)buffer) = firstByte & info->readTypeParameter; break;
+    case InlineLength:
+    case FixedLength:
+    case ReadLength:
+        memcpy(data + dataOffset, buffer, dataSize); break;
+    default: break;
+    }
+    switch (info->dataType) {
+    case TYPE_NIL:
+        printf("NIL"); break;
+    case TYPE_INTEGER:
+        printf("int(%i) ", *((int32_t *)(void*) buffer)); break;
+    default:
+        printf("unknown "); break;
+    }
+    printf("(%s)\n", info->name);
     free(hexData);
+    free(buffer);
 }
 
-uint8_t demoPack[] = {0xD0, 1}; // fixint 1
+uint8_t demo1[] = {0xD0, 1}; // int8
+uint8_t demo2[] = {27}; // fixint
 
 void fillSpots(uint16_t from, uint16_t to, Formats value) {
     for (uint16_t i = from; i <= to; i++) {
@@ -84,5 +112,6 @@ int32_t main() {
         initialize();
     }
     printf("dumping test data...\n");
-    dumpPack(demoPack, 0);
+    dumpPack(demo1, 0);
+    dumpPack(demo2, 0);
 }
