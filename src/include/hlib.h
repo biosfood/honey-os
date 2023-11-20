@@ -103,10 +103,9 @@ extern void listClear(ListElement **list, bool freeData);
 
 extern void _printf(AllocationData, const char *format, ...);
 extern char *_asprintf(AllocationData, const char *format, ...);
-extern void _sprintf(AllocationData, char *, const char *format, ...);
+extern void sprintf(const char *format, ...);
 #define printf(...) _printf(allocationData, __VA_ARGS__)
 #define asprintf(...) _asprintf(allocationData, __VA_ARGS__)
-#define sprintf(...) _sprintf(allocationData, __VA_ARGS__)
 
 extern bool checkFocus();
 
