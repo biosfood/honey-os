@@ -13,7 +13,7 @@ typedef enum ReadTypes {
     FixedLength,
     ReadLength,
     ElementsInline,
-    ReadElementts,
+    ReadElements,
 } ReadTypes;
 
 #define DATA_TYPES(X, S) \
