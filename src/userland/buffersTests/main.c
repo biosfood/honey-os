@@ -28,7 +28,7 @@ uint32_t readLength(void *data, uint32_t size) {
 
 int32_t readInteger(uint8_t *data, Formats format, FormatInfo *info) {
     if (format == FORMAT_NEGATIVE_FIXINT) {
-        return ((int8_t) (*data | ~0x1F));
+        return ((int8_t) (*data | ~info->readTypeParameter));
     }
     if (format == FORMAT_POSITIVE_FIXINT ||
         format == FORMAT_UINT8 ||
@@ -46,7 +46,7 @@ int32_t readInteger(uint8_t *data, Formats format, FormatInfo *info) {
     return *(int32_t *)data;
 }
 
-void dumpPack(uint8_t *data, uint32_t indent) {
+void *dumpPack(uint8_t *data, uint32_t indent) {
     uint8_t firstByte = data[0];
     Formats format = FirstByteToFormat[firstByte];
     FormatInfo *info = &formatInfo[format];
@@ -72,10 +72,12 @@ void dumpPack(uint8_t *data, uint32_t indent) {
         dataSize = length;
         break;
     case ElementsInline:
+        dataOffset = 1;
         break;
     case ReadElements:
         bytesToRead += info->readTypeParameter;
-        dataOffset = info->readTypeParameter;
+        dataOffset = 1;
+        dataSize = info->readTypeParameter;
     }
 
     char *hexData = malloc(3*bytesToRead);
@@ -83,21 +85,24 @@ void dumpPack(uint8_t *data, uint32_t indent) {
         sprintf(hexData + 3*i, "%x ", data[i]);
     }
     hexData[3*bytesToRead - 1] = 0;
-    printf("%s: ", hexData);
-    if (info->dataType == TYPE_ARRAY || info->dataType == TYPE_MAP) {
-        // TODO: read compund types
-        return;
-    }
+    char *indentData = malloc(indent + 1);
+    memset(indentData, ' ', indent);
+    indentData[indent] = 0;
+    printf("%s%s: ", indentData, hexData);
     void *buffer = malloc(MAX(bytesToRead + 1, 8));
     switch (info->readType) {
     case Inline:
+    case ElementsInline:
         *((uint8_t *)buffer) = firstByte & info->readTypeParameter; break;
     case InlineLength:
     case FixedLength:
     case ReadLength:
+    case ReadElements:
         memcpy(data + dataOffset, buffer, dataSize); break;
     default: break;
     }
+    uint32_t size;
+    void *next = data + bytesToRead;
     switch (info->dataType) {
     case TYPE_NIL:
         printf("NIL"); break;
@@ -109,16 +114,34 @@ void dumpPack(uint8_t *data, uint32_t indent) {
     case TYPE_STRING:
         ((uint8_t *)buffer)[bytesToRead] = 0;
         printf("str(\"%s\")", buffer); break;
+    case TYPE_ARRAY:
+        size = readInteger(buffer, format, info);
+        printf("array(%i) (%s)\n", size, info->name);
+        for (uint32_t i = 0; i < size; i++) {
+            next = dumpPack(next, indent + 2);
+        }
+        return next;
+    case TYPE_MAP:
+        size = readInteger(buffer, format, info);
+        printf("map(%i) (%s)\n", size, info->name);
+        for (uint32_t i = 0; i < size; i++) {
+            next = dumpPack(next, indent + 1);
+            next = dumpPack(next, indent + 2);
+        }
+        return next;
+
     default:
         printf("unknown"); break;
     }
     printf(" (%s)\n", info->name);
     free(hexData);
+    free(indentData);
     free(buffer);
+    return next;
 }
 
-uint8_t demo1[] = {0xD0, 1}; // int8
-uint8_t demo2[] = {0xC2}; // false
+uint8_t demo1[] = {0x92, 1, 5}; // fixarray
+uint8_t demo2[] = {0xDE, 2, 0, 0xA2, 'h', 'i', 1, 0xA2, ';', ')', 0xC3 }; // map16
 uint8_t demo3[] = {0xC3}; // true
 uint8_t demo4[] = {0xA2, 'h', 'i'}; // fixstring
 uint8_t demo5[] = {0xD9, 5, 'w', 'o', 'r', 'l', 'd'}; // str8

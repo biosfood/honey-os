@@ -30,8 +30,8 @@ typedef enum ReadTypes {
 
 #define FORMATS(X, S) \
     X(POSITIVE_FIXINT, INTEGER, 0x00, 0x7F, Inline, 0x7F) S \
-    X(FIXMAP, MAP, 0x80, 0x8F, InlineLength, 0x0F) S \
-    X(FIXARRAY, ARRAY, 0x90, 0x9F, InlineLength, 0x0F) S \
+    X(FIXMAP, MAP, 0x80, 0x8F, ElementsInline, 0x0F) S \
+    X(FIXARRAY, ARRAY, 0x90, 0x9F, ElementsInline, 0x0F) S \
     X(FIXSTR, STRING, 0xa0, 0xBF, InlineLength, 0x1F) S \
     X(NIL, NIL, 0xC0, 0xC0, Inline, 0x00) S \
     X(UNUSED, UNUSED, 0xC1, 0xC1, Inline, 0x00) S \
@@ -62,8 +62,8 @@ typedef enum ReadTypes {
     X(STR32, STRING, 0xDB, 0xDB, ReadLength, 4) S \
     X(ARRAY16, ARRAY, 0xDC, 0xDC, ReadLength, 2) S \
     X(ARRAY32, ARRAY, 0xDD, 0xDD, ReadLength, 4) S \
-    X(MAP16, MAP, 0xDE, 0xDE, ReadLength, 2) S \
-    X(MAP32, MAP, 0xDF, 0xDF, ReadLength, 4) S \
+    X(MAP16, MAP, 0xDE, 0xDE, ReadElements, 2) S \
+    X(MAP32, MAP, 0xDF, 0xDF, ReadElements, 4) S \
     X(NEGATIVE_FIXINT, INTEGER, 0xE0, 0xFF, Inline, 0x1F)
 
 // define enums
