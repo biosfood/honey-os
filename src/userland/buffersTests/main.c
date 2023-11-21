@@ -68,7 +68,7 @@ void dumpPack(uint8_t *data, uint32_t indent) {
     case ReadLength:
         uint32_t length = readLength(data + 1, info->readTypeParameter);
         bytesToRead += info->readTypeParameter + length;
-        dataOffset = info->readTypeParameter;
+        dataOffset = 1 + info->readTypeParameter;
         dataSize = length;
         break;
     case ElementsInline:
@@ -88,7 +88,7 @@ void dumpPack(uint8_t *data, uint32_t indent) {
         // TODO: read compund types
         return;
     }
-    void *buffer = malloc(MAX(bytesToRead, 8));
+    void *buffer = malloc(MAX(bytesToRead + 1, 8));
     switch (info->readType) {
     case Inline:
         *((uint8_t *)buffer) = firstByte & info->readTypeParameter; break;
@@ -102,20 +102,26 @@ void dumpPack(uint8_t *data, uint32_t indent) {
     case TYPE_NIL:
         printf("NIL"); break;
     case TYPE_INTEGER:
-        printf("int(%i) ", readInteger(buffer, format, info)); break;
+        printf("int(%i)", readInteger(buffer, format, info)); break;
+    case TYPE_BOOLEAN:
+        printf("bool(%s)", readInteger(buffer, format, info) ? "true" : "false"); break;
+    // can't even print a float yet...
+    case TYPE_STRING:
+        ((uint8_t *)buffer)[bytesToRead] = 0;
+        printf("str(\"%s\")", buffer); break;
     default:
-        printf("unknown "); break;
+        printf("unknown"); break;
     }
-    printf("(%s)\n", info->name);
+    printf(" (%s)\n", info->name);
     free(hexData);
     free(buffer);
 }
 
 uint8_t demo1[] = {0xD0, 1}; // int8
-uint8_t demo2[] = {27}; // fixint
-uint8_t demo3[] = {-1}; // fixint -1
-uint8_t demo4[] = {0xD0, -10}; // negative int8
-uint8_t demo5[] = {0xD1, -15, -1}; // negative int16
+uint8_t demo2[] = {0xC2}; // false
+uint8_t demo3[] = {0xC3}; // true
+uint8_t demo4[] = {0xA2, 'h', 'i'}; // fixstring
+uint8_t demo5[] = {0xD9, 5, 'w', 'o', 'r', 'l', 'd'}; // str8
 
 void fillSpots(uint16_t from, uint16_t to, Formats value) {
     for (uint16_t i = from; i <= to; i++) {
