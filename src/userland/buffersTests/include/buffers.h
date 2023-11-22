@@ -16,6 +16,11 @@ typedef enum ReadTypes {
     ReadElements,
 } ReadTypes;
 
+typedef enum IntegerType {
+    Signed,
+    Unsigned
+} IntegerType;
+
 #define DATA_TYPES(X, S) \
     X(INTEGER) S \
     X(NIL) S \
@@ -86,5 +91,41 @@ typedef struct FormatInfo {
 
 extern Formats FirstByteToFormat[256];
 extern FormatInfo formatInfo[];
+
+// macros for initializing a buffer
+#define ABS(x) (x >= 0 ? x : -x)
+#define EMPTY(...)
+#define DEFER(...) __VA_ARGS__ EMPTY()
+#define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
+
+#define EXPAND3(...) __VA_ARGS__
+#define EXPAND2(...) EXPAND3(EXPAND3(EXPAND3(EXPAND3(__VA_ARGS__))))
+#define EXPAND1(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
+#define EXPAND(...) EXPAND1(EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__))))
+
+#define STRING_Length(x) 1+strlen(x)
+
+#define ONE(...) 1
+
+#define ARRAY_Length_id() ARRAY_Length
+#define _INTEGER_LENGTH(x, type, ...) integerLength(x, type)
+#define INTEGER_Length(x, ...) _INTEGER_LENGTH(x, ##__VA_ARGS__ , Unsigned)
+#define INTEGER_Length_id() INTEGER_Length
+#define STRING_Length_id() STRING_Length
+#define MAP_Length_id() MAP_Length
+
+#define LENGTH(type, ...) DEFER(type##_Length_id)()(__VA_ARGS__)
+
+
+#define CONTENTS contents (LENGTH, +)
+
+#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
+#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
+
+#define CREATE(name, definition) \
+    uint32_t name##Length = EXPAND(definition(LENGTH)); \
+    void *name = malloc(name##Length);
+
+// TODO: assign values here!
 
 #endif // BUFFERS_H

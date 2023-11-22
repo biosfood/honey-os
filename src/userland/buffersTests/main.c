@@ -140,12 +140,6 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
     return next;
 }
 
-uint8_t demo1[] = {0x92, 1, 5}; // fixarray
-uint8_t demo2[] = {0xDE, 2, 0, 0xA2, 'h', 'i', 1, 0xA2, ';', ')', 0xC3 }; // map16
-uint8_t demo3[] = {0xC3}; // true
-uint8_t demo4[] = {0xA2, 'h', 'i'}; // fixstring
-uint8_t demo5[] = {0xD9, 5, 'w', 'o', 'r', 'l', 'd'}; // str8
-
 void fillSpots(uint16_t from, uint16_t to, Formats value) {
     for (uint16_t i = from; i <= to; i++) {
         FirstByteToFormat[i] = value;
@@ -157,16 +151,26 @@ void initialize() {
     FORMATS(FILL_SPOTS_X, NOTHING);
 }
 
-uint32_t INTEGER_Length(int32_t value) {
-    if ((value & 0x7F) == value) {
+uint32_t integerLength(int32_t value, IntegerType integerType) {
+    if ((value & 0x7F) == value || ((~value) & 0x1F) == ~value) {
         // fixint
         return 1;
     }
+    value = ABS(value);
     if ((value & 0xFF) == value) {
-        // uint8
+        // int8
         return 2;
     }
-    return 3;
+    if ((value & 0xFFFF) == value) {
+        // int16
+        return 3;
+    }
+    if ((value & 0xFFFFFFFF) == value) {
+        // int32
+        return 5;
+    }
+    // int64
+    return 9;;
 }
 
 uint32_t arrayLength(uint32_t elementCount) {
@@ -179,30 +183,8 @@ uint32_t mapLength(uint32_t elementCount) {
     return 1;
 }
 
-# define EMPTY(...)
-# define DEFER(...) __VA_ARGS__ EMPTY()
-# define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
-# define EXPAND(...) __VA_ARGS__
-
-#define STRING_Length(x) 1+strlen(x)
-
-#define ONE(Type, value) 1
-
-#define ARRAY_Length_id() ARRAY_Length
-#define INTEGER_Length_id() INTEGER_Length
-#define STRING_Length_id() STRING_Length
-#define MAP_Length_id() MAP_Length
-
-#define LENGTH(type, value) DEFER(type##_Length_id)()(value)
-
-
-#define CONTENTS contents (LENGTH, +)
-
-#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
-#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
-
 #define SAMPLE_1(X) \
-    X(INTEGER, 1)
+    X(INTEGER, 1, Signed)
 
 #define SAMPLE_2_ARRAY_CONTENTS(X, S) \
     X(INTEGER, 1) S \
@@ -225,12 +207,8 @@ int32_t main() {
         initialize();
     }
     printf("dumping test data...\n");
-    uint32_t length = EXPAND(SAMPLE_1(LENGTH));
-    uint32_t length2 = EXPAND(EXPAND(SAMPLE_2(LENGTH)));
-    uint32_t length3 = EXPAND(EXPAND(EXPAND(SAMPLE_3(LENGTH))));
-    dumpPack(demo1, 0);
-    dumpPack(demo2, 0);
-    dumpPack(demo3, 0);
-    dumpPack(demo4, 0);
-    dumpPack(demo5, 0);
+    CREATE(test, SAMPLE_1);
+    printf("test 1 length: %i\n", testLength);
+    dumpPack(test, 0);
+    free(test);
 }
