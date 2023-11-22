@@ -157,6 +157,67 @@ void initialize() {
     FORMATS(FILL_SPOTS_X, NOTHING);
 }
 
+uint32_t INTEGER_Length(int32_t value) {
+    if ((value & 0x7F) == value) {
+        // fixint
+        return 1;
+    }
+    if ((value & 0xFF) == value) {
+        // uint8
+        return 2;
+    }
+    return 3;
+}
+
+uint32_t arrayLength(uint32_t elementCount) {
+    // TODO
+    return 1;
+}
+
+uint32_t mapLength(uint32_t elementCount) {
+    // TODO
+    return 1;
+}
+
+# define EMPTY(...)
+# define DEFER(...) __VA_ARGS__ EMPTY()
+# define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
+# define EXPAND(...) __VA_ARGS__
+
+#define STRING_Length(x) 1+strlen(x)
+
+#define ONE(Type, value) 1
+
+#define ARRAY_Length_id() ARRAY_Length
+#define INTEGER_Length_id() INTEGER_Length
+#define STRING_Length_id() STRING_Length
+#define MAP_Length_id() MAP_Length
+
+#define LENGTH(type, value) DEFER(type##_Length_id)()(value)
+
+
+#define CONTENTS contents (LENGTH, +)
+
+#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
+#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
+
+#define SAMPLE_1(X) \
+    X(INTEGER, 1)
+
+#define SAMPLE_2_ARRAY_CONTENTS(X, S) \
+    X(INTEGER, 1) S \
+    X(STRING, "hi") \
+
+#define SAMPLE_2(X) \
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENTS)
+
+#define SAMPLE_3_MAP_CONTENTS(X, S) \
+    X(INTEGER, 1) S \
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENTS)
+
+#define SAMPLE_3(X) \
+    X(MAP, SAMPLE_3_MAP_CONTENTS)
+
 int32_t main() {
     static bool intitialized = false;
     if (!intitialized) {
@@ -164,6 +225,9 @@ int32_t main() {
         initialize();
     }
     printf("dumping test data...\n");
+    uint32_t length = EXPAND(SAMPLE_1(LENGTH));
+    uint32_t length2 = EXPAND(EXPAND(SAMPLE_2(LENGTH)));
+    uint32_t length3 = EXPAND(EXPAND(EXPAND(SAMPLE_3(LENGTH))));
     dumpPack(demo1, 0);
     dumpPack(demo2, 0);
     dumpPack(demo3, 0);
