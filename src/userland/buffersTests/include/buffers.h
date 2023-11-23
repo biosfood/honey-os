@@ -115,19 +115,21 @@ extern FormatInfo formatInfo[];
 #define STRING_Length_id() STRING_Length
 #define MAP_Length_id() MAP_Length
 
-#define LENGTH(type, ...) DEFER(type##_Length_id)()(__VA_ARGS__)
+#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
+#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
 
+#define LENGTH(type, ...) DEFER(type##_Length_id)()(__VA_ARGS__)
 
 #define _INTEGER_WRITE(x, type, ...) buffer = integerWrite(buffer, x, type);
 #define INTEGER_Write(x, ...) _INTEGER_WRITE(x, ##__VA_ARGS__ , Unsigned)
 #define INTEGER_Write_id() INTEGER_Write
+#define ARRAY_Write_id() ARRAY_Write
+
+#define ARRAY_Write(contents) buffer = arrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
 
 #define WRITE(type, ...) DEFER(type##_Write_id)()(__VA_ARGS__)
 
 #define CONTENTS contents (LENGTH, +)
-
-#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
-#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
 
 #define CREATE(name, definition) \
     uint32_t name##Length = EXPAND(definition(LENGTH)); \

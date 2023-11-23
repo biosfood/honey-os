@@ -224,8 +224,37 @@ void *integerWrite(void *buffer, int32_t x, IntegerType type) {
 }
 
 uint32_t arrayLength(uint32_t elementCount) {
-    // TODO
+    if ((elementCount & formatInfo[FORMAT_FIXARRAY].readTypeParameter) == elementCount) {
+        return 1;
+    }
+    if ((uint16_t)elementCount == elementCount) {
+        return 3;
+    }
+    if ((uint32_t)elementCount == elementCount) {
+        return 5;
+    }
+    // TODO: 64 bit numbers
     return 1;
+}
+
+void *arrayWrite(void *buffer, uint32_t elementCount) {
+    uint8_t *bufferByte = buffer;
+    if ((elementCount & formatInfo[FORMAT_FIXARRAY].readTypeParameter) == elementCount) {
+        *bufferByte = formatInfo[FORMAT_FIXARRAY].min + elementCount;
+        return buffer + 1;
+    }
+    if ((uint16_t)elementCount == elementCount) {
+        *bufferByte = formatInfo[FORMAT_ARRAY16].min;
+        *(uint16_t *)(buffer + 1) = (uint16_t) elementCount;
+        return buffer + 3;
+    }
+    if ((uint32_t)elementCount == elementCount) {
+        *bufferByte = formatInfo[FORMAT_ARRAY32].min;
+        *(uint32_t *)(buffer + 1) = (uint32_t) elementCount;
+        return buffer + 5;
+    }
+    // TODO: 64 bit numbers
+    return buffer;
 }
 
 uint32_t mapLength(uint32_t elementCount) {
@@ -236,12 +265,13 @@ uint32_t mapLength(uint32_t elementCount) {
 #define SAMPLE_1(X) \
     X(INTEGER, 500, Signed)
 
-#define SAMPLE_2_ARRAY_CONTENTS(X, S) \
+#define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
-    X(STRING, "hi") \
+    X(INTEGER, 500, Signed)
+    // X(STRING, "hi") \
 
 #define SAMPLE_2(X) \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENTS)
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
 
 #define SAMPLE_3_MAP_CONTENTS(X, S) \
     X(INTEGER, 1) S \
@@ -257,7 +287,7 @@ int32_t main() {
         initialize();
     }
     printf("dumping test data...\n");
-    CREATE(test, SAMPLE_1);
+    CREATE(test, SAMPLE_2);
     printf("test 1 length: %i\n", testLength);
     dumpPack(test, 0);
     free(test);
