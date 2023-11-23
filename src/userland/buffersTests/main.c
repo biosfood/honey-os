@@ -4,7 +4,7 @@
 // see https://github.com/msgpack/msgpack/blob/master/spec.md
 
 #define FORMATS_STRUCTS_X(_name, _dataType, _min, _max, _readType, _readTypeParameter) \
-    { .name = #_name, .dataType = TYPE_##_dataType, .readType = _readType, .readTypeParameter = _readTypeParameter }
+    { .name = #_name, .dataType = TYPE_##_dataType, .readType = _readType, .readTypeParameter = _readTypeParameter, .min = _min, .max = _max }
 
 FormatInfo formatInfo[] = {
     FORMATS(FORMATS_STRUCTS_X, COMMA)
@@ -170,7 +170,57 @@ uint32_t integerLength(int32_t value, IntegerType integerType) {
         return 5;
     }
     // int64
-    return 9;;
+    return 9;
+}
+
+void *integerWrite(void *buffer, int32_t x, IntegerType type) {
+    if (x < 0 && type != Signed) {
+        printf("integerWrite: %i is negative but type is Unsigned!\n", x);
+        return buffer;
+    }
+    uint8_t *bufferByte = buffer;
+    if ((x & 0x7F) == x) {
+        *bufferByte = (uint8_t)x;
+        // fixint
+        return buffer + 1;
+    }
+    if (((~x) & 0x1F) == ~x) {
+        *bufferByte = (int8_t)x;
+        // negative fixint
+        return buffer + 1;
+    }
+    if ((uint8_t)x == x) {
+        *bufferByte = formatInfo[FORMAT_UINT8].min;
+        *(uint8_t *)(buffer + 1) = (uint8_t) x;
+        return buffer + 2;
+    }
+    if ((int8_t) x == x) {
+        *bufferByte = formatInfo[FORMAT_INT8].min;
+        *(int8_t *)(buffer + 1) = (int8_t) x;
+        return buffer + 2;
+    }
+    if ((uint16_t)x == x) {
+        *bufferByte = formatInfo[FORMAT_UINT16].min;
+        *(uint16_t *)(buffer + 1) = (uint16_t) x;
+        return buffer + 3;
+    }
+    if ((int16_t) x == x) {
+        *bufferByte = formatInfo[FORMAT_INT16].min;
+        *(int16_t *)(buffer + 1) = (int16_t) x;
+        return buffer + 3;
+    }
+    if ((uint32_t)x == x) {
+        *bufferByte = formatInfo[FORMAT_UINT32].min;
+        *(uint32_t *)(buffer + 1) = (uint32_t) x;
+        return buffer + 5;
+    }
+    if ((int32_t) x == x) {
+        *bufferByte = formatInfo[FORMAT_INT32].min;
+        *(int32_t *)(buffer + 1) = (int32_t) x;
+        return buffer + 5;
+    }
+    // TODO: 64 bit numbers
+    return buffer;
 }
 
 uint32_t arrayLength(uint32_t elementCount) {
@@ -184,7 +234,7 @@ uint32_t mapLength(uint32_t elementCount) {
 }
 
 #define SAMPLE_1(X) \
-    X(INTEGER, 1, Signed)
+    X(INTEGER, 500, Signed)
 
 #define SAMPLE_2_ARRAY_CONTENTS(X, S) \
     X(INTEGER, 1) S \

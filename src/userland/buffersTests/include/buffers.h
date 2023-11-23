@@ -87,6 +87,7 @@ typedef struct FormatInfo {
     DataTypes dataType;
     ReadTypes readType;
     uint32_t readTypeParameter;
+    uint8_t min, max;
 } FormatInfo;
 
 extern Formats FirstByteToFormat[256];
@@ -117,6 +118,12 @@ extern FormatInfo formatInfo[];
 #define LENGTH(type, ...) DEFER(type##_Length_id)()(__VA_ARGS__)
 
 
+#define _INTEGER_WRITE(x, type, ...) buffer = integerWrite(buffer, x, type);
+#define INTEGER_Write(x, ...) _INTEGER_WRITE(x, ##__VA_ARGS__ , Unsigned)
+#define INTEGER_Write_id() INTEGER_Write
+
+#define WRITE(type, ...) DEFER(type##_Write_id)()(__VA_ARGS__)
+
 #define CONTENTS contents (LENGTH, +)
 
 #define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
@@ -124,7 +131,11 @@ extern FormatInfo formatInfo[];
 
 #define CREATE(name, definition) \
     uint32_t name##Length = EXPAND(definition(LENGTH)); \
-    void *name = malloc(name##Length);
+    void *name = malloc(name##Length); \
+    { \
+        void *buffer = name; \
+        EXPAND(definition(WRITE)) \
+    }
 
 // TODO: assign values here!
 
