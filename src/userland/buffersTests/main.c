@@ -151,6 +151,46 @@ void initialize() {
     FORMATS(FILL_SPOTS_X, NOTHING);
 }
 
+uint32_t stringLength(uint32_t strlength) {
+    if ((strlength & 0x1F) == strlength) {
+        // fixstr
+        return 1 + strlength;
+    }
+    if ((strlength & 0xFF) == strlength) {
+        // str8
+        return 2 + strlength;
+    }
+    if ((strlength & 0xFFFF) == strlength) {
+        // str16
+        return 3 + strlength;
+    }
+    // str32
+    return 5 + strlength;
+}
+
+void *stringWrite(void *buffer, char *string) {
+    uint32_t length = strlen(string);
+    uint8_t *bufferByte = buffer;
+    if ((length & 0x1F) == length) {
+        *bufferByte = formatInfo[FORMAT_FIXSTR].min + (uint8_t) length;
+        buffer++;
+    } else if ((length & 0xFF) == length) {
+        *bufferByte = formatInfo[FORMAT_STR8].min;
+        *(uint8_t *)(buffer + 1) = (uint8_t) length;
+        buffer += 2;
+    } else if ((length & 0xFFFF) == length) {
+        *bufferByte = formatInfo[FORMAT_STR16].min;
+        *(uint16_t *)(buffer + 1) = (uint16_t) length;
+        buffer += 3;
+    } else {
+        *bufferByte = formatInfo[FORMAT_STR32].min;
+        *(uint32_t *)(buffer + 1) = (uint32_t) length;
+        buffer += 5;
+    }
+    memcpy(string, buffer, length);
+    return buffer + length;
+}
+
 uint32_t integerLength(int32_t value, IntegerType integerType) {
     if ((value & 0x7F) == value || ((~value) & 0x1F) == ~value) {
         // fixint
@@ -267,8 +307,8 @@ uint32_t mapLength(uint32_t elementCount) {
 
 #define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
+    X(STRING, "hi") S \
     X(INTEGER, 500, Signed)
-    // X(STRING, "hi") \
 
 #define SAMPLE_2(X) \
     X(ARRAY, SAMPLE_2_ARRAY_CONTENT)

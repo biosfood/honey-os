@@ -104,7 +104,7 @@ extern FormatInfo formatInfo[];
 #define EXPAND1(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
 #define EXPAND(...) EXPAND1(EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__))))
 
-#define STRING_Length(x) 1+strlen(x)
+#define STRING_Length(x) stringLength(strlen(x))
 
 #define ONE(...) 1
 
@@ -122,8 +122,11 @@ extern FormatInfo formatInfo[];
 
 #define _INTEGER_WRITE(x, type, ...) buffer = integerWrite(buffer, x, type);
 #define INTEGER_Write(x, ...) _INTEGER_WRITE(x, ##__VA_ARGS__ , Unsigned)
+#define STRING_Write(x) buffer = stringWrite(buffer, x);
+
 #define INTEGER_Write_id() INTEGER_Write
 #define ARRAY_Write_id() ARRAY_Write
+#define STRING_Write_id() STRING_Write
 
 #define ARRAY_Write(contents) buffer = arrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
 
@@ -138,7 +141,5 @@ extern FormatInfo formatInfo[];
         void *buffer = name; \
         EXPAND(definition(WRITE)) \
     }
-
-// TODO: assign values here!
 
 #endif // BUFFERS_H
