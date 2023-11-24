@@ -298,8 +298,33 @@ void *arrayWrite(void *buffer, uint32_t elementCount) {
 }
 
 uint32_t mapLength(uint32_t elementCount) {
-    // TODO
-    return 1;
+    if (elementCount % 2) {
+        printf("map: bad element count %i\n", elementCount);
+        return 0;
+    }
+    return arrayLength(elementCount / 2);
+}
+
+void *mapWrite(void *buffer, uint32_t elementCount) {
+    uint8_t *bufferByte = buffer;
+    if (elementCount % 2) {
+        printf("map: bad element count %i\n", elementCount);
+        return buffer;
+    }
+    elementCount >>= 1;
+    if ((elementCount & 0x0F) == elementCount) {
+        *bufferByte = formatInfo[FORMAT_FIXMAP].min + elementCount;
+        // fixmap
+        return buffer + 1;
+    }
+    if ((elementCount & 0xFFFF) == elementCount) {
+        *bufferByte = formatInfo[FORMAT_MAP16].min;
+        *(uint16_t *)(buffer + 1) = (uint16_t) elementCount;
+        return buffer + 3;
+    }
+    *bufferByte = formatInfo[FORMAT_MAP32].min;
+    *(uint32_t *)(buffer + 1) = elementCount;
+    return buffer + 5;
 }
 
 #define SAMPLE_1(X) \
@@ -315,7 +340,9 @@ uint32_t mapLength(uint32_t elementCount) {
 
 #define SAMPLE_3_MAP_CONTENTS(X, S) \
     X(INTEGER, 1) S \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENTS)
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENT) S \
+    X(STRING, "hello") S \
+    X(STRING, "world")
 
 #define SAMPLE_3(X) \
     X(MAP, SAMPLE_3_MAP_CONTENTS)
@@ -327,7 +354,7 @@ int32_t main() {
         initialize();
     }
     printf("dumping test data...\n");
-    CREATE(test, SAMPLE_2);
+    CREATE(test, SAMPLE_3);
     printf("test 1 length: %i\n", testLength);
     dumpPack(test, 0);
     free(test);

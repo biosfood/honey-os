@@ -127,8 +127,10 @@ extern FormatInfo formatInfo[];
 #define INTEGER_Write_id() INTEGER_Write
 #define ARRAY_Write_id() ARRAY_Write
 #define STRING_Write_id() STRING_Write
+#define MAP_Write_id() MAP_Write
 
 #define ARRAY_Write(contents) buffer = arrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
+#define MAP_Write(contents) buffer = mapWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
 
 #define WRITE(type, ...) DEFER(type##_Write_id)()(__VA_ARGS__)
 
