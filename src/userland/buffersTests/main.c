@@ -347,6 +347,11 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 #define SAMPLE_3(X) \
     X(MAP, SAMPLE_3_MAP_CONTENTS)
 
+#define EXPECT(data, _dataType) \
+    if (formatInfo[FirstByteToFormat[*((uint8_t *)data)]].dataType != TYPE_##_dataType) { \
+        printf("failed EXPECT, expected %s, got %s\n", #_dataType, formatInfo[FirstByteToFormat[*((uint8_t *)data)]].name); \
+    } else
+
 int32_t main() {
     static bool intitialized = false;
     if (!intitialized) {
@@ -355,6 +360,12 @@ int32_t main() {
     }
     printf("dumping test data...\n");
     CREATE(test, SAMPLE_3);
+    EXPECT(test, MAP) {
+        printf("test is a map\n");
+    }
+    EXPECT(test, STRING) {
+        printf("test is a string\n");
+    }
     printf("test 1 length: %i\n", testLength);
     dumpPack(test, 0);
     free(test);
