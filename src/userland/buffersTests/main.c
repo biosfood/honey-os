@@ -352,21 +352,57 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
         printf("failed EXPECT, expected %s, got %s\n", #_dataType, formatInfo[FirstByteToFormat[*((uint8_t *)data)]].name); \
     } else
 
+uint32_t readUint(void *data) {
+    uint8_t *buffer = (uint8_t *) data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_INTEGER) {
+        printf("readUint: cannot convert %s to int\n", info->name);
+        return 0;
+    }
+    if (format == FORMAT_NEGATIVE_FIXINT) {
+        printf("readUint: cannot read a negative fixint\n");
+        return 0;
+    }
+    switch (info->readType) {
+    case Inline:
+        return *((uint8_t *)data) & info->readTypeParameter;
+    case FixedLength:
+        switch (info->readTypeParameter) {
+        case 1:
+            return *((uint8_t *)(data + 1));
+        case 2:
+            return *((uint16_t *)(data + 1));
+        case 4:
+            return *((uint32_t *)(data + 1));
+        }
+    default:
+    }
+    printf("readUint: cannot read %s\n", info->name);
+    return 0;
+}
+
+#define _AS_INT(data, catchError) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
+        readUint(data); \
+    })
+
+#define AS_INT(data, retval, ...) \
+    _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert " #data " to an integer"); return retval; })
+
 int32_t main() {
     static bool intitialized = false;
     if (!intitialized) {
         intitialized = true;
         initialize();
     }
-    printf("dumping test data...\n");
-    CREATE(test, SAMPLE_3);
-    EXPECT(test, MAP) {
-        printf("test is a map\n");
-    }
-    EXPECT(test, STRING) {
-        printf("test is a string\n");
-    }
-    printf("test 1 length: %i\n", testLength);
+    CREATE(test, SAMPLE_1);
+    uint32_t intValue = AS_INT(test, -1);
+    printf("test data as an unsigned integer: %i\n", intValue);
+    printf("test length: %i\n", testLength);
     dumpPack(test, 0);
     free(test);
 }
