@@ -328,7 +328,7 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 }
 
 #define SAMPLE_1(X) \
-    X(INTEGER, 500, Signed)
+    X(INTEGER, -500, Signed)
 
 #define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
@@ -352,34 +352,58 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
         printf("failed EXPECT, expected %s, got %s\n", #_dataType, formatInfo[FirstByteToFormat[*((uint8_t *)data)]].name); \
     } else
 
-uint32_t readUint(void *data) {
+// for reading values from a buffer: malloc is very slow, so only use it sparingly, when reutrning a value.
+
+intmax_t readInt(void *data) {
     uint8_t *buffer = (uint8_t *) data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
     if (info->dataType != TYPE_INTEGER) {
-        printf("readUint: cannot convert %s to int\n", info->name);
+        printf("readInt: cannot convert %s to int\n", info->name);
         return 0;
     }
-    if (format == FORMAT_NEGATIVE_FIXINT) {
-        printf("readUint: cannot read a negative fixint\n");
-        return 0;
-    }
-    switch (info->readType) {
-    case Inline:
-        return *((uint8_t *)data) & info->readTypeParameter;
-    case FixedLength:
-        switch (info->readTypeParameter) {
-        case 1:
+    if (format < FORMAT_INT8) {
+        // definietly working with a uint
+        if (format == FORMAT_POSITIVE_FIXINT) {
+            return *((uint8_t *)data) & info->readTypeParameter;
+        }
+        if (format == FORMAT_UINT8) {
             return *((uint8_t *)(data + 1));
-        case 2:
+        }
+        if (format == FORMAT_UINT16) {
             return *((uint16_t *)(data + 1));
-        case 4:
+        }
+        if (format == FORMAT_UINT32) {
             return *((uint32_t *)(data + 1));
         }
-    default:
+        goto fail;
     }
+    if (format == FORMAT_NEGATIVE_FIXINT) {
+        return (intmax_t) (int8_t) (*buffer);
+    }
+    if (format == FORMAT_INT8) {
+        return (intmax_t) *((int8_t *)data);
+    }
+    if (format == FORMAT_INT16) {
+        return (intmax_t) *((int16_t *)(data + 1));
+    }
+    if (format == FORMAT_INT32) {
+        return (intmax_t) *((int32_t *)(data + 1));
+    }
+fail:
+    // TODO: 64-bit numbers
     printf("readUint: cannot read %s\n", info->name);
     return 0;
+}
+
+uint32_t readUint(void *data) {
+    intmax_t asInt = readInt(data);
+    if (asInt < 0) {
+        printf("readUint: value %i is negative\n", asInt);
+        return 0;
+    }
+    return asInt;
+
 }
 
 #define _AS_INT(data, catchError) \
@@ -387,11 +411,24 @@ uint32_t readUint(void *data) {
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        readUint(data); \
+        readInt(data); \
+    })
+
+#define _AS_UINT(data, catchError, catchNegative) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
+        intmax_t asInt = readInt(data); \
+        if (asInt < 0) catchNegative \
+        (uint32_t) asInt; \
     })
 
 #define AS_INT(data, retval, ...) \
-    _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert " #data " to an integer"); return retval; })
+    _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert '" #data "' to an integer\n"); return retval; })
+
+#define AS_UINT(data, retval, ...) \
+    _AS_UINT(data, ##__VA_ARGS__, { printf("AS_UINT: cannot convert '" #data "' to an integer\n"); return retval; }, { printf("AS_UINT: '" #data "' is negative!\n"); asInt = 0; })
 
 int32_t main() {
     static bool intitialized = false;
@@ -400,9 +437,9 @@ int32_t main() {
         initialize();
     }
     CREATE(test, SAMPLE_1);
-    uint32_t intValue = AS_INT(test, -1);
-    printf("test data as an unsigned integer: %i\n", intValue);
-    printf("test length: %i\n", testLength);
+    uint32_t uintValue = AS_UINT(test, -1);
+    int32_t intValue = AS_INT(test, -1);
+    printf("test data as an unsigned integer: %i, as a signed integer: %i\n", uintValue, intValue);
     dumpPack(test, 0);
     free(test);
 }
