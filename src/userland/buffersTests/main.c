@@ -330,13 +330,15 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 #define SAMPLE_1(X) \
     X(INTEGER, -500, Signed)
 
+#define SAMPLE_2(X) X(STRING, "test")
+
 #define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
     X(STRING, "hi") S \
     X(INTEGER, 500, Signed)
 
-#define SAMPLE_2(X) \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
+// #define SAMPLE_2(X) \
+//     X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
 
 #define SAMPLE_3_MAP_CONTENTS(X, S) \
     X(INTEGER, 1) S \
@@ -406,6 +408,36 @@ uint32_t readUint(void *data) {
 
 }
 
+char *readStr(void *data) {
+    uint8_t *buffer = (uint8_t *) data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_STRING) {
+        printf("readString: cannot convert %s to string\n", info->name);
+        return NULL;
+    }
+    uintmax_t size = 0;
+    uint8_t offset = 0;
+    if (format == FORMAT_FIXSTR) {
+        size = *buffer & info->readTypeParameter;
+        offset = 1;
+    } else if (format == FORMAT_STR8) {
+        size = *((uint8_t *)(data + 1));
+        offset = 2;
+    } else if (format == FORMAT_STR16) {
+        size = *((uint16_t *)(data + 1));
+        offset = 3;
+    } else if (format == FORMAT_STR32) {
+        size = *((uint32_t *)(data + 1));
+        offset = 5;
+    }
+    printf("size : %i\n", size);
+    char *str = malloc(size + 1);
+    memcpy(data + offset, str, size);
+    str[size] = 0;
+    return str;
+}
+
 #define _AS_INT(data, catchError) \
     ({ \
         uint8_t *buffer = (uint8_t *) data; \
@@ -424,11 +456,22 @@ uint32_t readUint(void *data) {
         (uint32_t) asInt; \
     })
 
+#define _AS_STRING(data, catchError) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_STRING) catchError \
+        readStr(data); \
+    })
+
 #define AS_INT(data, retval, ...) \
     _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert '" #data "' to an integer\n"); return retval; })
 
 #define AS_UINT(data, retval, ...) \
     _AS_UINT(data, ##__VA_ARGS__, { printf("AS_UINT: cannot convert '" #data "' to an integer\n"); return retval; }, { printf("AS_UINT: '" #data "' is negative!\n"); asInt = 0; })
+
+#define AS_STRING(data, retval, ...) \
+    _AS_STRING(data, ##__VA_ARGS__, { printf("AS_STRING: cannot convert '" #data "' to a string\n"); return retval; })
 
 int32_t main() {
     static bool intitialized = false;
@@ -440,6 +483,13 @@ int32_t main() {
     uint32_t uintValue = AS_UINT(test, -1);
     int32_t intValue = AS_INT(test, -1);
     printf("test data as an unsigned integer: %i, as a signed integer: %i\n", uintValue, intValue);
+
+    CREATE(test2, SAMPLE_2);
+    char *stringValue = AS_STRING(test2, -1);
+    printf("test2 as a string: %s\n", stringValue);
+
     dumpPack(test, 0);
     free(test);
+    free(stringValue);
+    stringValue = AS_STRING(test, -1);
 }
