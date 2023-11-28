@@ -330,15 +330,13 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 #define SAMPLE_1(X) \
     X(INTEGER, -500, Signed)
 
-#define SAMPLE_2(X) X(STRING, "test")
-
 #define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
     X(STRING, "hi") S \
     X(INTEGER, 500, Signed)
 
-// #define SAMPLE_2(X) \
-//     X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
+#define SAMPLE_2(X) \
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
 
 #define SAMPLE_3_MAP_CONTENTS(X, S) \
     X(INTEGER, 1) S \
@@ -438,6 +436,75 @@ char *readStr(void *data) {
     return str;
 }
 
+uintmax_t readArraySize(void *data, void **firstElement) {
+    uint8_t *buffer = (uint8_t *) data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_ARRAY) {
+        printf("readArraySize: cannot convert %s to array\n", info->name);
+        return 0;
+    }
+    switch (format) {
+    case FORMAT_FIXARRAY:
+        *firstElement = data + 1;
+        return *buffer & info->readTypeParameter;
+    case FORMAT_ARRAY16:
+        *firstElement = data + 3;
+        return *((uint16_t *)(data + 1));
+    case FORMAT_ARRAY32:
+        *firstElement = data + 5;
+        return *((uint32_t *)(data + 1));
+    }
+    printf("readArraySize: cannot read %s\n", info->name);
+    return 0;
+}
+
+void *seek(void *data) {
+    uint8_t *buffer = (uint8_t *) data; 
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    uint32_t elementCount;
+    switch (info->readType) {
+    case Inline:
+        return data + 1;
+    case InlineLength:
+        return data + 1 + (*buffer & info->readTypeParameter);
+    case FixedLength:
+        return data + 1 + info->readTypeParameter;
+    case ReadLength:
+        switch (info->readTypeParameter) {
+        case 1:
+            return data + 1 + *((uint8_t *)(data + 1));
+        case 2:
+            return data + 1 + *((uint16_t *)(data + 1));
+        case 4:
+            return data + 1 + *((uint32_t *)(data + 1));
+        }
+    case ElementsInline:
+        data++;
+        for (uint8_t i = 0; i < (*buffer &info->readTypeParameter); i++) {
+            data = seek(data);
+        }
+        return data;
+    case ReadElements:
+        switch (info->readTypeParameter) {
+        case 1:
+            elementCount = *((uint8_t *)(data + 1));
+        case 2:
+            elementCount = *((uint16_t *)(data + 1));
+        case 4:
+            elementCount = *((uint32_t *)(data + 1));
+        }
+        data += 1 + info->readTypeParameter;
+        for (uint8_t i = 0; i < elementCount; i++) {
+            data = seek(data);
+        }
+        return data;
+    }
+    printf("seek: cannot read %s\n", info->name);
+    return NULL;
+}
+
 #define _AS_INT(data, catchError) \
     ({ \
         uint8_t *buffer = (uint8_t *) data; \
@@ -473,23 +540,32 @@ char *readStr(void *data) {
 #define AS_STRING(data, retval, ...) \
     _AS_STRING(data, ##__VA_ARGS__, { printf("AS_STRING: cannot convert '" #data "' to a string\n"); return retval; })
 
+#define ARRAY_LOOP(data, retval, elementName, action) \
+    { \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_ARRAY) { \
+            printf("ARRAY_LOOP: cannot convert '" #data "' to an array\n"); \
+            return retval; \
+        } \
+        void *elementName; \
+        uint32_t maxElement = readArraySize(data, &elementName); \
+        for (uint32_t i = 0; i < maxElement; i++) { \
+            action \
+            elementName = seek(elementName); \
+        } \
+    }
+
 int32_t main() {
     static bool intitialized = false;
     if (!intitialized) {
         intitialized = true;
         initialize();
     }
-    CREATE(test, SAMPLE_1);
-    uint32_t uintValue = AS_UINT(test, -1);
-    int32_t intValue = AS_INT(test, -1);
-    printf("test data as an unsigned integer: %i, as a signed integer: %i\n", uintValue, intValue);
-
-    CREATE(test2, SAMPLE_2);
-    char *stringValue = AS_STRING(test2, -1);
-    printf("test2 as a string: %s\n", stringValue);
-
+    CREATE(test, SAMPLE_2);
+    ARRAY_LOOP(test, -1, element, {
+        dumpPack(element, 0);
+    })
     dumpPack(test, 0);
     free(test);
-    free(stringValue);
-    stringValue = AS_STRING(test, -1);
 }
