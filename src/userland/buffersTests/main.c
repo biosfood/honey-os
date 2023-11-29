@@ -459,6 +459,29 @@ uintmax_t readArraySize(void *data, void **firstElement) {
     return 0;
 }
 
+uintmax_t readMapSize(void *data, void **firstElement) {
+    uint8_t *buffer = data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_MAP) {
+        printf("readMapSize: cannot convert %s to a map\n", info->name);
+        return 0;
+    }
+    switch (format) {
+    case FORMAT_FIXMAP:
+        *firstElement = data + 1;
+        return *buffer & info->readTypeParameter;
+    case FORMAT_MAP16:
+        *firstElement = data + 3;
+        return *((uint16_t *)(data + 1));
+    case FORMAT_MAP32:
+        *firstElement = data + 5;
+        return *((uint32_t *)(data + 1));
+    }
+    printf("readMapSize: cannot read %s\n", info->name);
+    return 0;
+}
+
 void *seek(void *data) {
     uint8_t *buffer = (uint8_t *) data; 
     uint8_t format = FirstByteToFormat[*buffer];
@@ -551,10 +574,46 @@ void *seek(void *data) {
         void *elementName; \
         uint32_t maxElement = readArraySize(data, &elementName); \
         for (uint32_t i = 0; i < maxElement; i++) { \
-            action \
+            (action); \
             elementName = seek(elementName); \
         } \
     }
+
+void *mapGetFromInt(void *data, uintmax_t searchValue) {
+    uint8_t *buffer = data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_MAP) {
+        printf("mapGetFromInt cannot convert %s to a map\n", info->name);
+        return 0;
+    }
+    uint8_t *element;
+    uint32_t pairCount = readMapSize(data, &element);
+    for (uintmax_t i = 0; i < pairCount; i++) {
+        if (formatInfo[FirstByteToFormat[*element]].dataType != TYPE_INTEGER) {
+            element = seek(element);
+            element = seek(element);
+        }
+        if (readInt(element) == searchValue) {
+            return seek(element);
+        }
+        element = seek(element);
+        element = seek(element);
+    }
+    printf("mapGetFromInt: key %i not found!\n", searchValue);
+    return NULL;
+}
+
+#define GET_FROM_INT(data, value, retval) \
+    ({ \
+        uint8_t *buffer = (uint8_t *)data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_MAP) { \
+            printf("GET_FROM_INT: cannot convert '" #data "' to a map, got %s\n", formatInfo[type].name); \
+            return retval; \
+        } \
+        mapGetFromInt(data, value); \
+    })
 
 int32_t main() {
     static bool intitialized = false;
@@ -562,10 +621,9 @@ int32_t main() {
         intitialized = true;
         initialize();
     }
-    CREATE(test, SAMPLE_2);
-    ARRAY_LOOP(test, -1, element, {
-        dumpPack(element, 0);
-    })
+    CREATE(test, SAMPLE_3);
+    printf("value from key int(1):\n");
+    dumpPack(GET_FROM_INT(test, 1, -1), 0);
     dumpPack(test, 0);
     free(test);
 }

@@ -4,3 +4,4 @@ clang
 -fms-extensions
 -Wno-microsoft-anon-tag
 -Wno-incompatible-library-redeclaration
+-Wno-compound-token-split-by-macro
