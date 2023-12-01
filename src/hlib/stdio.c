@@ -161,6 +161,7 @@ void _sprintf(char *data, const char *format, va_list *valist) {
         *write = format[i];
         write++;
     }
+    *write = 0;
 }
 
 void sprintf(char *data, const char *format, ...) {
