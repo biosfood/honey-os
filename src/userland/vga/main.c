@@ -50,7 +50,18 @@ void write(char c) {
     writeChar(c, COLOR(white, black));
 }
 
+void writeBulk(uint32_t stringId) {
+    uint32_t length = getStringLength(stringId);
+    char *buffer = malloc(length);
+    readString(stringId, buffer);
+    for (uint32_t i = 0; i < length; i++) {
+        write(buffer[i]);
+    }
+}
+
+
 int32_t main() {
     videoSource = requestMemory(2, NULL, PTR(0xB8000));
     createFunction("writeChar", (void *)write);
+    createFunction("writeBulk", (void *)writeBulk);
 }

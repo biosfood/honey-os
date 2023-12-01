@@ -1,7 +1,7 @@
 #include <hlib.h>
 #include <stdint.h>
 
-uint32_t mainService, mainOut, globalService, globalOut, globalBulkOut;
+uint32_t mainService, mainOut, mainBulkOut, globalService, globalOut, globalBulkOut;
 
 uint32_t focusService, focusServiceKeyHandler;
 uint32_t currentKeyConsumerService, currentKeyConsumerFunction;
@@ -25,6 +25,11 @@ void logMain(uint32_t stringId) {
         syscall(-1, 0, 0, 0, 0);
     }
     lock = true;
+    if (mainBulkOut) {
+        request(mainService, mainBulkOut, stringId, 0);
+        lock = false;
+        return;
+    }
     readString(stringId, buffer);
     for (uint32_t i = 0; buffer[i]; i++) {
         request(mainService, mainOut, buffer[i], 0);
@@ -138,6 +143,7 @@ int32_t main() {
     createFunction("checkFocus", (void *)doCheckFocus);
     mainService = loadFromInitrd("vga");
     mainOut = getFunction(mainService, "writeChar");
+    mainBulkOut = getFunction(mainService, "writeBulk");
     globalService = loadFromInitrd("parallel");
     globalOut = getFunction(globalService, "writeChar");
     globalBulkOut = getFunction(globalService, "write_bulk");
