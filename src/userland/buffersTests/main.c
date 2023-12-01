@@ -12,53 +12,36 @@ FormatInfo formatInfo[] = {
 
 Formats FirstByteToFormat[256];
 
-uint32_t readLength(void *data, uint32_t size) {
+uintmax_t readLength(void *data, int8_t size) {
+    if (size < 0) {
+        size = -size;
+        return (*(uint8_t *)(data)) & ((1 << size) - 1);
+    }
     switch (size) {
     case 1:
-        return *((uint8_t *)data);
+        return *((uint8_t *)(data + 1));
     case 2:
-        return *((uint16_t *)data);
+        return *((uint16_t *)(data + 1));
     case 4:
-        return *((uint32_t *)data);
+        return *((uint32_t *)(data + 1));
     // TODO: 64-bit numbers!
     }
     printf("cannot read length of size %i!\n", size);
     return 0;
 }
 
-int32_t readInteger(uint8_t *data, Formats format, FormatInfo *info) {
-    if (format == FORMAT_NEGATIVE_FIXINT) {
-        return ((int8_t) (*data | ~info->readTypeParameter));
-    }
-    if (format == FORMAT_POSITIVE_FIXINT ||
-        format == FORMAT_UINT8 ||
-        format == FORMAT_UINT16 ||
-        format == FORMAT_UINT32 ||
-        format == FORMAT_UINT64) {
-
-        return *(uint32_t *)data;
-    }
-    if (data[info->readTypeParameter-1] & 0x80) {
-        for (uint8_t i = info->readTypeParameter; i < 8; i++) {
-            data[i] = 0xFF;
-        }
-    }
-    return *(int32_t *)data;
-}
-
 void *dumpPack(uint8_t *data, uint32_t indent) {
-    uint8_t firstByte = data[0];
-    Formats format = FirstByteToFormat[firstByte];
-    FormatInfo *info = &formatInfo[format];
+    FormatInfo *info = &formatInfo[FirstByteToFormat[data[0]]];
     uint32_t bytesToRead = 1;
     uint32_t dataOffset = 0, dataSize = 0;
+    uintmax_t length = readLength(data, info->readTypeParameter);
     switch (info->readType) {
     case Inline:
         break;
     case InlineLength:
-        bytesToRead += firstByte & info->readTypeParameter;
+        bytesToRead += length;
         dataOffset = 1;
-        dataSize = firstByte & info->readTypeParameter;
+        dataSize = length;
         break;
     case FixedLength:
         bytesToRead += info->readTypeParameter;
@@ -66,7 +49,6 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
         dataSize = info->readTypeParameter;
         break;
     case ReadLength:
-        uint32_t length = readLength(data + 1, info->readTypeParameter);
         bytesToRead += info->readTypeParameter + length;
         dataOffset = 1 + info->readTypeParameter;
         dataSize = length;
@@ -76,10 +58,9 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
         break;
     case ReadElements:
         bytesToRead += info->readTypeParameter;
-        dataOffset = 1;
+        dataOffset = 1 + info->readTypeParameter;
         dataSize = info->readTypeParameter;
     }
-
     char *hexData = malloc(3*bytesToRead);
     for (uint32_t i = 0; i < bytesToRead; i++) {
         sprintf(hexData + 3*i, "%x ", data[i]);
@@ -88,52 +69,40 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
     char *indentData = malloc(indent + 1);
     memset(indentData, ' ', indent);
     indentData[indent] = 0;
-    printf("%s%s: ", indentData, hexData);
-    void *buffer = malloc(MAX(bytesToRead + 1, 8));
-    switch (info->readType) {
-    case Inline:
-    case ElementsInline:
-        *((uint8_t *)buffer) = firstByte & info->readTypeParameter; break;
-    case InlineLength:
-    case FixedLength:
-    case ReadLength:
-    case ReadElements:
-        memcpy(data + dataOffset, buffer, dataSize); break;
-    default: break;
-    }
-    uint32_t size;
     void *next = data + bytesToRead;
+    uint8_t *buffer;
     switch (info->dataType) {
     case TYPE_NIL:
-        printf("NIL"); break;
+        printf("%s%s: %s\n", indentData, hexData, info->name); break;
     case TYPE_INTEGER:
-        printf("int(%i)", readInteger(buffer, format, info)); break;
+        printf("%s%s: %s(%i)\n", indentData, hexData, info->name, readInt(data)); break;
     case TYPE_BOOLEAN:
-        printf("bool(%s)", readInteger(buffer, format, info) ? "true" : "false"); break;
+        printf("%s%s: %s(%s)\n", indentData, hexData, info->name, length ? "true" : "false"); break;
     // can't even print a float yet...
     case TYPE_STRING:
-        ((uint8_t *)buffer)[bytesToRead] = 0;
-        printf("str(\"%s\")", buffer); break;
+        buffer = malloc(length + 1);
+        memcpy(data + dataOffset, buffer, length);
+        buffer[length] = 0;
+        printf("%s%s: %s(\"%s\")\n", indentData, hexData, info->name, buffer);
+        free(buffer);
+        break;
     case TYPE_ARRAY:
-        size = readInteger(buffer, format, info);
-        printf("array(%i) (%s)\n", size, info->name);
-        for (uint32_t i = 0; i < size; i++) {
+        printf("%s%s: %s(%i)\n", indentData, hexData, info->name, length);
+        for (uint32_t i = 0; i < length; i++) {
             next = dumpPack(next, indent + 2);
         }
-        return next;
+        break;
     case TYPE_MAP:
-        size = readInteger(buffer, format, info);
-        printf("map(%i) (%s)\n", size, info->name);
-        for (uint32_t i = 0; i < size; i++) {
+        printf("%s%s: %s(%i)\n", indentData, hexData, info->name, length);
+        for (uint32_t i = 0; i < length; i++) {
             next = dumpPack(next, indent + 1);
             next = dumpPack(next, indent + 2);
         }
-        return next;
-
+        break;
     default:
-        printf("unknown"); break;
+        // this branch should actually be impossible to reach...
+        printf("unknown\n"); break;
     }
-    printf(" (%s)\n", info->name);
     free(hexData);
     free(indentData);
     free(buffer);
@@ -327,31 +296,6 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
     return buffer + 5;
 }
 
-#define SAMPLE_1(X) \
-    X(INTEGER, -500, Signed)
-
-#define SAMPLE_2_ARRAY_CONTENT(X, S) \
-    X(INTEGER, 1) S \
-    X(STRING, "hi") S \
-    X(INTEGER, 500, Signed)
-
-#define SAMPLE_2(X) \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
-
-#define SAMPLE_3_MAP_CONTENTS(X, S) \
-    X(INTEGER, 1) S \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENT) S \
-    X(STRING, "hello") S \
-    X(STRING, "world")
-
-#define SAMPLE_3(X) \
-    X(MAP, SAMPLE_3_MAP_CONTENTS)
-
-#define EXPECT(data, _dataType) \
-    if (formatInfo[FirstByteToFormat[*((uint8_t *)data)]].dataType != TYPE_##_dataType) { \
-        printf("failed EXPECT, expected %s, got %s\n", #_dataType, formatInfo[FirstByteToFormat[*((uint8_t *)data)]].name); \
-    } else
-
 // for reading values from a buffer: malloc is very slow, so only use it sparingly, when reutrning a value.
 
 intmax_t readInt(void *data) {
@@ -365,7 +309,7 @@ intmax_t readInt(void *data) {
     if (format < FORMAT_INT8) {
         // definietly working with a uint
         if (format == FORMAT_POSITIVE_FIXINT) {
-            return *((uint8_t *)data) & info->readTypeParameter;
+            return *((uint8_t *)data) & ((1 << (-info->readTypeParameter)) - 1);
         }
         if (format == FORMAT_UINT8) {
             return *((uint8_t *)(data + 1));
@@ -403,7 +347,6 @@ uint32_t readUint(void *data) {
         return 0;
     }
     return asInt;
-
 }
 
 char *readStr(void *data) {
@@ -528,57 +471,6 @@ void *seek(void *data) {
     return NULL;
 }
 
-#define _AS_INT(data, catchError) \
-    ({ \
-        uint8_t *buffer = (uint8_t *) data; \
-        uint8_t type = FirstByteToFormat[*buffer]; \
-        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        readInt(data); \
-    })
-
-#define _AS_UINT(data, catchError, catchNegative) \
-    ({ \
-        uint8_t *buffer = (uint8_t *) data; \
-        uint8_t type = FirstByteToFormat[*buffer]; \
-        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        intmax_t asInt = readInt(data); \
-        if (asInt < 0) catchNegative \
-        (uint32_t) asInt; \
-    })
-
-#define _AS_STRING(data, catchError) \
-    ({ \
-        uint8_t *buffer = (uint8_t *) data; \
-        uint8_t type = FirstByteToFormat[*buffer]; \
-        if (formatInfo[type].dataType != TYPE_STRING) catchError \
-        readStr(data); \
-    })
-
-#define AS_INT(data, retval, ...) \
-    _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert '" #data "' to an integer\n"); return retval; })
-
-#define AS_UINT(data, retval, ...) \
-    _AS_UINT(data, ##__VA_ARGS__, { printf("AS_UINT: cannot convert '" #data "' to an integer\n"); return retval; }, { printf("AS_UINT: '" #data "' is negative!\n"); asInt = 0; })
-
-#define AS_STRING(data, retval, ...) \
-    _AS_STRING(data, ##__VA_ARGS__, { printf("AS_STRING: cannot convert '" #data "' to a string\n"); return retval; })
-
-#define ARRAY_LOOP(data, retval, elementName, action) \
-    { \
-        uint8_t *buffer = (uint8_t *) data; \
-        uint8_t type = FirstByteToFormat[*buffer]; \
-        if (formatInfo[type].dataType != TYPE_ARRAY) { \
-            printf("ARRAY_LOOP: cannot convert '" #data "' to an array\n"); \
-            return retval; \
-        } \
-        void *elementName; \
-        uint32_t maxElement = readArraySize(data, &elementName); \
-        for (uint32_t i = 0; i < maxElement; i++) { \
-            (action); \
-            elementName = seek(elementName); \
-        } \
-    }
-
 void *mapGetFromInt(void *data, uintmax_t searchValue) {
     uint8_t *buffer = data;
     uint8_t format = FirstByteToFormat[*buffer];
@@ -588,7 +480,7 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
         return 0;
     }
     uint8_t *element;
-    uint32_t pairCount = readMapSize(data, &element);
+    uint32_t pairCount = readMapSize(data, (void *)&element);
     for (uintmax_t i = 0; i < pairCount; i++) {
         if (formatInfo[FirstByteToFormat[*element]].dataType != TYPE_INTEGER) {
             element = seek(element);
@@ -604,16 +496,25 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
     return NULL;
 }
 
-#define GET_FROM_INT(data, value, retval) \
-    ({ \
-        uint8_t *buffer = (uint8_t *)data; \
-        uint8_t type = FirstByteToFormat[*buffer]; \
-        if (formatInfo[type].dataType != TYPE_MAP) { \
-            printf("GET_FROM_INT: cannot convert '" #data "' to a map, got %s\n", formatInfo[type].name); \
-            return retval; \
-        } \
-        mapGetFromInt(data, value); \
-    })
+#define SAMPLE_1(X) \
+    X(INTEGER, -500, Signed)
+
+#define SAMPLE_2_ARRAY_CONTENT(X, S) \
+    X(INTEGER, 1) S \
+    X(STRING, "hi") S \
+    X(INTEGER, 500, Signed)
+
+#define SAMPLE_2(X) \
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENT)
+
+#define SAMPLE_3_MAP_CONTENTS(X, S) \
+    X(INTEGER, 1) S \
+    X(ARRAY, SAMPLE_2_ARRAY_CONTENT) S \
+    X(STRING, "hello") S \
+    X(STRING, "world")
+
+#define SAMPLE_3(X) \
+    X(MAP, SAMPLE_3_MAP_CONTENTS)
 
 int32_t main() {
     static bool intitialized = false;

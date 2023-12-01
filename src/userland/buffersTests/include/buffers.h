@@ -34,13 +34,13 @@ typedef enum IntegerType {
     X(UNUSED)
 
 #define FORMATS(X, S) \
-    X(POSITIVE_FIXINT, INTEGER, 0x00, 0x7F, Inline, 0x7F) S \
-    X(FIXMAP, MAP, 0x80, 0x8F, ElementsInline, 0x0F) S \
-    X(FIXARRAY, ARRAY, 0x90, 0x9F, ElementsInline, 0x0F) S \
-    X(FIXSTR, STRING, 0xa0, 0xBF, InlineLength, 0x1F) S \
+    X(POSITIVE_FIXINT, INTEGER, 0x00, 0x7F, Inline, -7) S \
+    X(FIXMAP, MAP, 0x80, 0x8F, ElementsInline, -4) S \
+    X(FIXARRAY, ARRAY, 0x90, 0x9F, ElementsInline, -4) S \
+    X(FIXSTR, STRING, 0xa0, 0xBF, InlineLength, -5) S \
     X(NIL, NIL, 0xC0, 0xC0, Inline, 0x00) S \
     X(UNUSED, UNUSED, 0xC1, 0xC1, Inline, 0x00) S \
-    X(FIXBOOL, BOOLEAN, 0xC2, 0xC3, Inline, 0x01) S \
+    X(FIXBOOL, BOOLEAN, 0xC2, 0xC3, Inline, -1) S \
     X(BIN8, BINARY, 0xC4, 0xC4, ReadLength, 1) S \
     X(BIN16, BINARY, 0xC5, 0xC5, ReadLength, 2) S \
     X(BIN32, BINARY, 0xc6, 0xC6, ReadLength, 4) S \
@@ -65,11 +65,11 @@ typedef enum IntegerType {
     X(STR8, STRING, 0xD9, 0xD9, ReadLength, 1) S \
     X(STR16, STRING, 0xDA, 0xDA, ReadLength, 2) S \
     X(STR32, STRING, 0xDB, 0xDB, ReadLength, 4) S \
-    X(ARRAY16, ARRAY, 0xDC, 0xDC, ReadLength, 2) S \
-    X(ARRAY32, ARRAY, 0xDD, 0xDD, ReadLength, 4) S \
+    X(ARRAY16, ARRAY, 0xDC, 0xDC, ReadElements, 2) S \
+    X(ARRAY32, ARRAY, 0xDD, 0xDD, ReadElements, 4) S \
     X(MAP16, MAP, 0xDE, 0xDE, ReadElements, 2) S \
     X(MAP32, MAP, 0xDF, 0xDF, ReadElements, 4) S \
-    X(NEGATIVE_FIXINT, INTEGER, 0xE0, 0xFF, Inline, 0x1F)
+    X(NEGATIVE_FIXINT, INTEGER, 0xE0, 0xFF, Inline, -5)
 
 // define enums
 #define ENUM_X(name) TYPE_##name
@@ -143,5 +143,74 @@ extern FormatInfo formatInfo[];
         void *buffer = name; \
         EXPAND(definition(WRITE)) \
     }
+
+// helper macros to make accessing data in a buffer easier
+// all of these check if the type is correct and throw an error if not
+#define _AS_INT(data, catchError) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
+        readInt(data); \
+    })
+
+#define _AS_UINT(data, catchError, catchNegative) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
+        intmax_t asInt = readInt(data); \
+        if (asInt < 0) catchNegative \
+        (uint32_t) asInt; \
+    })
+
+#define _AS_STRING(data, catchError) \
+    ({ \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_STRING) catchError \
+        readStr(data); \
+    })
+
+#define AS_INT(data, retval, ...) \
+    _AS_INT(data, ##__VA_ARGS__, { printf("AS_INT: cannot convert '" #data "' to an integer\n"); return retval; })
+
+#define AS_UINT(data, retval, ...) \
+    _AS_UINT(data, ##__VA_ARGS__, { printf("AS_UINT: cannot convert '" #data "' to an integer\n"); return retval; }, { printf("AS_UINT: '" #data "' is negative!\n"); asInt = 0; })
+
+#define AS_STRING(data, retval, ...) \
+    _AS_STRING(data, ##__VA_ARGS__, { printf("AS_STRING: cannot convert '" #data "' to a string\n"); return retval; })
+
+#define ARRAY_LOOP(data, retval, elementName, action) \
+    { \
+        uint8_t *buffer = (uint8_t *) data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_ARRAY) { \
+            printf("ARRAY_LOOP: cannot convert '" #data "' to an array\n"); \
+            return retval; \
+        } \
+        void *elementName; \
+        uint32_t maxElement = readArraySize(data, &elementName); \
+        for (uint32_t i = 0; i < maxElement; i++) { \
+            (action); \
+            elementName = seek(elementName); \
+        } \
+    }
+
+#define GET_FROM_INT(data, value, retval) \
+    ({ \
+        uint8_t *buffer = (uint8_t *)data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_MAP) { \
+            printf("GET_FROM_INT: cannot convert '" #data "' to a map, got %s\n", formatInfo[type].name); \
+            return retval; \
+        } \
+        mapGetFromInt(data, value); \
+    })
+
+
+extern uint32_t readUint(void *data);
+extern intmax_t readInt(void *data);
+
 
 #endif // BUFFERS_H
