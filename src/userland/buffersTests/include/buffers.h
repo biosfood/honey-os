@@ -37,7 +37,7 @@ typedef enum IntegerType {
     X(POSITIVE_FIXINT, INTEGER, 0x00, 0x7F, Inline, -7) S \
     X(FIXMAP, MAP, 0x80, 0x8F, ElementsInline, -4) S \
     X(FIXARRAY, ARRAY, 0x90, 0x9F, ElementsInline, -4) S \
-    X(FIXSTR, STRING, 0xa0, 0xBF, InlineLength, -5) S \
+    X(FIXSTR, STRING, 0xA0, 0xBF, InlineLength, -5) S \
     X(NIL, NIL, 0xC0, 0xC0, Inline, 0x00) S \
     X(UNUSED, UNUSED, 0xC1, 0xC1, Inline, 0x00) S \
     X(FIXBOOL, BOOLEAN, 0xC2, 0xC3, Inline, -1) S \

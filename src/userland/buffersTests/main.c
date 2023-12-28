@@ -14,8 +14,7 @@ Formats FirstByteToFormat[256];
 
 uintmax_t readLength(void *data, int8_t size) {
     if (size < 0) {
-        size = -size;
-        return (*(uint8_t *)(data)) & ((1 << size) - 1);
+        return (*(uint8_t *)(data)) & ((1 << (-size)) - 1);
     }
     switch (size) {
     case 1:
@@ -141,7 +140,7 @@ void *stringWrite(void *buffer, char *string) {
     uint32_t length = strlen(string);
     uint8_t *bufferByte = buffer;
     if ((length & 0x1F) == length) {
-        *bufferByte = formatInfo[FORMAT_FIXSTR].min + (uint8_t) length;
+        *bufferByte = formatInfo[FORMAT_FIXSTR].min + length;
         buffer++;
     } else if ((length & 0xFF) == length) {
         *bufferByte = formatInfo[FORMAT_STR8].min;
@@ -248,7 +247,7 @@ uint32_t arrayLength(uint32_t elementCount) {
 
 void *arrayWrite(void *buffer, uint32_t elementCount) {
     uint8_t *bufferByte = buffer;
-    if ((elementCount & formatInfo[FORMAT_FIXARRAY].readTypeParameter) == elementCount) {
+    if ((elementCount & 0xF) == elementCount) {
         *bufferByte = formatInfo[FORMAT_FIXARRAY].min + elementCount;
         return buffer + 1;
     }
@@ -297,7 +296,6 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 }
 
 // for reading values from a buffer: malloc is very slow, so only use it sparingly, when reutrning a value.
-
 intmax_t readInt(void *data) {
     uint8_t *buffer = (uint8_t *) data;
     uint8_t format = FirstByteToFormat[*buffer];
@@ -357,22 +355,17 @@ char *readStr(void *data) {
         printf("readString: cannot convert %s to string\n", info->name);
         return NULL;
     }
-    uintmax_t size = 0;
-    uint8_t offset = 0;
+    uint8_t offset;
     if (format == FORMAT_FIXSTR) {
-        size = *buffer & info->readTypeParameter;
         offset = 1;
     } else if (format == FORMAT_STR8) {
-        size = *((uint8_t *)(data + 1));
         offset = 2;
     } else if (format == FORMAT_STR16) {
-        size = *((uint16_t *)(data + 1));
         offset = 3;
     } else if (format == FORMAT_STR32) {
-        size = *((uint32_t *)(data + 1));
         offset = 5;
     }
-    printf("size : %i\n", size);
+    uint32_t size = readLength(data, offset);
     char *str = malloc(size + 1);
     memcpy(data + offset, str, size);
     str[size] = 0;
@@ -390,16 +383,12 @@ uintmax_t readArraySize(void *data, void **firstElement) {
     switch (format) {
     case FORMAT_FIXARRAY:
         *firstElement = data + 1;
-        return *buffer & info->readTypeParameter;
     case FORMAT_ARRAY16:
         *firstElement = data + 3;
-        return *((uint16_t *)(data + 1));
     case FORMAT_ARRAY32:
         *firstElement = data + 5;
-        return *((uint32_t *)(data + 1));
     }
-    printf("readArraySize: cannot read %s\n", info->name);
-    return 0;
+    return readLength(data, info->readTypeParameter);
 }
 
 uintmax_t readMapSize(void *data, void **firstElement) {
@@ -412,61 +401,44 @@ uintmax_t readMapSize(void *data, void **firstElement) {
     }
     switch (format) {
     case FORMAT_FIXMAP:
-        *firstElement = data + 1;
-        return *buffer & info->readTypeParameter;
+        *firstElement = data + 1; break;
     case FORMAT_MAP16:
-        *firstElement = data + 3;
-        return *((uint16_t *)(data + 1));
+        *firstElement = data + 3; break;
     case FORMAT_MAP32:
-        *firstElement = data + 5;
-        return *((uint32_t *)(data + 1));
+        *firstElement = data + 5; break;
     }
-    printf("readMapSize: cannot read %s\n", info->name);
-    return 0;
+    return readLength(data, info->readTypeParameter);
 }
 
 void *seek(void *data) {
     uint8_t *buffer = (uint8_t *) data; 
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
-    uint32_t elementCount;
+    uint32_t length = readLength(data, info->readTypeParameter);
+    if (info->dataType == TYPE_MAP) {
+        length <<= 1;
+    }
     switch (info->readType) {
     case Inline:
         return data + 1;
-    case InlineLength:
-        return data + 1 + (*buffer & info->readTypeParameter);
     case FixedLength:
         return data + 1 + info->readTypeParameter;
     case ReadLength:
-        switch (info->readTypeParameter) {
-        case 1:
-            return data + 1 + *((uint8_t *)(data + 1));
-        case 2:
-            return data + 1 + *((uint16_t *)(data + 1));
-        case 4:
-            return data + 1 + *((uint32_t *)(data + 1));
-        }
+        return data + 1 + info->readTypeParameter + length;
+    case InlineLength:
+        return data + 1 + length;
     case ElementsInline:
         data++;
-        for (uint8_t i = 0; i < (*buffer &info->readTypeParameter); i++) {
-            data = seek(data);
-        }
-        return data;
+        goto READ_ELEMENTS;
     case ReadElements:
-        switch (info->readTypeParameter) {
-        case 1:
-            elementCount = *((uint8_t *)(data + 1));
-        case 2:
-            elementCount = *((uint16_t *)(data + 1));
-        case 4:
-            elementCount = *((uint32_t *)(data + 1));
-        }
         data += 1 + info->readTypeParameter;
-        for (uint8_t i = 0; i < elementCount; i++) {
+    READ_ELEMENTS:
+        for (uint8_t i = 0; i < length; i++) {
             data = seek(data);
         }
         return data;
     }
+    // should never happen
     printf("seek: cannot read %s\n", info->name);
     return NULL;
 }
@@ -493,11 +465,9 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
         element = seek(element);
     }
     printf("mapGetFromInt: key %i not found!\n", searchValue);
+    // TODO: return something sensible here / throw an actual exception
     return NULL;
 }
-
-#define SAMPLE_1(X) \
-    X(INTEGER, -500, Signed)
 
 #define SAMPLE_2_ARRAY_CONTENT(X, S) \
     X(INTEGER, 1) S \
@@ -509,9 +479,11 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
 
 #define SAMPLE_3_MAP_CONTENTS(X, S) \
     X(INTEGER, 1) S \
-    X(ARRAY, SAMPLE_2_ARRAY_CONTENT) S \
+     X(ARRAY, SAMPLE_2_ARRAY_CONTENT) S \
     X(STRING, "hello") S \
-    X(STRING, "world")
+     X(STRING, "world") S \
+    X(INTEGER, 2) S \
+     X(STRING, "Number 2")
 
 #define SAMPLE_3(X) \
     X(MAP, SAMPLE_3_MAP_CONTENTS)
@@ -523,8 +495,9 @@ int32_t main() {
         initialize();
     }
     CREATE(test, SAMPLE_3);
-    printf("value from key int(1):\n");
-    dumpPack(GET_FROM_INT(test, 1, -1), 0);
+    printf("value from key int(2):\n");
+    dumpPack(GET_FROM_INT(test, 2, -1), 0);
+    printf("\n\n");
     dumpPack(test, 0);
     free(test);
 }
