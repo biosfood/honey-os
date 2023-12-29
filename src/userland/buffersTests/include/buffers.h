@@ -104,37 +104,40 @@ extern FormatInfo formatInfo[];
 #define EXPAND1(...) EXPAND2(EXPAND2(EXPAND2(EXPAND2(__VA_ARGS__))))
 #define EXPAND(...) EXPAND1(EXPAND1(EXPAND1(EXPAND1(__VA_ARGS__))))
 
-#define STRING_Length(x) stringLength(strlen(x))
+#define STRING_Length(x) msgPackStringLength(strlen(x))
 
 #define ONE(...) 1
 
 #define ARRAY_Length_id() ARRAY_Length
-#define _INTEGER_LENGTH(x, type, ...) integerLength(x, type)
+#define _INTEGER_LENGTH(x, type, ...) msgPackIntegerLength(x, type)
 #define INTEGER_Length(x, ...) _INTEGER_LENGTH(x, ##__VA_ARGS__ , Unsigned)
 #define INTEGER_Length_id() INTEGER_Length
 #define STRING_Length_id() STRING_Length
 #define MAP_Length_id() MAP_Length
 
-#define ARRAY_Length(contents) arrayLength(contents(ONE, +)) + contents(LENGTH, +)
-#define MAP_Length(contents) mapLength(contents(ONE, +)) + contents(LENGTH, +)
+#define ARRAY_Length(contents) msgPackArrayLength(contents(ONE, +)) + contents(LENGTH, +)
+#define MAP_Length(contents) msgPackMapLength(contents(ONE, +)) + contents(LENGTH, +)
 
 #define LENGTH(type, ...) DEFER(type##_Length_id)()(__VA_ARGS__)
 
-#define _INTEGER_WRITE(x, type, ...) buffer = integerWrite(buffer, x, type);
+#define _INTEGER_WRITE(x, type, ...) buffer = msgPackIntegerWrite(buffer, x, type);
 #define INTEGER_Write(x, ...) _INTEGER_WRITE(x, ##__VA_ARGS__ , Unsigned)
-#define STRING_Write(x) buffer = stringWrite(buffer, x);
+#define STRING_Write(x) buffer = msgPackStringWrite(buffer, x);
 
 #define INTEGER_Write_id() INTEGER_Write
 #define ARRAY_Write_id() ARRAY_Write
 #define STRING_Write_id() STRING_Write
 #define MAP_Write_id() MAP_Write
 
-#define ARRAY_Write(contents) buffer = arrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
-#define MAP_Write(contents) buffer = mapWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
+#define ARRAY_Write(contents) buffer = msgPackArrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
+#define MAP_Write(contents) buffer = msgPackMapWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
 
 #define WRITE(type, ...) DEFER(type##_Write_id)()(__VA_ARGS__)
 
 #define CONTENTS contents (LENGTH, +)
+
+extern uint32_t msgPackReadUint(void *data);
+extern intmax_t msgPackReadInt(void *data);
 
 #define CREATE(name, definition) \
     uint32_t name##Length = EXPAND(definition(LENGTH)); \
@@ -151,7 +154,7 @@ extern FormatInfo formatInfo[];
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        readInt(data); \
+        msgPackReadInt(data); \
     })
 
 #define _AS_UINT(data, catchError, catchNegative) \
@@ -159,7 +162,7 @@ extern FormatInfo formatInfo[];
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        intmax_t asInt = readInt(data); \
+        intmax_t asInt = msgPackReadInt(data); \
         if (asInt < 0) catchNegative \
         (uint32_t) asInt; \
     })
@@ -169,7 +172,7 @@ extern FormatInfo formatInfo[];
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_STRING) catchError \
-        readStr(data); \
+        msgPackReadStr(data); \
     })
 
 #define AS_INT(data, retval, ...) \
@@ -190,10 +193,10 @@ extern FormatInfo formatInfo[];
             return retval; \
         } \
         void *elementName; \
-        uint32_t maxElement = readArraySize(data, &elementName); \
+        uint32_t maxElement = msgPackReadArraySize(data, &elementName); \
         for (uint32_t i = 0; i < maxElement; i++) { \
             (action); \
-            elementName = seek(elementName); \
+            elementName = msgPackSeek(elementName); \
         } \
     }
 
@@ -205,12 +208,24 @@ extern FormatInfo formatInfo[];
             printf("GET_FROM_INT: cannot convert '" #data "' to a map, got %s\n", formatInfo[type].name); \
             return retval; \
         } \
-        mapGetFromInt(data, value); \
+        msgPackMapGetFromInt(data, value); \
     })
 
+#define GET_FROM_STRING(data, value, retval) \
+    ({ \
+        uint8_t *buffer = (uint8_t *)data; \
+        uint8_t type = FirstByteToFormat[*buffer]; \
+        if (formatInfo[type].dataType != TYPE_MAP) { \
+            printf("GET_FROM_STRING: cannot convert '" #data "' to a map, got %s\n", formatInfo[type].name); \
+            return retval; \
+        } \
+        msgPackMapGetFromString(data, value); \
+    })
 
-extern uint32_t readUint(void *data);
-extern intmax_t readInt(void *data);
+typedef char * STRING;
+typedef intmax_t INT;
 
+#define _GET(type, name, retval, ...) type name = AS_##type(GET_FROM_STRING(data, #name, retval), retval);
+#define GET(type, name, ...) _GET(type, name, ##__VA_ARGS__, -1)
 
 #endif // BUFFERS_H

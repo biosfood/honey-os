@@ -12,7 +12,7 @@ FormatInfo formatInfo[] = {
 
 Formats FirstByteToFormat[256];
 
-uintmax_t readLength(void *data, int8_t size) {
+uintmax_t msgPackReadLength(void *data, int8_t size) {
     if (size < 0) {
         return (*(uint8_t *)(data)) & ((1 << (-size)) - 1);
     }
@@ -29,11 +29,11 @@ uintmax_t readLength(void *data, int8_t size) {
     return 0;
 }
 
-void *dumpPack(uint8_t *data, uint32_t indent) {
+void *msgPackDump(uint8_t *data, uint32_t indent) {
     FormatInfo *info = &formatInfo[FirstByteToFormat[data[0]]];
     uint32_t bytesToRead = 1;
     uint32_t dataOffset = 0, dataSize = 0;
-    uintmax_t length = readLength(data, info->readTypeParameter);
+    uintmax_t length = msgPackReadLength(data, info->readTypeParameter);
     switch (info->readType) {
     case Inline:
         break;
@@ -74,7 +74,7 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
     case TYPE_NIL:
         printf("%s%s: %s\n", indentData, hexData, info->name); break;
     case TYPE_INTEGER:
-        printf("%s%s: %s(%i)\n", indentData, hexData, info->name, readInt(data)); break;
+        printf("%s%s: %s(%i)\n", indentData, hexData, info->name, msgPackReadInt(data)); break;
     case TYPE_BOOLEAN:
         printf("%s%s: %s(%s)\n", indentData, hexData, info->name, length ? "true" : "false"); break;
     // can't even print a float yet...
@@ -88,14 +88,14 @@ void *dumpPack(uint8_t *data, uint32_t indent) {
     case TYPE_ARRAY:
         printf("%s%s: %s(%i)\n", indentData, hexData, info->name, length);
         for (uint32_t i = 0; i < length; i++) {
-            next = dumpPack(next, indent + 2);
+            next = msgPackDump(next, indent + 2);
         }
         break;
     case TYPE_MAP:
         printf("%s%s: %s(%i)\n", indentData, hexData, info->name, length);
         for (uint32_t i = 0; i < length; i++) {
-            next = dumpPack(next, indent + 1);
-            next = dumpPack(next, indent + 2);
+            next = msgPackDump(next, indent + 1);
+            next = msgPackDump(next, indent + 2);
         }
         break;
     default:
@@ -119,7 +119,7 @@ void initialize() {
     FORMATS(FILL_SPOTS_X, NOTHING);
 }
 
-uint32_t stringLength(uint32_t strlength) {
+uint32_t msgPackStringLength(uint32_t strlength) {
     if ((strlength & 0x1F) == strlength) {
         // fixstr
         return 1 + strlength;
@@ -136,7 +136,7 @@ uint32_t stringLength(uint32_t strlength) {
     return 5 + strlength;
 }
 
-void *stringWrite(void *buffer, char *string) {
+void *msgPackStringWrite(void *buffer, char *string) {
     uint32_t length = strlen(string);
     uint8_t *bufferByte = buffer;
     if ((length & 0x1F) == length) {
@@ -159,7 +159,7 @@ void *stringWrite(void *buffer, char *string) {
     return buffer + length;
 }
 
-uint32_t integerLength(int32_t value, IntegerType integerType) {
+uint32_t msgPackIntegerLength(int32_t value, IntegerType integerType) {
     if ((value & 0x7F) == value || ((~value) & 0x1F) == ~value) {
         // fixint
         return 1;
@@ -181,7 +181,7 @@ uint32_t integerLength(int32_t value, IntegerType integerType) {
     return 9;
 }
 
-void *integerWrite(void *buffer, int32_t x, IntegerType type) {
+void *msgPackIntegerWrite(void *buffer, int32_t x, IntegerType type) {
     if (x < 0 && type != Signed) {
         printf("integerWrite: %i is negative but type is Unsigned!\n", x);
         return buffer;
@@ -231,7 +231,7 @@ void *integerWrite(void *buffer, int32_t x, IntegerType type) {
     return buffer;
 }
 
-uint32_t arrayLength(uint32_t elementCount) {
+uint32_t msgPackArrayLength(uint32_t elementCount) {
     if ((elementCount & formatInfo[FORMAT_FIXARRAY].readTypeParameter) == elementCount) {
         return 1;
     }
@@ -245,7 +245,7 @@ uint32_t arrayLength(uint32_t elementCount) {
     return 1;
 }
 
-void *arrayWrite(void *buffer, uint32_t elementCount) {
+void *msgPackArrayWrite(void *buffer, uint32_t elementCount) {
     uint8_t *bufferByte = buffer;
     if ((elementCount & 0xF) == elementCount) {
         *bufferByte = formatInfo[FORMAT_FIXARRAY].min + elementCount;
@@ -265,15 +265,15 @@ void *arrayWrite(void *buffer, uint32_t elementCount) {
     return buffer;
 }
 
-uint32_t mapLength(uint32_t elementCount) {
+uint32_t msgPackMapLength(uint32_t elementCount) {
     if (elementCount % 2) {
         printf("map: bad element count %i\n", elementCount);
         return 0;
     }
-    return arrayLength(elementCount / 2);
+    return msgPackArrayLength(elementCount / 2);
 }
 
-void *mapWrite(void *buffer, uint32_t elementCount) {
+void *msgPackMapWrite(void *buffer, uint32_t elementCount) {
     uint8_t *bufferByte = buffer;
     if (elementCount % 2) {
         printf("map: bad element count %i\n", elementCount);
@@ -296,7 +296,7 @@ void *mapWrite(void *buffer, uint32_t elementCount) {
 }
 
 // for reading values from a buffer: malloc is very slow, so only use it sparingly, when reutrning a value.
-intmax_t readInt(void *data) {
+intmax_t msgPackReadInt(void *data) {
     uint8_t *buffer = (uint8_t *) data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
@@ -338,8 +338,8 @@ fail:
     return 0;
 }
 
-uint32_t readUint(void *data) {
-    intmax_t asInt = readInt(data);
+uint32_t msgPackReadUint(void *data) {
+    intmax_t asInt = msgPackReadInt(data);
     if (asInt < 0) {
         printf("readUint: value %i is negative\n", asInt);
         return 0;
@@ -347,7 +347,7 @@ uint32_t readUint(void *data) {
     return asInt;
 }
 
-char *readStr(void *data) {
+char *msgPackReadStr(void *data) {
     uint8_t *buffer = (uint8_t *) data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
@@ -365,14 +365,14 @@ char *readStr(void *data) {
     } else if (format == FORMAT_STR32) {
         offset = 5;
     }
-    uint32_t size = readLength(data, offset);
+    uint32_t size = msgPackReadLength(data, info->readTypeParameter);
     char *str = malloc(size + 1);
     memcpy(data + offset, str, size);
     str[size] = 0;
     return str;
 }
 
-uintmax_t readArraySize(void *data, void **firstElement) {
+uintmax_t msgPackReadArraySize(void *data, void **firstElement) {
     uint8_t *buffer = (uint8_t *) data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
@@ -388,10 +388,10 @@ uintmax_t readArraySize(void *data, void **firstElement) {
     case FORMAT_ARRAY32:
         *firstElement = data + 5;
     }
-    return readLength(data, info->readTypeParameter);
+    return msgPackReadLength(data, info->readTypeParameter);
 }
 
-uintmax_t readMapSize(void *data, void **firstElement) {
+uintmax_t msgPackReadMapSize(void *data, void **firstElement) {
     uint8_t *buffer = data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
@@ -407,14 +407,14 @@ uintmax_t readMapSize(void *data, void **firstElement) {
     case FORMAT_MAP32:
         *firstElement = data + 5; break;
     }
-    return readLength(data, info->readTypeParameter);
+    return msgPackReadLength(data, info->readTypeParameter);
 }
 
-void *seek(void *data) {
+void *msgPackSeek(void *data) {
     uint8_t *buffer = (uint8_t *) data; 
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
-    uint32_t length = readLength(data, info->readTypeParameter);
+    uint32_t length = msgPackReadLength(data, info->readTypeParameter);
     if (info->dataType == TYPE_MAP) {
         length <<= 1;
     }
@@ -434,7 +434,7 @@ void *seek(void *data) {
         data += 1 + info->readTypeParameter;
     READ_ELEMENTS:
         for (uint8_t i = 0; i < length; i++) {
-            data = seek(data);
+            data = msgPackSeek(data);
         }
         return data;
     }
@@ -443,7 +443,7 @@ void *seek(void *data) {
     return NULL;
 }
 
-void *mapGetFromInt(void *data, uintmax_t searchValue) {
+void *msgPackMapGetFromInt(void *data, uintmax_t searchValue) {
     uint8_t *buffer = data;
     uint8_t format = FirstByteToFormat[*buffer];
     FormatInfo *info = &formatInfo[format];
@@ -452,19 +452,54 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
         return 0;
     }
     uint8_t *element;
-    uint32_t pairCount = readMapSize(data, (void *)&element);
+    uint32_t pairCount = msgPackReadMapSize(data, (void *)&element);
     for (uintmax_t i = 0; i < pairCount; i++) {
         if (formatInfo[FirstByteToFormat[*element]].dataType != TYPE_INTEGER) {
-            element = seek(element);
-            element = seek(element);
+            element = msgPackSeek(element);
+            element = msgPackSeek(element);
         }
-        if (readInt(element) == searchValue) {
-            return seek(element);
+        if (msgPackReadInt(element) == searchValue) {
+            return msgPackSeek(element);
         }
-        element = seek(element);
-        element = seek(element);
+        element = msgPackSeek(element);
+        element = msgPackSeek(element);
     }
     printf("mapGetFromInt: key %i not found!\n", searchValue);
+    // TODO: return something sensible here / throw an actual exception
+    return NULL;
+}
+
+void *msgPackMapGetFromString(void *data, char *searchValue) {
+    uint8_t *buffer = data;
+    uint8_t format = FirstByteToFormat[*buffer];
+    FormatInfo *info = &formatInfo[format];
+    if (info->dataType != TYPE_MAP) {
+        printf("mapGetFromString cannot convert %s to a map\n", info->name);
+        return 0;
+    }
+    uint8_t *element;
+    uint32_t pairCount = msgPackReadMapSize(data, (void *)&element);
+    for (uintmax_t i = 0; i < pairCount; i++) {
+        if (formatInfo[FirstByteToFormat[*element]].dataType != TYPE_STRING) {
+            element = msgPackSeek(element);
+            element = msgPackSeek(element);
+        }
+        char *key = msgPackReadStr(element);
+        bool equal = true;
+        for (uint32_t i = 0; searchValue[i]; i++) {
+            if (key[i] != searchValue[i]) {
+                equal = false;
+                break;
+            }
+        }
+        free(key);
+        if (equal) {
+            return msgPackSeek(element);
+        }
+        element = msgPackSeek(element);
+        element = msgPackSeek(element);
+    }
+    printf("mapGetFromString: key '%s' not found!\n", searchValue);
     // TODO: return something sensible here / throw an actual exception
     return NULL;
 }
@@ -483,10 +518,21 @@ void *mapGetFromInt(void *data, uintmax_t searchValue) {
     X(STRING, "hello") S \
      X(STRING, "world") S \
     X(INTEGER, 2) S \
-     X(STRING, "Number 2")
+     X(STRING, "Number 2") S \
+    X(STRING, "number") S \
+     X(INTEGER, 1)
 
 #define SAMPLE_3(X) \
     X(MAP, SAMPLE_3_MAP_CONTENTS)
+
+uint32_t testFunction(void *data) {
+    GET(STRING, hello);
+    GET(INT, number);
+
+    printf("parameters: hello=%s, number=%i\n", hello, number);
+    free(hello);
+    return 0;
+}
 
 int32_t main() {
     static bool intitialized = false;
@@ -495,9 +541,9 @@ int32_t main() {
         initialize();
     }
     CREATE(test, SAMPLE_3);
-    printf("value from key int(2):\n");
-    dumpPack(GET_FROM_INT(test, 2, -1), 0);
-    printf("\n\n");
-    dumpPack(test, 0);
+    msgPackDump(test, 0);
+
+    testFunction(test);
+
     free(test);
 }
