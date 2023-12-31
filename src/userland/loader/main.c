@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 int32_t main() {
+    initializeFlatBuffers();
     loadFromInitrd("ioManager");
     printf("HONEY-OS - made by Lukas Eisenhauer\n");
     printf("finished loading all the essential modules\n");

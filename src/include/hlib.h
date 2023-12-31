@@ -10,6 +10,7 @@ typedef struct ListElement {
 } ListElement;
 
 #include "../hlib/malloc.h"
+#include "buffers.h"
 
 #define PTR(x) ((void *)(uintptr_t)(x))
 #define U32(x) ((uint32_t)(uintptr_t)(x))
@@ -108,5 +109,10 @@ extern void sprintf(char *data, const char *format, ...);
 #define asprintf(...) _asprintf(allocationData, __VA_ARGS__)
 
 extern bool checkFocus();
+
+#define COMMA ,
+#define NOTHING
+#define SEMICOLON ;
+#define ABS(x) (x >= 0 ? x : -x)
 
 #endif
