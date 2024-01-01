@@ -132,12 +132,14 @@ int32_t getDeviceClass(uint32_t deviceId);
 int32_t getBaseAddress(uint32_t deviceId, uint32_t n);
 int32_t enableBusMaster(uint32_t deviceId);
 int32_t getPCIInterrupt(uint32_t deviceId);
+uintptr_t dump(uint32_t device);
 
 void initializePci() {
     createFunction("getDeviceClass", (void *)getDeviceClass);
     createFunction("getBaseAddress", (void *)getBaseAddress);
     createFunction("enableBusMaster", (void *)enableBusMaster);
     createFunction("getInterrupt", (void *)getPCIInterrupt);
+    createFunction("dump", (void *)dump);
     if (!(pciConfigRead(0, 0, 0, 0x0E) & 0x80)) {
         checkBus(0);
     } else {
@@ -181,6 +183,31 @@ int32_t getPCIInterrupt(uint32_t deviceId) {
     GET_HEADER
     return pciConfigRead(device->bus, device->device, device->function, 0x3C) &
            0xFF;
+}
+
+#define DEVICE_DUMP_BARS(X, S) \
+    X(INTEGER, device->bar[0]) S \
+    X(INTEGER, device->bar[1]) S \
+    X(INTEGER, device->bar[2]) S \
+    X(INTEGER, device->bar[3]) S \
+    X(INTEGER, device->bar[4])
+
+#define DEVICE_DUMP_MAP_DATA(X, S) \
+    X(STRING, "bars") S \
+     X(ARRAY, DEVICE_DUMP_BARS) S \
+    X(STRING, "class") S \
+     X(INTEGER, device->class << 16 | device->subclass << 8 | device->programmingInterface)
+
+#define DEVICE_DUMP(X) X(MAP, DEVICE_DUMP_MAP_DATA)
+
+uintptr_t dump(uint32_t deviceId) {
+    GET_HEADER
+    CREATE(data, DEVICE_DUMP);
+    void *resultBuffer = requestMemory(1, NULL, NULL);
+    memcpy(data, resultBuffer, dataLength);
+    uint32_t result = U32(getPhysicalAddress(resultBuffer));
+    free(resultBuffer);
+    return result;
 }
 
 int32_t main() {
