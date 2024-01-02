@@ -23,12 +23,15 @@ uint32_t msgPackIntegerLength(int32_t value, IntegerType integerType) {
 }
 
 void *msgPackIntegerWrite(void *buffer, int32_t x, IntegerType type) {
+    uint8_t *bufferByte = buffer;
     if (x < 0 && type != Signed) {
         // printf("integerWrite: %i is negative but type is Unsigned!\n", x);
         // should never occur when using the correct macros
-        return buffer;
+        // as a failsave, treat it as a uint32_t
+        *bufferByte = formatInfo[FORMAT_UINT32].min;
+        *(uint32_t *)(buffer + 1) = (uint32_t) x;
+        return buffer + 5;
     }
-    uint8_t *bufferByte = buffer;
     if ((x & 0x7F) == x) {
         *bufferByte = (uint8_t)x;
         // fixint

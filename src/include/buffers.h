@@ -26,6 +26,9 @@
 #define STRING_Length_id() STRING_Length
 #define MAP_Length_id() MAP_Length
 
+#define LIST_Length(list, type, name, contents) msgPackArrayLength(listCount(list)) + ({ uint32_t len = 0; foreach (list, type, name, { len += contents(LENGTH, +); }) len; })
+#define LIST_Length_id() LIST_Length
+
 #define ARRAY_Length(contents) msgPackArrayLength(contents(ONE, +)) + contents(LENGTH, +)
 #define MAP_Length(contents) msgPackMapLength(allocationData, contents(ONE, +)) + contents(LENGTH, +)
 
@@ -39,6 +42,9 @@
 #define ARRAY_Write_id() ARRAY_Write
 #define STRING_Write_id() STRING_Write
 #define MAP_Write_id() MAP_Write
+
+#define LIST_Write_id() LIST_Write
+#define LIST_Write(list, type, name, contents) buffer = msgPackArrayWrite(buffer, listCount(list)); foreach (list, type, name, { contents(WRITE, NOTHING); })
 
 #define ARRAY_Write(contents) buffer = msgPackArrayWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
 #define MAP_Write(contents) buffer = msgPackMapWrite(buffer, contents(ONE, +)); contents(WRITE, NOTHING)
