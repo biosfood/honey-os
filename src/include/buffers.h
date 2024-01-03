@@ -68,7 +68,7 @@
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_INTEGER) catchError \
-        msgPackReadInt(allocationData, data); \
+        msgPackReadInt(allocationData, buffer); \
     })
 
 #define _AS_UINT(data, catchError, catchNegative) \
@@ -86,7 +86,7 @@
         uint8_t *buffer = (uint8_t *) data; \
         uint8_t type = FirstByteToFormat[*buffer]; \
         if (formatInfo[type].dataType != TYPE_STRING) catchError \
-        msgPackReadStr(allocationData, data); \
+        msgPackReadStr(allocationData, buffer); \
     })
 
 #define AS_INT(data, retval, ...) \
@@ -107,10 +107,11 @@
             return retval; \
         } \
         void *elementName; \
-        uint32_t maxElement = msgPackReadArraySize(data, &elementName); \
+        uint32_t maxElement = msgPackReadArraySize(allocationData, data, &elementName); \
+        elementName = data + 1; \
         for (uint32_t i = 0; i < maxElement; i++) { \
             (action); \
-            elementName = msgPackSeek(elementName); \
+            elementName = msgPackSeek(allocationData, elementName); \
         } \
     }
 
@@ -224,7 +225,7 @@ extern Formats FirstByteToFormat[256];
 extern FormatInfo formatInfo[];
 
 typedef char * STRING;
-typedef intmax_t INT;
+typedef uint32_t INT;
 
 extern Formats FirstByteToFormat[256];
 extern FormatInfo formatInfo[];
@@ -260,5 +261,6 @@ extern void *_msgPackDump(AllocationData allocationData, uint8_t *data, uint32_t
 #define msgPackDump(data) _msgPackDump(allocationData, data, 0)
 
 extern void initializeFlatBuffers();
+extern void *msgPackSeek(AllocationData allocationData, void *data);
 
 #endif

@@ -94,6 +94,7 @@ void checkFunction(uint8_t bus, uint8_t device, uint8_t function) {
     for (uint8_t i = 0; i < 6; i++) {
         pciDevice->bar[i] = (temp = READ(0x10 + 4 * i));
     }
+    pciDevice->id = listCount(pciDevices);
     listAdd(&pciDevices, pciDevice);
     if (class == 6 && pciDevice->subclass == 4) {
         checkBus(READ8(0x19));
@@ -195,10 +196,12 @@ int32_t getPCIInterrupt(uint32_t deviceId) {
     X(INTEGER, device->bar[4])
 
 #define DEVICE_DUMP_MAP_DATA(X, S) \
-    X(STRING, "bars") S \
-     X(ARRAY, DEVICE_DUMP_BARS) S \
-    X(STRING, "class") S \
-     X(INTEGER, device->class << 16 | device->subclass << 8 | device->programmingInterface)
+    X(STRING, "bars") S X(ARRAY, DEVICE_DUMP_BARS) S \
+    X(STRING, "id") S X(INTEGER, device->id) S \
+    X(STRING, "class") S X(INTEGER, device->class) S \
+    X(STRING, "className") S X(STRING, classNames[device->class]) S \
+    X(STRING, "subclass") S X(INTEGER, device->subclass) S \
+    X(STRING, "programmingInterface") S X(INTEGER, device->programmingInterface)
 
 #define DEVICE_DUMP(X, ...) X(MAP, DEVICE_DUMP_MAP_DATA)
 
@@ -236,5 +239,4 @@ int32_t main() {
         printf("[%i:%i:%i]: %s\n", device->bus, device->device,
                device->function, classNames[device->class]);
     })
-        ;
 }

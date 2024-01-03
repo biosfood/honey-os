@@ -67,9 +67,7 @@ void *_msgPackDump(AllocationData allocationData, uint8_t *data, uint32_t indent
         printf("%s%s: %s(%s)\n", indentData, hexData, info->name, length ? "true" : "false"); break;
     // can't even print a float yet...
     case TYPE_STRING:
-        buffer = malloc(length + 1);
-        memcpy(data + dataOffset, buffer, length);
-        buffer[length] = 0;
+        buffer = (void  *)msgPackReadStr(allocationData, data);
         printf("%s%s: %s(\"%s\")\n", indentData, hexData, info->name, buffer);
         free(buffer);
         break;
@@ -102,7 +100,7 @@ void *msgPackSeek(AllocationData allocationData, void *data) {
     FormatInfo *info = &formatInfo[format];
     uint32_t length = msgPackReadLength(allocationData, data, info->readTypeParameter);
     if (info->dataType == TYPE_MAP) {
-        length <<= 1;
+        length *= 2;
     }
     switch (info->readType) {
     case Inline:

@@ -59,10 +59,10 @@ char *msgPackReadStr(AllocationData allocationData, void *data) {
     } else if (format == FORMAT_STR32) {
         offset = 5;
     }
-    uint32_t size = msgPackReadLength(allocationData, data, info->readTypeParameter);
-    char *str = malloc(size + 1);
-    memcpy(data + offset, str, size);
-    str[size] = 0;
+    uint32_t length = msgPackReadLength(allocationData, data, info->readTypeParameter);
+    char *str = malloc(length + 1);
+    memcpy(data + offset, str, length);
+    str[length] = 0;
     return str;
 }
 

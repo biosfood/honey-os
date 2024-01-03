@@ -76,10 +76,13 @@ uintmax_t msgPackReadArraySize(AllocationData allocationData, void *data, void *
     switch (format) {
     case FORMAT_FIXARRAY:
         *firstElement = data + 1;
+        break;
     case FORMAT_ARRAY16:
         *firstElement = data + 3;
+        break;
     case FORMAT_ARRAY32:
         *firstElement = data + 5;
+        break;
     }
     return msgPackReadLength(allocationData, data, info->readTypeParameter);
 }
