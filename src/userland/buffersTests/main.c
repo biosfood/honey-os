@@ -1,5 +1,4 @@
 #include <hlib.h>
-#include <buffers.h>
 
 REQUEST(pciDump, "lspci", "dumpAll");
 
