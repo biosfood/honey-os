@@ -8,9 +8,19 @@ int32_t main() {
     while (1) {
         printf("> ");
         gets(buffer);
-        if (!*buffer) {
+        if (!*buffer || *buffer == ' ') {
             continue;
         }
+        uint32_t space_position = strlen(buffer);
+        for (uint32_t i = 0; buffer[i]; i++) {
+            if (buffer[i] == ' ') {
+                space_position = i;
+                break;
+            }
+        }
+        buffer[space_position] = 0;
+        char *command = buffer;
+        char *arguments = buffer + space_position + 1;
         uint32_t service = getService(buffer);
         if (!service) {
             service = loadFromInitrdUninitialized(buffer);
