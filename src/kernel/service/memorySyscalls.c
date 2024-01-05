@@ -26,6 +26,7 @@ void handleRequestMemorySyscall(Syscall *call) {
         uint32_t physicalPage = PAGE_ID(physical);
         reservePagesCount(kernelPhysicalPages, physicalPage, pageCount);
         for (uint32_t i = 0; i < pageCount; i++) {
+            // the program probably wants to interact with an external device, so set the volatile flag
             mapPage(&service->pagingInfo, ADDRESS(physicalPage + i),
                     ADDRESS(virtualStart + i), true, true);
         }

@@ -34,7 +34,9 @@ Service *loadElf(void *elfStart, char *serviceName) {
     service->pagingInfo.pageDirectory = malloc(0x1000);
     service->name = serviceName;
     service->nameHash = insertString(serviceName);
+    // TODO: better ids
     service->id = listCount(services);
+    // fire load event
     fireEvent(loadInitrdEvent, service->nameHash, 0);
     void *current = &functionsStart;
     if (hlib) {
@@ -49,6 +51,8 @@ Service *loadElf(void *elfStart, char *serviceName) {
         sharePage(&(service->pagingInfo), current, current);
         current += 0x1000;
     }
+    // reserve first few pages to hopefully catch NULL pointers correctly
+    reservePagesCount(&service->pagingInfo, 0, 0x10);
     for (uint32_t i = 0; i < header->programHeaderEntryCount; i++) {
         if (hlib && programHeader->virtualAddress >= 0xF0000000) {
             goto end;
@@ -93,7 +97,6 @@ Service *findService(char *name) {
             return service;
         }
     })
-        ;
     return NULL;
 }
 
@@ -103,7 +106,6 @@ ServiceFunction *findFunction(Service *service, char *name) {
             return provider;
         }
     })
-        ;
     return NULL;
 }
 
