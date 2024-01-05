@@ -102,23 +102,31 @@ ListElement *usbSlots = NULL;
 
 void resetPort(UsbSlot *slot) {
     printf("--------\n");
-    void *buffer = requestMemory(1, 0, 0);
+    void *buffer = malloc(4096);
+    uint32_t portIndex = slot->portIndex;
     UsbDeviceDescriptor *descriptor = malloc(sizeof(UsbDeviceDescriptor));
     slot->interface->getDescriptor(slot->data, 1 << 8, 0, buffer, 0);
     memcpy(buffer, (void *)descriptor, sizeof(UsbDeviceDescriptor));
     printf("port %i: usb version %x.%x, %i supported configuration(s)\n",
-           slot->portIndex, descriptor->usbVersion >> 8,
+           portIndex, descriptor->usbVersion >> 8,
            descriptor->usbVersion & 0xFF, descriptor->configurationCount);
     slot->interface->getDescriptor(slot->data, 3 << 8, 0, buffer, 0);
     uint32_t language = *((uint16_t *)(buffer + 2));
+
     char *manufacturer = usbReadString(
         slot, language, descriptor->manufacturerStringDescriptor, buffer);
+    printf("port %i: manufacturer: %s, ", portIndex, manufacturer);
+    free(manufacturer);
+
     char *device = usbReadString(slot, language,
                                  descriptor->deviceStringDescriptor, buffer);
+    printf("device: %s, ", device);
+    free(device);
+
     char *serial = usbReadString(
         slot, language, descriptor->serialNumberStringDescriptor, buffer);
-    printf("port %i: manufacturer:%s, device:%s, serial:%s\n", slot->portIndex,
-           manufacturer, device, serial);
+    printf("serial: %s\n", serial);
+    free(serial);
 
     slot->interface->getDescriptor(slot->data, 2 << 8, 0, buffer, 0);
     UsbConfigurationDescriptor *configurationBuffer = buffer;
