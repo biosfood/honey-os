@@ -12,6 +12,7 @@ int32_t main() {
     loadFromInitrd("keyboard");
     loadFromInitrd("mouse");
     loadFromInitrd("usb");
+    loadFromInitrd("ps2");
     uint32_t id = loadFromInitrdUninitialized("shell");
     requestName("ioManager", "setForeground", id, 0);
     request(id, 0, 0, 0);

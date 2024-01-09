@@ -86,7 +86,7 @@ DeviceType getDeviceType(uint8_t device) {
     // disable scanning
     writeDevice(device, 0xF5);
     // wait for ACK
-    while (read(device) != 0xFA);
+    while (read() != 0xFA);
     // send identify command
     writeDevice(device, 0xF2);
     // wait for ACK
@@ -129,7 +129,7 @@ void initDevice(uint8_t device) {
     }
     // send enable command
     writeController(device == 0 ? 0xAE : 0xA8);
-    read();
+    // maybe there should be a read(); here, but it seems that just times out
     flushOutputBuffer();
     // send reset command to device
     writeDevice(device, 0xFF);
@@ -228,8 +228,6 @@ void start() {
     config.data.firstInterruptEnabled = 1;
     config.data.secondInterruptEnabled = 1;
     writeConfiguration(config.byte);
-
-    printf("configuration now: %x", readConfiguration().byte);
 }
 
 int32_t main() {
