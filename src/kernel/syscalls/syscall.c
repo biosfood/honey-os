@@ -80,6 +80,7 @@ extern uintptr_t handleStackContainsSyscall;
 extern uintptr_t handleAwaitSyscall;
 extern uintptr_t handleGetPhysicalSyscall;
 extern uintptr_t handleForkSyscall;
+extern uintptr_t handleFreeSyscall;
 
 void (*syscallHandlers[])(Syscall *) = {
     0,
@@ -106,6 +107,7 @@ void (*syscallHandlers[])(Syscall *) = {
     (void *)&handleAwaitSyscall,
     (void *)&handleGetPhysicalSyscall,
     (void *)&handleForkSyscall,
+    (void *)&handleFreeSyscall,
 };
 
 void processSyscall(Syscall *call) {

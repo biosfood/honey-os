@@ -39,3 +39,10 @@ void handleGetPhysicalSyscall(Syscall *call) {
     call->returnValue = U32(getPhysicalAddress(
         service->pagingInfo.pageDirectory, PTR(call->parameters[0])));
 }
+
+void handleFreeSyscall(Syscall *call) {
+    Service *service = call->service;
+    uint32_t address = call->parameters[0];
+    uint32_t virtualPageId = PAGE_ID(address);
+    giveUpPage(&service->pagingInfo, virtualPageId);
+}

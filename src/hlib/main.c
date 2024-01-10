@@ -53,7 +53,9 @@ void *getPage() { return requestMemory(1, NULL, NULL); }
 
 void *getPagesCount(uint32_t count) { return requestMemory(count, NULL, NULL); }
 
-void freePage(void *location) {}
+void freePage(void *location) {
+    syscall(SYS_FREE_PAGE, U32(location), 0, 0, 0);
+}
 
 void memset(void *_target, uint8_t byte, uint32_t size) {
     uint8_t *target = _target;

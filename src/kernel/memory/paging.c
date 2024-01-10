@@ -240,6 +240,30 @@ void unmapPageFrom(PagingInfo *info, void *address) {
     } while (info->isPageConnectedToNext[coarse] & fineBit);
 }
 
+void giveUpPage(PagingInfo *info, uint32_t pageId) {
+    uint32_t coarse, fine, fineBit;
+    do {
+        {
+            // mark physical page as free
+            void *physical = getPhysicalAddress(info->pageDirectory, ADDRESS(pageId));
+            uint32_t physicalId = PAGE_ID(physical);
+            uint32_t coarse = physicalId / 32;
+            uint32_t fine = physicalId % 32;
+            uint32_t fineBit = 1 << fine;
+            markPageFree(kernelPhysicalPages, coarse, fine, fineBit);
+        }
+
+        // mark virtual page as free
+        coarse = pageId / 32;
+        fine = pageId % 32;
+        fineBit = 1 << fine;
+        markPageFree(info, coarse, fine, fineBit);
+        unmapSinglePageFrom(info, ADDRESS(pageId));
+        pageId++;
+    } while (info->isPageConnectedToNext[coarse] & fineBit);
+
+}
+
 void unmapPage(void *pageAddress) {
     unmapPageFrom(kernelVirtualPages, pageAddress);
 }

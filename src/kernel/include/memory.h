@@ -45,6 +45,8 @@ extern void *sharePage(PagingInfo *destination, void *sourceAddress,
 extern void freePage(void *pageAddress);
 extern void freePhysicalPage(uint32_t pageId);
 extern void unmapPage(void *pageAddress);
+extern void unmapPageFrom(PagingInfo *info, void *address);
+extern void giveUpPage(PagingInfo *info, uint32_t pageId);
 
 extern void free(void *address);
 
