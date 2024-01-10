@@ -21,12 +21,8 @@ void registerDevice(uint32_t deviceId, uint32_t reserved, uint32_t serviceName, 
     }
     for (uint32_t entry = 0; entry < 4; entry++) {
         PartitionTableEntry *partition = &device->mbr->entries[entry];
-        if (partition->lbaStart == 0 ||
-            (partition->startCHS[0] == 0 &&
-             partition->startCHS[1] == 0 &&
-             partition->startCHS[2] == 0)) {
-            // starting at the first block, this partition does not exist
-            // skip it
+        if (partition->type == 0 || partition->sectorCount == 0) {
+            // https://uefi.org/sites/default/files/resources/UEFI_Spec_2_10_Aug29.pdf, page 111
             continue;
         }
         printf("partition %i: %i: start: %i, end: %i, active: %i\n", entry, partition->type, partition->lbaStart, partition->lbaStart + partition->sectorCount, partition->active);
@@ -34,6 +30,10 @@ void registerDevice(uint32_t deviceId, uint32_t reserved, uint32_t serviceName, 
             printf("partition %i is a GPT\n", entry);
             // TODO
             // look at https://uefi.org/sites/default/files/resources/UEFI_Spec_2_10_Aug29.pdf, page 110 for information for this
+        } else  if (partition->type == 0xEF) {
+            printf("partition %i is an UEFI system partition\n", entry);
+            // TODO
+            // probably not relevant?
         }
     }
 }
