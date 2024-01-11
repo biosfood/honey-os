@@ -76,7 +76,7 @@ uint32_t out(uint32_t out, void *data) {
     command->transferSize = transferSize; // todo: fix this
     memcpy(dataHere, command->data, size);
     request(device->serviceId, device->outFunction, out & 0xFFFF0000 | device->deviceId, U32(getPhysicalAddress(command)));
-    freePage(dataHere - 2);
+    // freePage(dataHere - 2);
     free(command);
     return 0;
 }

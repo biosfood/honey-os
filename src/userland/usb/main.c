@@ -256,7 +256,8 @@ void initialize() {
 
 int32_t main() {
     if (!initialized) {
-        initialize();
+        fork(initialize, NULL, NULL, NULL);
+        // initialize();
         initialized = true;
     }
 }
