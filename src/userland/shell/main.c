@@ -26,7 +26,13 @@ int32_t main() {
             service = loadFromInitrdUninitialized(buffer);
         }
         if (service) {
-            request(service, 0, 0, 0);
+            uint32_t function = getFunction(service, "terminal");
+            if (function) {
+                uint32_t args = insertString(arguments);
+                request(service, function, args, 0);
+            } else {
+                request(service, 0, 0, 0);
+            }
         } else {
             printf("%s: command not found\n", buffer);
         }
