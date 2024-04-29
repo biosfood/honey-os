@@ -9,7 +9,7 @@ uint32_t showDevice(void *data) {
     GET(INT, subclass);
     GET(INT, programmingInterface);
 
-    printf("id: %i, class: \"%s\" (%i) / %i / %i\n", id, className, class, subclass, programmingInterface);
+    printf("id: %i, class: \"%s\" (%i/%i/%i)\n", id, className, class, subclass, programmingInterface);
 
     free(className);
     return 0;
